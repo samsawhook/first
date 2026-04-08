@@ -333,15 +333,13 @@ export default function Dashboard() {
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 border-b border-[#1E2D3D]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
                   {[
-                    { label: "Portfolio NAV", value: `$${(fund.nav / 1_000_000).toFixed(2)}M`, accent: "#10B981" },
+                    { label: "Portfolio Value", value: `$${(fund.nav / 1_000_000).toFixed(2)}M`, accent: "#10B981" },
                     { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
                     { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
                     { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
                     { label: "IRR",   value: `${fund.irr}%`,   accent: null },
-                    { label: "Called Capital", value: `$${(fund.calledCapital / 1_000_000).toFixed(2)}M`, accent: null },
-                    { label: "Distributions",  value: `$${(navHistory[navHistory.length - 1].distributions / 1_000).toFixed(0)}K`, accent: null },
                     { label: "Active Companies", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                   ].map(({ label, value, accent }) => (
                     <div key={label} className="px-4 py-3.5 border-r border-[#1E2D3D] last:border-r-0">
@@ -390,9 +388,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ② NAV over time */}
+                  {/* ② Value over time */}
                   <div className="p-5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">NAV Over Time</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Value Over Time</p>
                     <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
                       {/* Grid lines */}
                       {yTicks.map((v, i) => (
@@ -408,19 +406,13 @@ export default function Dashboard() {
                         const idx = navHistory.indexOf(d);
                         return <text key={i} x={xS(idx)} y={H - 4} textAnchor="middle" style={{ fontSize: 8, fill: "#475569" }}>{d.quarter}</text>;
                       })}
-                      {/* NAV fill */}
+                      {/* Value fill */}
                       <path d={navFill} fill="#10B981" opacity="0.07" />
-                      {/* Called capital line */}
-                      <path d={calledLine} fill="none" stroke="#334155" strokeWidth="1.5" strokeDasharray="3 3" />
-                      {/* NAV line */}
+                      {/* Value line */}
                       <path d={navLine} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
                       {/* Current dot */}
                       <circle cx={xS(navHistory.length - 1)} cy={yS(navHistory[navHistory.length - 1].nav)} r="3" fill="#10B981" />
                     </svg>
-                    <div className="flex items-center gap-4 mt-1">
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-emerald-500" /><span className="text-[10px] text-slate-600">NAV</span></div>
-                      <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-slate-700" style={{ borderTop: "1.5px dashed #334155" }} /><span className="text-[10px] text-slate-600">Called Capital</span></div>
-                    </div>
                   </div>
 
                   {/* ③ Allocation by security type */}
@@ -473,29 +465,37 @@ export default function Dashboard() {
                 </div>
               );
 
-              const TH = ({ children }: { children?: React.ReactNode }) => (
-                <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider whitespace-nowrap">{children}</th>
+              const TH = ({ children, wide }: { children?: React.ReactNode; wide?: boolean }) => (
+                <th className={`py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider whitespace-nowrap${wide ? " min-w-[180px]" : ""}`}>{children}</th>
               );
               const TD = ({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => (
                 <td className={`py-2.5 px-3 text-xs ${className}`} style={style}>{children}</td>
               );
 
-              const SectionHeader = ({ label, tableKey, accent, pills }: {
-                label: string; tableKey: string; accent: string; pills: React.ReactNode;
+              const SectionHeader = ({ label, tableKey, accent, stats }: {
+                label: string; tableKey: string; accent: string;
+                stats: { label: string; value: string; color?: string }[];
               }) => (
-                <button
-                  onClick={() => toggleTable(tableKey)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#111D2E]/60 transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
-                    <span className="text-sm font-semibold text-slate-200">{label}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2">{pills}</div>
+                <div>
+                  <button
+                    onClick={() => toggleTable(tableKey)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#111D2E]/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: accent }} />
+                      <span className="text-sm font-semibold text-slate-200">{label}</span>
+                    </div>
                     <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
+                  </button>
+                  <div className="grid border-t border-[#1E2D3D]" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+                    {stats.map((s, i) => (
+                      <div key={s.label} className={`px-4 py-2.5 ${i < stats.length - 1 ? "border-r border-[#1E2D3D]" : ""}`}>
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium whitespace-nowrap">{s.label}</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: s.color ?? "#e2e8f0" }}>{s.value}</p>
+                      </div>
+                    ))}
                   </div>
-                </button>
+                </div>
               );
 
               // ── Group transactions by company ──────────────────────────────────
@@ -515,21 +515,19 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Equity" tableKey="common" accent="#10B981" pills={
-                            <>
-                              <span className="text-[10px] text-slate-500">{totalShares.toLocaleString()} shares</span>
-                              <span className="text-slate-700 text-[10px]">·</span>
-                              <span className="text-[10px] text-slate-500">{wtdAvg !== null ? `${fmtPrice(wtdAvg)} wtd avg` : ""}</span>
-                              <span className="text-[10px] font-semibold text-emerald-400">{fmt(totalCost)}</span>
-                            </>
-                          } />
+                          <SectionHeader label="Equity" tableKey="common" accent="#10B981" stats={[
+                            { label: "Companies", value: String(companiesWithCommon.length) },
+                            { label: "Total Shares", value: totalShares.toLocaleString() },
+                            { label: "Wtd Avg Cost", value: wtdAvg !== null ? fmtPrice(wtdAvg) : "—" },
+                            { label: "Cost Basis", value: fmt(totalCost), color: "#10B981" },
+                          ]} />
                         </div>
                         {openInstrumentTables.has("common") && (
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
-                                  <TH></TH><TH>Company</TH><TH>Total Shares</TH>
+                                  <TH></TH><TH wide>Company</TH><TH>Total Shares</TH>
                                   <TH>Avg Cost/sh</TH><TH>Cost Basis</TH><TH>Curr Value</TH><TH>Gain / Loss</TH>
                                 </tr>
                               </thead>
@@ -612,21 +610,19 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Credit" tableKey="preferred" accent="#6366F1" pills={
-                            <>
-                              <span className="text-[10px] text-slate-500">{totalShares.toLocaleString()} shares</span>
-                              <span className="text-slate-700 text-[10px]">·</span>
-                              <span className="text-[10px] text-slate-500">{wtdAvg !== null ? `${fmtPrice(wtdAvg)} wtd avg` : ""}</span>
-                              <span className="text-[10px] font-semibold text-indigo-400">{fmt(totalCost)}</span>
-                            </>
-                          } />
+                          <SectionHeader label="Credit" tableKey="preferred" accent="#6366F1" stats={[
+                            { label: "Companies", value: String(companiesWithPref.length) },
+                            { label: "Total Shares", value: totalShares.toLocaleString() },
+                            { label: "Wtd Avg Cost", value: wtdAvg !== null ? fmtPrice(wtdAvg) : "—" },
+                            { label: "Cost Basis", value: fmt(totalCost), color: "#6366F1" },
+                          ]} />
                         </div>
                         {openInstrumentTables.has("preferred") && (
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
-                                  <TH></TH><TH>Company</TH><TH>Shares</TH><TH>Type</TH>
+                                  <TH></TH><TH wide>Company</TH><TH>Shares</TH><TH>Type</TH>
                                   <TH>Liq Pref</TH><TH>Conv Ratio</TH><TH>Sh if Conv</TH>
                                   <TH>Div Rate</TH><TH>Avg Cost/sh</TH><TH>Cost Basis</TH>
                                 </tr>
@@ -725,15 +721,12 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Convertibles" tableKey="debt" accent="#F59E0B" pills={
-                            <>
-                              <span className="text-[10px] text-slate-500">{companiesWithDebt.length} companies</span>
-                              <span className="text-slate-700 text-[10px]">·</span>
-                              {wtdRate !== null && <span className="text-[10px] text-slate-500">{wtdRate.toFixed(1)}% wtd rate</span>}
-                              {wtdRate !== null && <span className="text-slate-700 text-[10px]">·</span>}
-                              <span className="text-[10px] font-semibold text-amber-400">{fmt(totalPrincipal)} principal</span>
-                            </>
-                          } />
+                          <SectionHeader label="Convertibles" tableKey="debt" accent="#F59E0B" stats={[
+                            { label: "Companies", value: String(companiesWithDebt.length) },
+                            { label: "Wtd Rate", value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
+                            { label: "Principal", value: fmt(totalPrincipal), color: "#F59E0B" },
+                            { label: "Current Value", value: fmt(totalCurrVal), color: "#e2e8f0" },
+                          ]} />
                         </div>
                         {openInstrumentTables.has("debt") && (
                           companiesWithDebt.length > 0 ? (
@@ -741,7 +734,7 @@ export default function Dashboard() {
                               <table className="w-full text-xs">
                                 <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                   <tr>
-                                    <TH></TH><TH>Company</TH><TH>Principal</TH>
+                                    <TH></TH><TH wide>Company</TH><TH>Principal</TH>
                                     <TH>Wtd Rate</TH><TH>Curr Value</TH><TH>Accrued</TH><TH>Status</TH>
                                   </tr>
                                 </thead>
@@ -852,22 +845,20 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Managed Funds" tableKey="managed" accent="#EC4899" pills={
-                            <>
-                              <span className="text-[10px] text-slate-500">{managedFundPositions.length} fund{managedFundPositions.length !== 1 ? "s" : ""}</span>
-                              <span className="text-slate-700 text-[10px]">·</span>
-                              <span className="text-[10px] text-slate-500">{fmt(totalCalled)} called</span>
-                              <span className="text-slate-700 text-[10px]">·</span>
-                              <span className="text-[10px] font-semibold text-pink-400">NAV {fmt(totalNav)}</span>
-                            </>
-                          } />
+                          <SectionHeader label="Managed Funds" tableKey="managed" accent="#EC4899" stats={[
+                            { label: "Called", value: fmt(totalCalled) },
+                            { label: "Uncalled", value: fmt(totalUncalled) },
+                            { label: "NAV", value: fmt(totalNav), color: "#EC4899" },
+                            { label: "DPI", value: wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—" },
+                            { label: "TVPI", value: wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—", color: "#EC4899" },
+                          ]} />
                         </div>
                         {openInstrumentTables.has("managed") && (
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs">
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
-                                  <TH></TH><TH>Fund</TH><TH>Vintage</TH>
+                                  <TH></TH><TH wide>Fund</TH><TH>Vintage</TH>
                                   <TH>Unit Price</TH><TH>Units Called</TH><TH>Called</TH>
                                   <TH>Uncalled</TH><TH>NAV</TH><TH>Distributions</TH>
                                   <TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
