@@ -16,6 +16,7 @@ export interface PortfolioCompany {
   status: "active" | "realized" | "written-off";
   secondaryAvailable: boolean;
   impliedValuation: number;
+  totalShares?: number; // fully-diluted share count; enables per-share price calc
   website?: string;
   logoUrl?: string;
   accentColor: string;
@@ -97,3 +98,50 @@ export type IOIPayload = {
   accredited: boolean;
   notes: string;
 };
+
+// ─── Investor Holdings ────────────────────────────────────────────────────────
+//
+// All investors share a single type. Holdings are a list of positions, each of
+// which can be one of three classes:
+//
+//   equity      – direct shares in a portfolio company
+//   lp_units    – LP interest in Co-Owner Fund, LP (the fund is just another entity)
+//   debt        – any credit instrument (convertible note, SAFE, term loan, etc.)
+//                 in either a portfolio company or the fund
+//
+// This means "Co-Owner Fund, LP" is not special — it's simply the entityId
+// "co-owner-fund" that may appear in lp_units or debt holdings, the same way
+// a portco id appears in equity or debt holdings.
+
+export interface EquityHolding {
+  class: "equity";
+  entityId: string;         // portfolio company id
+  shares: number;
+}
+
+export interface LPHolding {
+  class: "lp_units";
+  entityId: "co-owner-fund";
+  lpPct: number;            // percentage of the fund (e.g. 12.5 means 12.5%)
+  units?: number;           // face unit count if tracked separately
+}
+
+export interface DebtHolding {
+  class: "debt";
+  entityId: string;         // portfolio company id OR "co-owner-fund"
+  instrument: string;       // e.g. "Convertible Note", "SAFE", "Term Loan", "Line of Credit"
+  principal: number;        // original principal / face value
+  interestRate?: number;    // annual %, e.g. 8 means 8%
+  maturityDate?: string;    // ISO date string
+  currentValue: number;     // principal + accrued interest, or marked fair value
+  convertible?: boolean;    // true if instrument converts to equity
+  conversionCap?: number;   // valuation cap for conversion
+}
+
+export type Holding = EquityHolding | LPHolding | DebtHolding;
+
+export interface Investor {
+  id: string;
+  name: string;
+  holdings: Holding[];
+}

@@ -8,6 +8,8 @@ import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import PerformanceChart from "@/components/PerformanceChart";
 import { portfolio } from "@/lib/data";
+import { investors } from "@/lib/investors";
+import type { Investor } from "@/lib/types";
 
 type Tab = "overview" | "portfolio" | "pipeline" | "secondary" | "letters";
 
@@ -24,6 +26,11 @@ const fmt = (n: number) =>
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
+  const selectedInvestor: Investor | undefined =
+    selectedInvestorId === "fund"
+      ? undefined
+      : investors.find((i) => i.id === selectedInvestorId);
 
   return (
     <div className="min-h-screen bg-[#060B14]">
@@ -107,18 +114,36 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* Portfolio allocation */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-100">Your Holdings</h2>
+                  <h2 className="text-sm font-semibold text-slate-100">
+                    {selectedInvestor ? `${selectedInvestor.name}'s Holdings` : "Fund Holdings"}
+                  </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Co-Owner Fund, LP · Portfolio allocation by current value
+                    {selectedInvestor
+                      ? "Equity, LP units, and debt positions · marked at implied valuations"
+                      : "Co-Owner Fund, LP · portfolio allocation by current value"}
                   </p>
                 </div>
-                <span className="text-xs text-slate-500 bg-[#111D2E] border border-[#1E2D3D] px-2.5 py-1 rounded-lg">
-                  As of March 31, 2026
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="text-xs text-slate-500 whitespace-nowrap">Viewing as</label>
+                  <select
+                    value={selectedInvestorId}
+                    onChange={(e) => setSelectedInvestorId(e.target.value)}
+                    className="text-xs bg-[#111D2E] border border-[#1E2D3D] text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500/50 cursor-pointer"
+                  >
+                    <option value="fund">Co-Owner Fund, LP (fund view)</option>
+                    <optgroup label="Investors">
+                      {investors.map((inv) => (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
               </div>
-              <PortfolioAllocationChart />
+              <PortfolioAllocationChart investor={selectedInvestor} />
             </div>
 
             {/* Performance chart card */}
