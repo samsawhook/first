@@ -31,16 +31,27 @@ function CompanyCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-              style={{
-                background: `${company.accentColor}18`,
-                color: company.accentColor,
-                border: `1px solid ${company.accentColor}30`,
-              }}
-            >
-              {company.initials}
-            </div>
+            {company.logoUrl ? (
+              <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white flex items-center justify-center p-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={company.logoUrl}
+                  alt={company.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                style={{
+                  background: `${company.accentColor}18`,
+                  color: company.accentColor,
+                  border: `1px solid ${company.accentColor}30`,
+                }}
+              >
+                {company.initials}
+              </div>
+            )}
             <div>
               <h3 className="text-sm font-semibold text-slate-100 leading-tight">
                 {company.name}

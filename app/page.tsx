@@ -147,15 +147,19 @@ export default function Dashboard() {
                         <tr key={c.id} className="hover:bg-[#111D2E]/50 transition-colors">
                           <td className="py-2.5 pr-4">
                             <div className="flex items-center gap-2">
-                              <div
-                                className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center"
-                                style={{
-                                  background: `${c.accentColor}18`,
-                                  color: c.accentColor,
-                                }}
-                              >
-                                {c.initials[0]}
-                              </div>
+                              {c.logoUrl ? (
+                                <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
+                                </div>
+                              ) : (
+                                <div
+                                  className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center shrink-0"
+                                  style={{ background: `${c.accentColor}18`, color: c.accentColor }}
+                                >
+                                  {c.initials[0]}
+                                </div>
+                              )}
                               <span className="font-medium text-slate-200">{c.name}</span>
                             </div>
                           </td>

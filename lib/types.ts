@@ -17,6 +17,7 @@ export interface PortfolioCompany {
   secondaryAvailable: boolean;
   impliedValuation: number;
   website?: string;
+  logoUrl?: string;
   accentColor: string;
 }
 

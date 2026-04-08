@@ -44,6 +44,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: true,
     impliedValuation: 17_800_000,
     website: "https://falconer.com",
+    logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
   },
   {
@@ -65,6 +66,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: true,
     impliedValuation: 8_330_000,
+    logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
   },
   {
@@ -86,6 +88,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 4_935_000,
+    logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/84711983-f208-406e-aeb1-60e8f271e02d/Screenshot+2025-10-29+162326.png",
     accentColor: "#10B981",
   },
   {
@@ -107,6 +110,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 3_857_000,
+    logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
   },
   {
@@ -128,6 +132,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: true,
     impliedValuation: 8_500_000,
+    logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
   },
   {
