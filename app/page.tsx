@@ -143,7 +143,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set<string>());
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "preferred", "debt"]));
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
 
   const toggleTable = (key: string) =>
@@ -355,7 +355,6 @@ export default function Dashboard() {
               );
 
               // ── Group transactions by company ──────────────────────────────────
-              type Co = typeof portfolio[0];
               const companiesWithCommon = portfolio.filter(c => c.shareTransactions?.some(t => t.type === "Common"));
               const companiesWithPref   = portfolio.filter(c => c.shareTransactions?.some(t => t.type === "Preferred"));
               const companiesWithDebt   = portfolio.filter(c => c.debtPositions?.length);
@@ -363,60 +362,7 @@ export default function Dashboard() {
               return (
               <div className="space-y-3">
 
-                {/* ══ 1. PORTFOLIO AT A GLANCE (main summary) ══════════════════════ */}
-                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-                  <div className="px-5 py-4 border-b border-[#1E2D3D]">
-                    <h2 className="text-sm font-semibold text-slate-100">Portfolio at a Glance</h2>
-                    <p className="text-[10px] text-slate-500 mt-0.5">All positions · equity marked at implied valuation</p>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
-                        <tr>
-                          <TH>Company</TH><TH>Sector</TH><TH>Invested</TH><TH>Curr Value</TH>
-                          <TH>MOIC</TH><TH>Economic %</TH><TH>Voting %</TH><TH>Avg Cost/sh</TH><TH>Status</TH>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#111D2E]">
-                        {portfolio.map((c) => {
-                          const moic = (c.currentValue / c.invested).toFixed(2);
-                          const txns = c.shareTransactions ?? [];
-                          const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
-                          const am = txns.reduce((s, t) => s + t.amount, 0);
-                          const avg = sh > 0 ? am / sh : null;
-                          return (
-                            <tr key={c.id} className="hover:bg-[#111D2E]/50 transition-colors cursor-pointer" onClick={() => setActiveCompanyId(c.id)}>
-                              <TD>
-                                <div className="flex items-center gap-2">
-                                  {companyLogo(c)}
-                                  <span className="font-semibold text-slate-200 hover:text-emerald-400 transition-colors whitespace-nowrap">{c.name}</span>
-                                </div>
-                              </TD>
-                              <TD className="text-slate-500 whitespace-nowrap">{c.sector}</TD>
-                              <TD className="text-slate-300 tabular-nums">{fmt(c.invested)}</TD>
-                              <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</TD>
-                              <TD>
-                                <span className={parseFloat(moic) >= 1.5 ? "text-emerald-400 font-semibold" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}>
-                                  {moic}x
-                                </span>
-                              </TD>
-                              <TD className="text-slate-300 tabular-nums">{c.ownership}%</TD>
-                              <TD className="tabular-nums text-slate-300">{c.votingOwnership ?? c.ownership}%</TD>
-                              <TD className="tabular-nums text-slate-400">{avg !== null ? fmtPrice(avg) : <span className="text-slate-700">—</span>}</TD>
-                              <TD>
-                                <span className={`px-1.5 py-0.5 rounded font-medium ${c.status === "active" ? "bg-emerald-500/10 text-emerald-400" : c.status === "realized" ? "bg-violet-500/10 text-violet-400" : "bg-slate-500/10 text-slate-400"}`}>
-                                  {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                                </span>
-                              </TD>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* ══ 2. COMMON STOCK ══════════════════════════════════════════════ */}
+                {/* ══ 1. EQUITY (Common Stock) ══════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
                     const totalShares = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + (t.shares ?? 0), 0), 0);
@@ -425,7 +371,7 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Common Stock" tableKey="common" accent="#10B981" pills={
+                          <SectionHeader label="Equity" tableKey="common" accent="#10B981" pills={
                             <>
                               <span className="text-[10px] text-slate-500">{totalShares.toLocaleString()} shares</span>
                               <span className="text-slate-700 text-[10px]">·</span>
@@ -513,7 +459,7 @@ export default function Dashboard() {
                   })()}
                 </div>
 
-                {/* ══ 3. PREFERRED STOCK ═══════════════════════════════════════════ */}
+                {/* ══ 2. CREDIT (Preferred Stock) ══════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
                     const totalShares = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + (t.shares ?? 0), 0), 0);
@@ -522,7 +468,7 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Preferred Stock" tableKey="preferred" accent="#6366F1" pills={
+                          <SectionHeader label="Credit" tableKey="preferred" accent="#6366F1" pills={
                             <>
                               <span className="text-[10px] text-slate-500">{totalShares.toLocaleString()} shares</span>
                               <span className="text-slate-700 text-[10px]">·</span>
@@ -622,7 +568,7 @@ export default function Dashboard() {
                   })()}
                 </div>
 
-                {/* ══ 4. DEBT / CONVERTIBLE ════════════════════════════════════════ */}
+                {/* ══ 3. CONVERTIBLES ══════════════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
                     const totalPrincipal = companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => a + d.principal, 0), 0);
@@ -635,7 +581,7 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Debt & Convertibles" tableKey="debt" accent="#F59E0B" pills={
+                          <SectionHeader label="Convertibles" tableKey="debt" accent="#F59E0B" pills={
                             <>
                               <span className="text-[10px] text-slate-500">{companiesWithDebt.length} companies</span>
                               <span className="text-slate-700 text-[10px]">·</span>
