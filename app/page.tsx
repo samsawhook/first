@@ -1,28 +1,88 @@
 "use client";
 import { useState } from "react";
-import { LayoutDashboard, Briefcase, Zap, ArrowLeftRight, BookOpen, Lock } from "lucide-react";
+import { LayoutDashboard, Briefcase, Zap, ArrowLeftRight, BookOpen, Lock, TrendingUp } from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import PortfolioGrid from "@/components/PortfolioGrid";
 import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import PerformanceChart from "@/components/PerformanceChart";
+import FootballField from "@/components/FootballField";
 import { portfolio } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor } from "@/lib/types";
 
-type Tab = "overview" | "portfolio" | "pipeline" | "secondary" | "letters";
+type Tab = "overview" | "portfolio" | "pipeline" | "secondary" | "letters" | "valuation";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "overview", label: "Overview", icon: <LayoutDashboard size={15} /> },
-  { id: "portfolio", label: "Portfolio", icon: <Briefcase size={15} /> },
-  { id: "pipeline", label: "Pipeline", icon: <Zap size={15} /> },
-  { id: "secondary", label: "Secondary", icon: <ArrowLeftRight size={15} /> },
-  { id: "letters", label: "Letters", icon: <BookOpen size={15} /> },
+  { id: "overview",   label: "Overview",   icon: <LayoutDashboard size={15} /> },
+  { id: "portfolio",  label: "Portfolio",  icon: <Briefcase size={15} /> },
+  { id: "pipeline",   label: "Pipeline",   icon: <Zap size={15} /> },
+  { id: "secondary",  label: "Secondary",  icon: <ArrowLeftRight size={15} /> },
+  { id: "letters",    label: "Letters",    icon: <BookOpen size={15} /> },
+  { id: "valuation",  label: "Valuation",  icon: <TrendingUp size={15} /> },
 ];
 
 const fmt = (n: number) =>
   n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${(n / 1_000).toFixed(0)}K`;
+
+function ValuationTab() {
+  const valuableCompanies = portfolio.filter((c) => c.valuationRefs && c.valuationRefs.length > 0);
+  const [selectedId, setSelectedId] = useState(valuableCompanies[0]?.id ?? "");
+  const company = valuableCompanies.find((c) => c.id === selectedId);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-100">Football Field Valuation</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Interactive valuation ranges across 409A, transaction, and market-multiple references.
+          </p>
+        </div>
+        <select
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          className="text-sm bg-[#111D2E] border border-[#1E2D3D] text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500/50 cursor-pointer shrink-0"
+        >
+          {valuableCompanies.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {company && (
+        <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5 space-y-1">
+          {/* Company header */}
+          <div className="flex items-center gap-3 mb-5">
+            {company.logoUrl ? (
+              <div className="w-9 h-9 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={company.logoUrl} alt={company.name} className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div
+                className="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center shrink-0"
+                style={{ background: `${company.accentColor}20`, color: company.accentColor }}
+              >
+                {company.initials}
+              </div>
+            )}
+            <div>
+              <h2 className="text-sm font-semibold text-slate-100">{company.name}</h2>
+              <p className="text-xs text-slate-500">
+                {company.stage} · {company.sector}
+                {company.revenue && ` · ${fmt(company.revenue)} ARR`}
+                {company.ebitda !== undefined && ` · ${company.ebitda < 0 ? "-" : ""}${fmt(Math.abs(company.ebitda))} EBITDA`}
+              </p>
+            </div>
+          </div>
+          <FootballField company={company} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -321,6 +381,10 @@ export default function Dashboard() {
             </div>
             <LettersSection />
           </div>
+        )}
+
+        {activeTab === "valuation" && (
+          <ValuationTab />
         )}
       </main>
 

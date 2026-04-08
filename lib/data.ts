@@ -5,6 +5,7 @@ import type {
   DealOpportunity,
   SecondaryLot,
   Letter,
+  ValuationRef,
 } from "./types";
 
 export const fund: FundMetrics = {
@@ -47,6 +48,13 @@ export const portfolio: PortfolioCompany[] = [
     website: "https://falconer.com",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
+    ebitda: 350_000,
+    valuationRefs: [
+      { label: "409A",            date: "Jan 2025", low: 5_800_000,  high: 11_200_000, color: "#64748B", note: "Most recent 409A range" },
+      { label: "Last Round",      date: "Mar 2024", low: 17_800_000, high: 17_800_000, color: "#3B82F6", note: "Series Seed @ $17.8M post-money" },
+      { label: "Rev Multiple",               low: 6_300_000,  high: 16_800_000, color: "#10B981", note: "3–8× on $2.1M ARR" },
+      { label: "EBITDA Multiple",            low: 2_800_000,  high: 5_250_000,  color: "#F59E0B", note: "8–15× on $350K EBITDA" },
+    ] satisfies ValuationRef[],
   },
   {
     id: "merchant-boxes",
@@ -70,6 +78,12 @@ export const portfolio: PortfolioCompany[] = [
     totalShares: 39_820_287, // 6,530,527 Co-Owner shares ÷ 16.4%
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
+    ebitda: -180_000,
+    valuationRefs: [
+      { label: "409A",        date: "Feb 2025", low: 2_000_000, high: 4_500_000,  color: "#64748B", note: "Most recent 409A range" },
+      { label: "Last Round",  date: "Sep 2023", low: 8_330_000, high: 8_330_000,  color: "#F59E0B", note: "Seed @ $8.33M post-money" },
+      { label: "Rev Multiple",               low: 3_800_000, high: 11_400_000, color: "#10B981", note: "1–3× on $3.8M ARR" },
+    ] satisfies ValuationRef[],
   },
   {
     id: "certd",
@@ -93,6 +107,12 @@ export const portfolio: PortfolioCompany[] = [
     totalShares: 30_423_657, // 4,350,663 Co-Owner shares ÷ 14.3%
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/84711983-f208-406e-aeb1-60e8f271e02d/Screenshot+2025-10-29+162326.png",
     accentColor: "#10B981",
+    ebitda: -850_000,
+    valuationRefs: [
+      { label: "409A",        date: "Mar 2025", low: 1_200_000, high: 2_800_000, color: "#64748B", note: "Most recent 409A range" },
+      { label: "Last Round",  date: "Nov 2023", low: 4_935_000, high: 4_935_000, color: "#10B981", note: "Seed @ $4.935M post-money" },
+      { label: "Rev Multiple",               low: 2_480_000, high: 6_200_000, color: "#8B5CF6", note: "4–10× on $620K ARR" },
+    ] satisfies ValuationRef[],
   },
   {
     id: "audily",
@@ -116,6 +136,12 @@ export const portfolio: PortfolioCompany[] = [
     totalShares: 52_004_140, // 16,537,717 Co-Owner shares ÷ 31.8%
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
+    ebitda: -320_000,
+    valuationRefs: [
+      { label: "409A",        date: "Jan 2025", low: 600_000,   high: 1_800_000, color: "#64748B", note: "Most recent 409A range" },
+      { label: "Last Round",  date: "Jul 2023", low: 3_857_000, high: 3_857_000, color: "#8B5CF6", note: "Seed @ $3.857M post-money" },
+      { label: "Rev Multiple",               low: 960_000,   high: 2_400_000, color: "#10B981", note: "2–5× on $480K ARR" },
+    ] satisfies ValuationRef[],
   },
   {
     id: "sbr2th",
@@ -139,6 +165,13 @@ export const portfolio: PortfolioCompany[] = [
     totalShares: 30_781_427, // 4,617,214 Co-Owner shares ÷ 15.0%
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
+    ebitda: 480_000,
+    valuationRefs: [
+      { label: "409A",            date: "Feb 2025", low: 3_000_000, high: 6_000_000, color: "#64748B", note: "Most recent 409A range" },
+      { label: "Last Round",      date: "Jan 2024", low: 8_500_000, high: 8_500_000, color: "#EC4899", note: "Growth @ $8.5M post-money" },
+      { label: "Rev Multiple",               low: 2_320_000, high: 7_250_000, color: "#10B981", note: "0.8–2.5× on $2.9M ARR" },
+      { label: "EBITDA Multiple",            low: 2_400_000, high: 4_800_000, color: "#F59E0B", note: "5–10× on $480K EBITDA" },
+    ] satisfies ValuationRef[],
   },
   {
     id: "hretic",

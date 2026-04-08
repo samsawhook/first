@@ -1,3 +1,12 @@
+export interface ValuationRef {
+  label: string;       // e.g. "409A", "Last Round", "Rev Multiple 3–8×"
+  date?: string;       // e.g. "Jan 2025"
+  low: number;         // lower bound of range ($); set equal to high for point transactions
+  high: number;        // upper bound of range ($)
+  color?: string;      // hex accent for the bar
+  note?: string;       // e.g. "3–8× on $2.1M ARR"
+}
+
 export interface PortfolioCompany {
   id: string;
   name: string;
@@ -20,6 +29,8 @@ export interface PortfolioCompany {
   website?: string;
   logoUrl?: string;
   accentColor: string;
+  valuationRefs?: ValuationRef[];
+  ebitda?: number;            // trailing EBITDA ($); negative = loss
 }
 
 export interface FundMetrics {
