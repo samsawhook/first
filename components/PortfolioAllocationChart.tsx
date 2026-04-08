@@ -123,8 +123,10 @@ function buildSegments(items: ReturnType<typeof fundSegments>): Segment[] {
 
 export default function PortfolioAllocationChart({
   investor,
+  onCompanyClick,
 }: {
   investor?: Investor;
+  onCompanyClick?: (id: string) => void;
 }) {
   const rawItems = investor
     ? (investor.holdings.map(resolveHolding).filter(Boolean) as ReturnType<typeof fundSegments>)
@@ -139,7 +141,7 @@ export default function PortfolioAllocationChart({
   const equitySegs = investor
     ? investor.holdings.filter((h) => h.class === "equity")
     : null;
-  const showMoic = !investor; // only show fund MOIC in default view
+  const showMoic = !investor;
   const fundActive = portfolio.filter((c) => c.status !== "written-off");
   const fundInvested = fundActive.reduce((s, c) => s + c.invested, 0);
   const fundMoic = (totalValue / fundInvested).toFixed(2);
@@ -194,10 +196,14 @@ export default function PortfolioAllocationChart({
 
       {/* Legend */}
       <div className="flex-1 space-y-2 w-full">
-        {segments.map((seg) => (
+        {segments.map((seg) => {
+          const companyId = portfolio.find((c) => c.name === seg.label)?.id;
+          const isClickable = !!companyId && !!onCompanyClick;
+          return (
           <div
             key={seg.key}
-            className="flex items-center gap-3 p-2.5 rounded-lg bg-[#111D2E] hover:bg-[#141f30] transition-colors"
+            onClick={() => isClickable && onCompanyClick(companyId!)}
+            className={`flex items-center gap-3 p-2.5 rounded-lg bg-[#111D2E] transition-colors ${isClickable ? "hover:bg-[#141f30] cursor-pointer" : ""}`}
           >
             {/* Color dot */}
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: seg.color }} />
@@ -219,7 +225,7 @@ export default function PortfolioAllocationChart({
 
             {/* Name + sublabel */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-200 font-medium truncate">{seg.label}</p>
+              <p className={`text-sm font-medium truncate ${isClickable ? "text-slate-200 hover:text-emerald-400 transition-colors" : "text-slate-200"}`}>{seg.label}</p>
               <p className="text-xs text-slate-600 truncate">{seg.sublabel}</p>
             </div>
 
@@ -248,7 +254,8 @@ export default function PortfolioAllocationChart({
               {fmt(seg.value)}
             </span>
           </div>
-        ))}
+          );
+        })}
 
         {/* Total row */}
         <div className="flex items-center justify-between border-t border-[#1E2D3D] pt-2 mt-1 px-2.5">

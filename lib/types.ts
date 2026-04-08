@@ -47,6 +47,39 @@ export interface NewsItem {
   url?: string;
 }
 
+// QuickBooks-compatible period snapshot — import by mapping QB P&L export columns
+export interface FinancialPeriod {
+  period: string;                // "Q1 2025", "FY 2024"
+  periodType: "quarterly" | "annual";
+  startDate?: string;            // ISO date; populated on QB import
+  endDate?: string;
+  // Income Statement
+  revenue: number;               // Total Income / Gross Revenue
+  costOfRevenue: number;         // COGS
+  grossProfit: number;
+  operatingExpenses: number;     // SG&A + R&D + other opex (excl COGS)
+  ebitda: number;                // = grossProfit - operatingExpenses
+  depreciation?: number;
+  netIncome: number;
+  // Cash flow (from QB Cash Flow Statement)
+  cashFromOperations?: number;
+  // Balance sheet snapshot (end of period — from QB Balance Sheet)
+  cash?: number;
+  accountsReceivable?: number;
+  totalAssets?: number;
+  totalLiabilities?: number;
+}
+
+export interface CompanyLetter {
+  id: string;
+  date: string;
+  period: string;
+  title: string;
+  author: string;
+  excerpt: string;
+  body: string;
+}
+
 export interface PortfolioCompany {
   id: string;
   name: string;
@@ -75,7 +108,11 @@ export interface PortfolioCompany {
   incomeStatement?: IncomeStatement;
   balanceSheet?: BalanceSheet;
   financingHistory?: FinancingRound[];
+  financialHistory?: FinancialPeriod[];   // ordered oldest → newest; QB import target
   news?: NewsItem[];
+  shareholderLetters?: CompanyLetter[];
+  annualMeetingDate?: string;
+  annualMeetingUrl?: string;
 }
 
 export interface FundMetrics {

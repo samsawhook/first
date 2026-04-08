@@ -276,7 +276,7 @@ export default function FootballField({ company }: { company: PortfolioCompany }
         <MetricCell label="Enterprise Value" value={fmtM(ev)} color="#94A3B8" />
         {moic !== null && (
           <MetricCell
-            label="Fund MOIC"
+            label="MOIC"
             value={fmtMx(moic)}
             color={moic >= 2 ? "#10B981" : moic >= 1 ? "#F59E0B" : "#EF4444"}
             highlight

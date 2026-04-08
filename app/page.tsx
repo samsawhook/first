@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   LayoutDashboard,
   Zap,
@@ -8,6 +9,7 @@ import {
   Lock,
   ChevronDown,
   Building2,
+  User,
 } from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import DealPipeline from "@/components/DealPipeline";
@@ -41,94 +43,98 @@ function CompaniesDropdown({
   onSelect: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const openMenu = useCallback(() => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setMenuPos({ top: r.bottom + 4, left: r.left });
+    }
+    setOpen(true);
+  }, []);
 
   useEffect(() => {
+    if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        btnRef.current?.contains(e.target as Node) ||
+        menuRef.current?.contains(e.target as Node)
+      ) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [open]);
 
-  const activeCompany = activeCompanyId
-    ? portfolio.find((c) => c.id === activeCompanyId)
-    : null;
+  const activeCompany = activeCompanyId ? portfolio.find((c) => c.id === activeCompanyId) : null;
 
-  const isActive = activeCompanyId !== null;
+  const menu = (
+    <div
+      ref={menuRef}
+      style={{ position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
+      className="w-60 bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl overflow-hidden"
+    >
+      <div className="p-1">
+        {portfolio
+          .filter((c) => c.status !== "written-off")
+          .map((company) => (
+            <button
+              key={company.id}
+              onClick={() => { onSelect(company.id); setOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                activeCompanyId === company.id
+                  ? "bg-emerald-500/10 text-emerald-400"
+                  : "text-slate-300 hover:bg-[#111D2E]"
+              }`}
+            >
+              {company.logoUrl ? (
+                <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={company.logoUrl} alt={company.name} className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div
+                  className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center shrink-0"
+                  style={{ background: `${company.accentColor}20`, color: company.accentColor }}
+                >
+                  {company.initials[0]}
+                </div>
+              )}
+              <span className="truncate flex-1">{company.name}</span>
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
+                style={{ background: `${company.accentColor}15`, color: company.accentColor }}
+              >
+                {company.stage.split(" ")[0]}
+              </span>
+            </button>
+          ))}
+      </div>
+    </div>
+  );
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
-        onClick={() => setOpen((o) => !o)}
+        ref={btnRef}
+        onClick={() => (open ? setOpen(false) : openMenu())}
         className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-          isActive
+          activeCompanyId !== null
             ? "border-emerald-500 text-emerald-400"
             : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
         }`}
       >
         <Building2 size={15} />
         {activeCompany ? activeCompany.name : "Companies"}
-        <ChevronDown
-          size={13}
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-56 bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl z-50 overflow-hidden">
-          <div className="p-1">
-            {portfolio
-              .filter((c) => c.status !== "written-off")
-              .map((company) => (
-                <button
-                  key={company.id}
-                  onClick={() => {
-                    onSelect(company.id);
-                    setOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
-                    activeCompanyId === company.id
-                      ? "bg-emerald-500/10 text-emerald-400"
-                      : "text-slate-300 hover:bg-[#111D2E]"
-                  }`}
-                >
-                  {company.logoUrl ? (
-                    <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={company.logoUrl}
-                        alt={company.name}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center shrink-0"
-                      style={{
-                        background: `${company.accentColor}20`,
-                        color: company.accentColor,
-                      }}
-                    >
-                      {company.initials[0]}
-                    </div>
-                  )}
-                  <span className="truncate">{company.name}</span>
-                  <span
-                    className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{
-                      background: `${company.accentColor}15`,
-                      color: company.accentColor,
-                    }}
-                  >
-                    {company.stage.split(" ")[0]}
-                  </span>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
+      {mounted && open && createPortal(menu, document.body)}
+    </>
   );
 }
 
@@ -197,11 +203,22 @@ export default function Dashboard() {
               );
             })()}
 
-            {/* Confidential badge */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 border border-[#1E2D3D] rounded-lg px-2.5 py-1.5">
-              <Lock size={11} />
-              <span className="hidden sm:inline">Confidential · Accredited Investors Only</span>
-              <span className="sm:hidden">Confidential</span>
+            {/* Account + confidential */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-600 border border-[#1E2D3D] rounded-lg px-2 py-1.5">
+                <Lock size={10} />
+                <span>Confidential</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2.5 py-1.5">
+                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                  <span className="text-[9px] font-bold text-emerald-400">NW</span>
+                </div>
+                <div className="hidden sm:block leading-tight">
+                  <p className="text-xs font-medium text-slate-200">Neil Wolfson</p>
+                  <p className="text-[9px] text-slate-500">Accredited Investor</p>
+                </div>
+                <User size={12} className="sm:hidden text-slate-400" />
+              </div>
             </div>
           </div>
         </div>
@@ -277,7 +294,7 @@ export default function Dashboard() {
                   </select>
                 </div>
               </div>
-              <PortfolioAllocationChart investor={selectedInvestor} />
+              <PortfolioAllocationChart investor={selectedInvestor} onCompanyClick={setActiveCompanyId} />
             </div>
 
             {/* Performance chart */}
