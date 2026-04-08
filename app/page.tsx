@@ -511,13 +511,16 @@ export default function Dashboard() {
 
         {!activeCompany && activeTab === "pipeline" && (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-xl font-semibold text-slate-100">Deal Pipeline</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Active opportunities and upcoming allocations. For accredited investors only.
-              </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-100">Investment Opportunities</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  Private deals curated by nth Venture — acquisitions, buyouts, energy infrastructure, and portfolio company options.
+                  Full details provided under NDA. For accredited investors only.
+                </p>
+              </div>
             </div>
-            <DealPipeline />
+            <DealPipeline onCompanyClick={setActiveCompanyId} />
           </div>
         )}
 

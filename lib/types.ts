@@ -157,6 +157,37 @@ export interface DealOpportunity {
   accentColor: string;
 }
 
+export interface YieldScenario {
+  label: string;
+  annualizedReturn: number;  // e.g. 20 = 20%; 0 = equity upside (no fixed yield)
+  notes?: string;
+}
+
+export interface PrivateDeal {
+  id: string;
+  name: string;                // Non-identifying per newsletter policy
+  initials: string;
+  sector: string;
+  dealType: "acquisition" | "buyout" | "energy" | "equity_option";
+  tagline: string;
+  description: string;
+  highlights: string[];
+  revenue?: number;
+  cashFlow?: number;           // SDE, EBITDA, or annual cash flow
+  cashFlowLabel?: string;      // "SDE", "Cash Flow", "EBITDA"
+  assets?: number;
+  assetsNote?: string;
+  askingPrice?: number;        // total deal price or CAPEX
+  minimumInvestment?: number;
+  yearsInBusiness?: number;
+  yieldScenarios: YieldScenario[];
+  requiresNDA: boolean;
+  deadline?: string;
+  isFeatured?: boolean;
+  linkedPortcoId?: string;     // links to a PortfolioCompany id
+  accentColor: string;
+}
+
 export interface SecondaryLot {
   id: string;
   companyId: string;
