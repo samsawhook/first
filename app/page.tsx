@@ -669,7 +669,14 @@ export default function Dashboard() {
                                       {isOpen && txns.map((t, i) => (
                                         <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
                                           <td className="py-2 px-3 w-6" />
-                                          <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date} · {t.type}</td>
+                                          <td className="py-2 px-3 pl-11">
+                                            <div className="flex flex-col gap-0.5">
+                                              <span className="text-[11px] text-slate-500">{t.date} · {t.type}</span>
+                                              {t.certificateNumber && (
+                                                <span className="text-[10px] font-mono text-slate-600 tracking-wide">{t.certificateNumber}</span>
+                                              )}
+                                            </div>
+                                          </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums">

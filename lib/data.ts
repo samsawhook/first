@@ -63,8 +63,8 @@ export const portfolio: PortfolioCompany[] = [
     ebitda: 350_000,
     votingOwnership: 22.1,
     shareTransactions: [
-      { date: "Aug 2022", type: "Common",    shares: 5_000_000, pricePerShare: 0.10,  amount: 500_000  },
-      { date: "Mar 2024", type: "Preferred", shares: 3_500_000, pricePerShare: 0.386, amount: 1_350_000,
+      { date: "Aug 2022", type: "Common",    shares: 5_000_000, pricePerShare: 0.10,  amount: 500_000,  certificateNumber: "CS-01" },
+      { date: "Mar 2024", type: "Preferred", shares: 3_500_000, pricePerShare: 0.386, amount: 1_350_000, certificateNumber: "PS-01",
         preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0, dividendRate: 8 },
     ] satisfies ShareTransaction[],
     valuationRefs: [
@@ -165,8 +165,8 @@ Thank you for your continued support.
     ebitda: -180_000,
     votingOwnership: 27.8,
     shareTransactions: [
-      { date: "Jun 2022", type: "Common",    shares: 4_000_000, pricePerShare: 0.075, amount: 300_000  },
-      { date: "Sep 2023", type: "Preferred", shares: 3_000_000, pricePerShare: 0.30,  amount: 900_000,
+      { date: "Jun 2022", type: "Common",    shares: 4_000_000, pricePerShare: 0.075, amount: 300_000,  certificateNumber: "CS-02" },
+      { date: "Sep 2023", type: "Preferred", shares: 3_000_000, pricePerShare: 0.30,  amount: 900_000,  certificateNumber: "PS-02",
         preferredType: "Participating w/ Cap", liquidationMultiple: 1.0, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
     valuationRefs: [
@@ -269,8 +269,8 @@ Thank you for your patience and continued confidence.
     ebitda: -850_000,
     votingOwnership: 35.2,
     shareTransactions: [
-      { date: "Mar 2022", type: "Common",    shares: 3_500_000, pricePerShare: 0.057, amount: 200_000 },
-      { date: "Nov 2023", type: "Preferred", shares: 2_800_000, pricePerShare: 0.25,  amount: 700_000,
+      { date: "Mar 2022", type: "Common",    shares: 3_500_000, pricePerShare: 0.057, amount: 200_000, certificateNumber: "CS-03" },
+      { date: "Nov 2023", type: "Preferred", shares: 2_800_000, pricePerShare: 0.25,  amount: 700_000, certificateNumber: "PS-03",
         preferredType: "Non-Participating", liquidationMultiple: 1.5, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
     debtPositions: [
@@ -380,8 +380,8 @@ Thank you for your patience — this is a complex market to move in, and we are 
     ebitda: -320_000,
     votingOwnership: 32.4,
     shareTransactions: [
-      { date: "Sep 2021", type: "Common",    shares: 4_000_000, pricePerShare: 0.05,  amount: 200_000 },
-      { date: "Jul 2023", type: "Preferred", shares: 2_000_000, pricePerShare: 0.20,  amount: 400_000,
+      { date: "Sep 2021", type: "Common",    shares: 4_000_000, pricePerShare: 0.05,  amount: 200_000, certificateNumber: "CS-04" },
+      { date: "Jul 2023", type: "Preferred", shares: 2_000_000, pricePerShare: 0.20,  amount: 400_000, certificateNumber: "PS-04",
         preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
     debtPositions: [
@@ -493,8 +493,8 @@ All six Audily employees hold meaningful equity. When I tell you our churn is ze
     ebitda: 480_000,
     votingOwnership: 25.6,
     shareTransactions: [
-      { date: "Apr 2022", type: "Common",    shares: 3_000_000, pricePerShare: 0.133, amount: 400_000 },
-      { date: "Jan 2024", type: "Preferred", shares: 2_333_333, pricePerShare: 0.30,  amount: 700_000,
+      { date: "Apr 2022", type: "Common",    shares: 3_000_000, pricePerShare: 0.133, amount: 400_000, certificateNumber: "CS-05" },
+      { date: "Jan 2024", type: "Preferred", shares: 2_333_333, pricePerShare: 0.30,  amount: 700_000, certificateNumber: "PS-05",
         preferredType: "Participating", liquidationMultiple: 1.0, conversionRatio: 1.0, dividendRate: 6 },
     ] satisfies ShareTransaction[],
     valuationRefs: [
@@ -599,8 +599,8 @@ Thank you for your continued support and alignment.
     ebitda: -620_000,
     votingOwnership: 21.2,
     shareTransactions: [
-      { date: "Feb 2024", type: "Common",    shares: 4_200_000, pricePerShare: 0.071, amount: 300_000 },
-      { date: "Oct 2024", type: "Preferred", shares: 2_800_000, pricePerShare: 0.161, amount: 450_000,
+      { date: "Feb 2024", type: "Common",    shares: 4_200_000, pricePerShare: 0.071, amount: 300_000, certificateNumber: "CS-06" },
+      { date: "Oct 2024", type: "Preferred", shares: 2_800_000, pricePerShare: 0.161, amount: 450_000, certificateNumber: "PS-06",
         preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
     valuationRefs: [

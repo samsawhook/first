@@ -86,6 +86,7 @@ export interface ShareTransaction {
   shares?: number;
   pricePerShare?: number;
   amount: number;                        // cash deployed ($)
+  certificateNumber?: string;            // e.g. "CS-12", "PS-04"
   notes?: string;
   // Preferred-specific
   preferredType?: "Participating" | "Non-Participating" | "Participating w/ Cap";
