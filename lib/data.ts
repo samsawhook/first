@@ -14,6 +14,7 @@ import type {
   NewsItem,
   CompanyLetter,
   ShareTransaction,
+  DebtPosition,
 } from "./types";
 
 export const fund: FundMetrics = {
@@ -61,7 +62,8 @@ export const portfolio: PortfolioCompany[] = [
     votingOwnership: 22.1,
     shareTransactions: [
       { date: "Aug 2022", type: "Common",    shares: 5_000_000, pricePerShare: 0.10,  amount: 500_000  },
-      { date: "Mar 2024", type: "Preferred", shares: 3_500_000, pricePerShare: 0.386, amount: 1_350_000 },
+      { date: "Mar 2024", type: "Preferred", shares: 3_500_000, pricePerShare: 0.386, amount: 1_350_000,
+        preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0, dividendRate: 8 },
     ] satisfies ShareTransaction[],
     valuationRefs: [
       { label: "409A",            date: "Jan 2025", low: 5_800_000,  high: 11_200_000, color: "#64748B", note: "Most recent 409A range" },
@@ -162,7 +164,8 @@ Thank you for your continued support.
     votingOwnership: 27.8,
     shareTransactions: [
       { date: "Jun 2022", type: "Common",    shares: 4_000_000, pricePerShare: 0.075, amount: 300_000  },
-      { date: "Sep 2023", type: "Preferred", shares: 3_000_000, pricePerShare: 0.30,  amount: 900_000  },
+      { date: "Sep 2023", type: "Preferred", shares: 3_000_000, pricePerShare: 0.30,  amount: 900_000,
+        preferredType: "Participating w/ Cap", liquidationMultiple: 1.0, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
     valuationRefs: [
       { label: "409A",        date: "Feb 2025", low: 2_000_000, high: 4_500_000,  color: "#64748B", note: "Most recent 409A range" },
@@ -265,8 +268,15 @@ Thank you for your patience and continued confidence.
     votingOwnership: 35.2,
     shareTransactions: [
       { date: "Mar 2022", type: "Common",    shares: 3_500_000, pricePerShare: 0.057, amount: 200_000 },
-      { date: "Nov 2023", type: "Preferred", shares: 2_800_000, pricePerShare: 0.25,  amount: 700_000 },
+      { date: "Nov 2023", type: "Preferred", shares: 2_800_000, pricePerShare: 0.25,  amount: 700_000,
+        preferredType: "Non-Participating", liquidationMultiple: 1.5, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
+    debtPositions: [
+      { id: "certd-cn-1", date: "Jun 2022", instrument: "Convertible Note", principal: 150_000,
+        interestRate: 8, maturityDate: "Jun 2024", valuationCap: 4_000_000,
+        status: "Extended", currentValue: 181_200,
+        notes: "Maturity extended to Jun 2026 pending Series A. Interest accruing at 8%." },
+    ] satisfies DebtPosition[],
     valuationRefs: [
       { label: "409A",        date: "Mar 2025", low: 1_200_000, high: 2_800_000, color: "#64748B", note: "Most recent 409A range" },
       { label: "Last Round",  date: "Nov 2023", low: 4_935_000, high: 4_935_000, color: "#10B981", note: "Seed @ $4.935M post-money" },
@@ -369,8 +379,15 @@ Thank you for your patience — this is a complex market to move in, and we are 
     votingOwnership: 32.4,
     shareTransactions: [
       { date: "Sep 2021", type: "Common",    shares: 4_000_000, pricePerShare: 0.05,  amount: 200_000 },
-      { date: "Jul 2023", type: "Preferred", shares: 2_000_000, pricePerShare: 0.20,  amount: 400_000 },
+      { date: "Jul 2023", type: "Preferred", shares: 2_000_000, pricePerShare: 0.20,  amount: 400_000,
+        preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0 },
     ] satisfies ShareTransaction[],
+    debtPositions: [
+      { id: "audily-safe-1", date: "Oct 2022", instrument: "SAFE", principal: 100_000,
+        valuationCap: 3_000_000, discountRate: 20,
+        status: "Accruing", currentValue: 100_000,
+        notes: "Post-money SAFE, 20% discount to next round, $3M valuation cap." },
+    ] satisfies DebtPosition[],
     valuationRefs: [
       { label: "409A",        date: "Jan 2025", low: 600_000,   high: 1_800_000, color: "#64748B", note: "Most recent 409A range" },
       { label: "Last Round",  date: "Jul 2023", low: 3_857_000, high: 3_857_000, color: "#8B5CF6", note: "Seed @ $3.857M post-money" },
@@ -475,7 +492,8 @@ All six Audily employees hold meaningful equity. When I tell you our churn is ze
     votingOwnership: 25.6,
     shareTransactions: [
       { date: "Apr 2022", type: "Common",    shares: 3_000_000, pricePerShare: 0.133, amount: 400_000 },
-      { date: "Jan 2024", type: "Preferred", shares: 2_333_333, pricePerShare: 0.30,  amount: 700_000 },
+      { date: "Jan 2024", type: "Preferred", shares: 2_333_333, pricePerShare: 0.30,  amount: 700_000,
+        preferredType: "Participating", liquidationMultiple: 1.0, conversionRatio: 1.0, dividendRate: 6 },
     ] satisfies ShareTransaction[],
     valuationRefs: [
       { label: "409A",            date: "Feb 2025", low: 3_000_000, high: 6_000_000, color: "#64748B", note: "Most recent 409A range" },

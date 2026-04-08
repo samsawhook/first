@@ -82,10 +82,29 @@ export interface CompanyLetter {
 
 export interface ShareTransaction {
   date: string;                          // e.g. "Aug 2022"
-  type: "Common" | "Preferred" | "RSU" | "SAFE" | "Option" | "Convertible Note";
-  shares?: number;                       // omit for SAFEs pre-conversion
-  pricePerShare?: number;                // omit for SAFEs pre-conversion
+  type: "Common" | "Preferred" | "RSU" | "Option";
+  shares?: number;
+  pricePerShare?: number;
   amount: number;                        // cash deployed ($)
+  notes?: string;
+  // Preferred-specific
+  preferredType?: "Participating" | "Non-Participating" | "Participating w/ Cap";
+  liquidationMultiple?: number;          // e.g. 1.0 = 1× liq pref
+  conversionRatio?: number;             // preferred → common per share (default 1.0)
+  dividendRate?: number;                // cumulative annual dividend %
+}
+
+export interface DebtPosition {
+  id: string;
+  date: string;
+  instrument: "Convertible Note" | "SAFE" | "Term Loan" | "Line of Credit" | "Revenue Based Financing";
+  principal: number;
+  interestRate?: number;                // annual %; undefined for SAFEs
+  maturityDate?: string;               // "Jun 2026"; undefined for open-ended SAFEs
+  valuationCap?: number;               // conversion cap ($)
+  discountRate?: number;               // SAFE discount %
+  status: "Current" | "Accruing" | "Converted" | "Repaid" | "Extended";
+  currentValue: number;                // principal + accrued; face value for SAFE
   notes?: string;
 }
 
@@ -116,6 +135,7 @@ export interface PortfolioCompany {
   ebitda?: number;               // trailing EBITDA ($); negative = loss
   votingOwnership?: number;      // voting % (may be less than ownership due to non-voting RSUs)
   shareTransactions?: ShareTransaction[]; // per-tranche purchase history ordered oldest → newest
+  debtPositions?: DebtPosition[];        // outstanding debt / convertible instruments held by the fund
   incomeStatement?: IncomeStatement;
   balanceSheet?: BalanceSheet;
   financingHistory?: FinancingRound[];

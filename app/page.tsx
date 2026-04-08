@@ -144,9 +144,17 @@ export default function Dashboard() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set<string>());
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
 
   const toggleTable = (key: string) =>
     setOpenInstrumentTables((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+
+  const toggleRow = (key: string) =>
+    setExpandedRows((prev) => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
@@ -308,204 +316,439 @@ export default function Dashboard() {
             {(() => {
               const fmtPrice = (n: number) => `$${n.toFixed(3)}`;
 
-              // Flatten all transactions across the portfolio, tagged with company
-              type TxnRow = ShareTransaction & { company: typeof portfolio[0] };
-              const allTxns: TxnRow[] = portfolio.flatMap((c) =>
-                (c.shareTransactions ?? []).map((t) => ({ ...t, company: c }))
+              // Helpers
+              const companyLogo = (c: typeof portfolio[0], size = "w-6 h-6") => c.logoUrl ? (
+                <div className={`${size} rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className={`${size} rounded font-bold flex items-center justify-center shrink-0 text-[10px]`}
+                  style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
+                  {c.initials[0]}
+                </div>
               );
-              const commonTxns   = allTxns.filter((t) => t.type === "Common");
-              const preferredTxns = allTxns.filter((t) => t.type === "Preferred");
-              const debtTxns     = allTxns.filter((t) =>
-                t.type === "Convertible Note" || t.type === "SAFE" || t.type === "Option"
+
+              const TH = ({ children }: { children?: React.ReactNode }) => (
+                <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider whitespace-nowrap">{children}</th>
+              );
+              const TD = ({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => (
+                <td className={`py-2.5 px-3 text-xs ${className}`} style={style}>{children}</td>
               );
 
-              const tableWtdAvg = (rows: TxnRow[]) => {
-                const sh = rows.reduce((s, t) => s + (t.shares ?? 0), 0);
-                const am = rows.reduce((s, t) => s + t.amount, 0);
-                return { shares: sh, amount: am, avg: sh > 0 ? am / sh : null };
-              };
-
-              const InstrumentSection = ({
-                label, tableKey, rows, accent,
-              }: {
-                label: string; tableKey: string; rows: TxnRow[]; accent: string;
-              }) => {
-                const isOpen = openInstrumentTables.has(tableKey);
-                const { shares, amount, avg } = tableWtdAvg(rows);
-                return (
-                  <div className="rounded-xl border border-[#1E2D3D] overflow-hidden">
-                    {/* Header / toggle */}
-                    <button
-                      onClick={() => toggleTable(tableKey)}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-[#0D1421] hover:bg-[#111D2E] transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full" style={{ background: accent }} />
-                        <span className="text-xs font-semibold text-slate-200">{label}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ background: `${accent}15`, color: accent }}>
-                          {rows.length} transaction{rows.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {/* Summary pills — always visible even when collapsed */}
-                        {rows.length > 0 && (
-                          <div className="hidden sm:flex items-center gap-3 text-[10px] text-slate-500">
-                            <span>{shares.toLocaleString()} shares</span>
-                            <span className="text-slate-700">·</span>
-                            <span>{avg !== null ? `${fmtPrice(avg)} wtd avg` : ""}</span>
-                            <span className="text-slate-700">·</span>
-                            <span className="font-semibold" style={{ color: accent }}>{fmt(amount)}</span>
-                          </div>
-                        )}
-                        <ChevronDown
-                          size={14}
-                          className={`text-slate-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                        />
-                      </div>
-                    </button>
-
-                    {/* Expandable table */}
-                    {isOpen && (
-                      rows.length > 0 ? (
-                        <table className="w-full text-xs border-t border-[#1E2D3D]">
-                          <thead>
-                            <tr className="bg-[#080E1A]">
-                              {["Company", "Date", "Shares", "Price / Share", "Amount"].map((h) => (
-                                <th key={h} className="py-2 px-4 text-left text-slate-600 font-medium uppercase tracking-wider text-[10px]">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#111D2E]">
-                            {rows.map((t, i) => (
-                              <tr
-                                key={i}
-                                className="hover:bg-[#111D2E]/30 transition-colors cursor-pointer"
-                                onClick={() => setActiveCompanyId(t.company.id)}
-                              >
-                                <td className="py-2.5 px-4">
-                                  <div className="flex items-center gap-2">
-                                    {t.company.logoUrl ? (
-                                      <div className="w-5 h-5 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={t.company.logoUrl} alt={t.company.name} className="w-full h-full object-contain" />
-                                      </div>
-                                    ) : (
-                                      <div className="w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center shrink-0"
-                                        style={{ background: `${t.company.accentColor}20`, color: t.company.accentColor }}>
-                                        {t.company.initials[0]}
-                                      </div>
-                                    )}
-                                    <span className="font-medium text-slate-300">{t.company.name}</span>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 px-4 text-slate-500">{t.date}</td>
-                                <td className="py-2.5 px-4 text-slate-300 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
-                                <td className="py-2.5 px-4 tabular-nums" style={{ color: accent }}>
-                                  {t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}
-                                </td>
-                                <td className="py-2.5 px-4 text-slate-200 tabular-nums font-medium">{fmt(t.amount)}</td>
-                              </tr>
-                            ))}
-                            {/* Totals row */}
-                            <tr className="bg-[#080E1A] border-t border-[#1E2D3D]">
-                              <td className="py-2 px-4 text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                              <td className="py-2 px-4" />
-                              <td className="py-2 px-4 text-slate-300 tabular-nums font-semibold">{shares.toLocaleString()}</td>
-                              <td className="py-2 px-4 tabular-nums font-semibold" style={{ color: accent }}>
-                                {avg !== null ? fmtPrice(avg) : "—"}
-                              </td>
-                              <td className="py-2 px-4 text-slate-100 tabular-nums font-semibold">{fmt(amount)}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div className="px-4 py-6 text-center text-xs text-slate-600 border-t border-[#1E2D3D]">
-                          No {label.toLowerCase()} positions in portfolio.
-                        </div>
-                      )
-                    )}
+              const SectionHeader = ({ label, tableKey, accent, pills }: {
+                label: string; tableKey: string; accent: string; pills: React.ReactNode;
+              }) => (
+                <button
+                  onClick={() => toggleTable(tableKey)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#111D2E]/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+                    <span className="text-sm font-semibold text-slate-200">{label}</span>
                   </div>
-                );
-              };
+                  <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2">{pills}</div>
+                    <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
+              );
+
+              // ── Group transactions by company ──────────────────────────────────
+              type Co = typeof portfolio[0];
+              const companiesWithCommon = portfolio.filter(c => c.shareTransactions?.some(t => t.type === "Common"));
+              const companiesWithPref   = portfolio.filter(c => c.shareTransactions?.some(t => t.type === "Preferred"));
+              const companiesWithDebt   = portfolio.filter(c => c.debtPositions?.length);
 
               return (
-              <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5 space-y-5">
-                <h2 className="text-sm font-semibold text-slate-100">Portfolio at a Glance</h2>
+              <div className="space-y-3">
 
-                {/* ── Main summary table ── */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-[#1E2D3D]">
-                        {["Company", "Sector", "Invested", "Curr Value", "MOIC", "Economic %", "Voting %", "Avg Cost/Share", "Status"].map((h) => (
-                          <th key={h} className="pb-2 pr-5 text-left text-[10px] text-slate-500 font-medium uppercase tracking-wider whitespace-nowrap last:pr-0">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#111D2E]">
-                      {portfolio.map((c) => {
-                        const moic = (c.currentValue / c.invested).toFixed(2);
-                        const txns = c.shareTransactions ?? [];
-                        const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
-                        const am = txns.reduce((s, t) => s + t.amount, 0);
-                        const avg = sh > 0 ? am / sh : null;
-                        return (
-                          <tr
-                            key={c.id}
-                            className="hover:bg-[#111D2E]/50 transition-colors cursor-pointer"
-                            onClick={() => setActiveCompanyId(c.id)}
-                          >
-                            <td className="py-3 pr-5">
-                              <div className="flex items-center gap-2">
-                                {c.logoUrl ? (
-                                  <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
-                                  </div>
-                                ) : (
-                                  <div className="w-6 h-6 rounded font-bold flex items-center justify-center shrink-0 text-[10px]"
-                                    style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
-                                    {c.initials[0]}
-                                  </div>
-                                )}
-                                <span className="font-semibold text-slate-200 hover:text-emerald-400 transition-colors whitespace-nowrap">{c.name}</span>
-                              </div>
-                            </td>
-                            <td className="py-3 pr-5 text-slate-500 whitespace-nowrap">{c.sector}</td>
-                            <td className="py-3 pr-5 text-slate-300 tabular-nums">{fmt(c.invested)}</td>
-                            <td className="py-3 pr-5 tabular-nums font-medium" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</td>
-                            <td className="py-3 pr-5 tabular-nums">
-                              <span className={parseFloat(moic) >= 1.5 ? "text-emerald-400 font-semibold" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}>
-                                {moic}x
-                              </span>
-                            </td>
-                            <td className="py-3 pr-5 text-slate-300 tabular-nums">{c.ownership}%</td>
-                            <td className="py-3 pr-5 tabular-nums text-slate-300">{c.votingOwnership ?? c.ownership}%</td>
-                            <td className="py-3 pr-5 tabular-nums text-slate-400">{avg !== null ? fmtPrice(avg) : <span className="text-slate-700">—</span>}</td>
-                            <td className="py-3">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                c.status === "active" ? "bg-emerald-500/10 text-emerald-400"
-                                : c.status === "realized" ? "bg-violet-500/10 text-violet-400"
-                                : "bg-slate-500/10 text-slate-400"
-                              }`}>
-                                {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                {/* ══ 1. PORTFOLIO AT A GLANCE (main summary) ══════════════════════ */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#1E2D3D]">
+                    <h2 className="text-sm font-semibold text-slate-100">Portfolio at a Glance</h2>
+                    <p className="text-[10px] text-slate-500 mt-0.5">All positions · equity marked at implied valuation</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                        <tr>
+                          <TH>Company</TH><TH>Sector</TH><TH>Invested</TH><TH>Curr Value</TH>
+                          <TH>MOIC</TH><TH>Economic %</TH><TH>Voting %</TH><TH>Avg Cost/sh</TH><TH>Status</TH>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#111D2E]">
+                        {portfolio.map((c) => {
+                          const moic = (c.currentValue / c.invested).toFixed(2);
+                          const txns = c.shareTransactions ?? [];
+                          const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
+                          const am = txns.reduce((s, t) => s + t.amount, 0);
+                          const avg = sh > 0 ? am / sh : null;
+                          return (
+                            <tr key={c.id} className="hover:bg-[#111D2E]/50 transition-colors cursor-pointer" onClick={() => setActiveCompanyId(c.id)}>
+                              <TD>
+                                <div className="flex items-center gap-2">
+                                  {companyLogo(c)}
+                                  <span className="font-semibold text-slate-200 hover:text-emerald-400 transition-colors whitespace-nowrap">{c.name}</span>
+                                </div>
+                              </TD>
+                              <TD className="text-slate-500 whitespace-nowrap">{c.sector}</TD>
+                              <TD className="text-slate-300 tabular-nums">{fmt(c.invested)}</TD>
+                              <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</TD>
+                              <TD>
+                                <span className={parseFloat(moic) >= 1.5 ? "text-emerald-400 font-semibold" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}>
+                                  {moic}x
+                                </span>
+                              </TD>
+                              <TD className="text-slate-300 tabular-nums">{c.ownership}%</TD>
+                              <TD className="tabular-nums text-slate-300">{c.votingOwnership ?? c.ownership}%</TD>
+                              <TD className="tabular-nums text-slate-400">{avg !== null ? fmtPrice(avg) : <span className="text-slate-700">—</span>}</TD>
+                              <TD>
+                                <span className={`px-1.5 py-0.5 rounded font-medium ${c.status === "active" ? "bg-emerald-500/10 text-emerald-400" : c.status === "realized" ? "bg-violet-500/10 text-violet-400" : "bg-slate-500/10 text-slate-400"}`}>
+                                  {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                                </span>
+                              </TD>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* ── Instrument tables ── */}
-                <div className="border-t border-[#1E2D3D] pt-4 space-y-2">
-                  <p className="text-[10px] text-slate-600 uppercase tracking-widest font-medium mb-3">Transaction Detail by Instrument</p>
-                  <InstrumentSection label="Common Stock"    tableKey="common"    rows={commonTxns}    accent="#10B981" />
-                  <InstrumentSection label="Preferred Stock" tableKey="preferred" rows={preferredTxns} accent="#6366F1" />
-                  <InstrumentSection label="Debt / Convertible" tableKey="debt"  rows={debtTxns}      accent="#F59E0B" />
+                {/* ══ 2. COMMON STOCK ══════════════════════════════════════════════ */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  {(() => {
+                    const totalShares = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + (t.shares ?? 0), 0), 0);
+                    const totalCost   = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + t.amount, 0), 0);
+                    const wtdAvg      = totalShares > 0 ? totalCost / totalShares : null;
+                    return (
+                      <>
+                        <div className="border-b border-[#1E2D3D]">
+                          <SectionHeader label="Common Stock" tableKey="common" accent="#10B981" pills={
+                            <>
+                              <span className="text-[10px] text-slate-500">{totalShares.toLocaleString()} shares</span>
+                              <span className="text-slate-700 text-[10px]">·</span>
+                              <span className="text-[10px] text-slate-500">{wtdAvg !== null ? `${fmtPrice(wtdAvg)} wtd avg` : ""}</span>
+                              <span className="text-[10px] font-semibold text-emerald-400">{fmt(totalCost)}</span>
+                            </>
+                          } />
+                        </div>
+                        {openInstrumentTables.has("common") && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                <tr>
+                                  <TH></TH><TH>Company</TH><TH>Total Shares</TH>
+                                  <TH>Avg Cost/sh</TH><TH>Cost Basis</TH><TH>Curr Value</TH><TH>Gain / Loss</TH>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {companiesWithCommon.map((c) => {
+                                  const txns = (c.shareTransactions ?? []).filter(t => t.type === "Common");
+                                  const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
+                                  const cost = txns.reduce((s, t) => s + t.amount, 0);
+                                  const avg = sh > 0 ? cost / sh : null;
+                                  const valPerSh = c.totalShares ? c.impliedValuation / c.totalShares : null;
+                                  const currVal = valPerSh !== null ? sh * valPerSh : null;
+                                  const gain = currVal !== null ? currVal - cost : null;
+                                  const rowKey = `common-${c.id}`;
+                                  const isOpen = expandedRows.has(rowKey);
+                                  return (
+                                    <>
+                                      <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
+                                        <TD>
+                                          <ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                                        </TD>
+                                        <TD>
+                                          <div className="flex items-center gap-2">
+                                            {companyLogo(c)}
+                                            <div>
+                                              <p className="font-semibold text-slate-200">{c.name}</p>
+                                              <p className="text-[10px] text-slate-600">{c.stage}</p>
+                                            </div>
+                                          </div>
+                                        </TD>
+                                        <TD className="text-slate-300 tabular-nums">{sh.toLocaleString()}</TD>
+                                        <TD className="text-emerald-400 tabular-nums">{avg !== null ? fmtPrice(avg) : "—"}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{fmt(cost)}</TD>
+                                        <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>
+                                          {currVal !== null ? fmt(currVal) : "—"}
+                                        </TD>
+                                        <TD>
+                                          {gain !== null ? (
+                                            <span className={gain >= 0 ? "text-emerald-400 tabular-nums" : "text-rose-400 tabular-nums"}>
+                                              {gain >= 0 ? "+" : ""}{fmt(gain)}
+                                            </span>
+                                          ) : "—"}
+                                        </TD>
+                                      </tr>
+                                      {isOpen && txns.map((t, i) => (
+                                        <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                          <td className="py-2 px-3 w-6" />
+                                          <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
+                                          <td className="py-2 px-3" />
+                                          <td className="py-2 px-3 text-[11px] text-slate-600">{t.notes ?? ""}</td>
+                                        </tr>
+                                      ))}
+                                    </>
+                                  );
+                                })}
+                                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                  <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalShares.toLocaleString()}</td>
+                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{wtdAvg !== null ? fmtPrice(wtdAvg) : "—"}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCost)}</td>
+                                  <td /><td />
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
+
+                {/* ══ 3. PREFERRED STOCK ═══════════════════════════════════════════ */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  {(() => {
+                    const totalShares = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + (t.shares ?? 0), 0), 0);
+                    const totalCost   = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + t.amount, 0), 0);
+                    const wtdAvg      = totalShares > 0 ? totalCost / totalShares : null;
+                    return (
+                      <>
+                        <div className="border-b border-[#1E2D3D]">
+                          <SectionHeader label="Preferred Stock" tableKey="preferred" accent="#6366F1" pills={
+                            <>
+                              <span className="text-[10px] text-slate-500">{totalShares.toLocaleString()} shares</span>
+                              <span className="text-slate-700 text-[10px]">·</span>
+                              <span className="text-[10px] text-slate-500">{wtdAvg !== null ? `${fmtPrice(wtdAvg)} wtd avg` : ""}</span>
+                              <span className="text-[10px] font-semibold text-indigo-400">{fmt(totalCost)}</span>
+                            </>
+                          } />
+                        </div>
+                        {openInstrumentTables.has("preferred") && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                <tr>
+                                  <TH></TH><TH>Company</TH><TH>Shares</TH><TH>Type</TH>
+                                  <TH>Liq Pref</TH><TH>Conv Ratio</TH><TH>Sh if Conv</TH>
+                                  <TH>Div Rate</TH><TH>Avg Cost/sh</TH><TH>Cost Basis</TH>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {companiesWithPref.map((c) => {
+                                  const txns = (c.shareTransactions ?? []).filter(t => t.type === "Preferred");
+                                  const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
+                                  const cost = txns.reduce((s, t) => s + t.amount, 0);
+                                  const avg = sh > 0 ? cost / sh : null;
+                                  // Weighted liq pref (weighted by share count)
+                                  const wtdLiq = sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.liquidationMultiple ?? 1), 0) / sh : null;
+                                  // Weighted conv ratio
+                                  const wtdConv = sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.conversionRatio ?? 1), 0) / sh : 1;
+                                  const sharesIfConv = Math.round(sh * (wtdConv ?? 1));
+                                  // Weighted div rate
+                                  const hasDivs = txns.some(t => t.dividendRate !== undefined);
+                                  const wtdDiv = hasDivs && sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.dividendRate ?? 0), 0) / sh : null;
+                                  const rowKey = `pref-${c.id}`;
+                                  const isOpen = expandedRows.has(rowKey);
+                                  // Representative type (most common)
+                                  const prefType = txns[0]?.preferredType ?? "—";
+                                  return (
+                                    <>
+                                      <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
+                                        <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
+                                        <TD>
+                                          <div className="flex items-center gap-2">
+                                            {companyLogo(c)}
+                                            <div>
+                                              <p className="font-semibold text-slate-200">{c.name}</p>
+                                              <p className="text-[10px] text-slate-600">{c.stage}</p>
+                                            </div>
+                                          </div>
+                                        </TD>
+                                        <TD className="text-slate-300 tabular-nums">{sh.toLocaleString()}</TD>
+                                        <TD>
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-400">{prefType}</span>
+                                        </TD>
+                                        <TD className="text-slate-300 tabular-nums">{wtdLiq !== null ? `${wtdLiq.toFixed(1)}×` : "—"}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{wtdConv !== null ? `${wtdConv.toFixed(2)}:1` : "—"}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{sharesIfConv.toLocaleString()}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{wtdDiv !== null ? `${wtdDiv.toFixed(1)}%` : <span className="text-slate-700">—</span>}</TD>
+                                        <TD className="text-indigo-400 tabular-nums">{avg !== null ? fmtPrice(avg) : "—"}</TD>
+                                        <TD className="text-slate-300 tabular-nums font-medium">{fmt(cost)}</TD>
+                                      </tr>
+                                      {isOpen && txns.map((t, i) => (
+                                        <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                          <td className="py-2 px-3 w-6" />
+                                          <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares?.toLocaleString()}</td>
+                                          <td className="py-2 px-3">
+                                            {t.preferredType && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{t.preferredType}</span>}
+                                          </td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.liquidationMultiple !== undefined ? `${t.liquidationMultiple}×` : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.conversionRatio !== undefined ? `${t.conversionRatio}:1` : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares && t.conversionRatio !== undefined ? Math.round(t.shares * t.conversionRatio).toLocaleString() : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.dividendRate !== undefined ? `${t.dividendRate}%` : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
+                                        </tr>
+                                      ))}
+                                    </>
+                                  );
+                                })}
+                                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                  <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalShares.toLocaleString()}</td>
+                                  <td /><td /><td />
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">
+                                    {companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + Math.round((t.shares ?? 0) * (t.conversionRatio ?? 1)), 0), 0).toLocaleString()}
+                                  </td>
+                                  <td />
+                                  <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{wtdAvg !== null ? fmtPrice(wtdAvg) : "—"}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCost)}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* ══ 4. DEBT / CONVERTIBLE ════════════════════════════════════════ */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  {(() => {
+                    const totalPrincipal = companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => a + d.principal, 0), 0);
+                    const totalCurrVal   = companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => a + d.currentValue, 0), 0);
+                    const allPositions   = companiesWithDebt.flatMap(c => c.debtPositions ?? []);
+                    const ratedPositions = allPositions.filter(d => d.interestRate !== undefined);
+                    const wtdRate = ratedPositions.length > 0
+                      ? ratedPositions.reduce((s, d) => s + d.principal * (d.interestRate!), 0) / ratedPositions.reduce((s, d) => s + d.principal, 0)
+                      : null;
+                    return (
+                      <>
+                        <div className="border-b border-[#1E2D3D]">
+                          <SectionHeader label="Debt & Convertibles" tableKey="debt" accent="#F59E0B" pills={
+                            <>
+                              <span className="text-[10px] text-slate-500">{companiesWithDebt.length} companies</span>
+                              <span className="text-slate-700 text-[10px]">·</span>
+                              {wtdRate !== null && <span className="text-[10px] text-slate-500">{wtdRate.toFixed(1)}% wtd rate</span>}
+                              {wtdRate !== null && <span className="text-slate-700 text-[10px]">·</span>}
+                              <span className="text-[10px] font-semibold text-amber-400">{fmt(totalPrincipal)} principal</span>
+                            </>
+                          } />
+                        </div>
+                        {openInstrumentTables.has("debt") && (
+                          companiesWithDebt.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                  <tr>
+                                    <TH></TH><TH>Company</TH><TH>Principal</TH>
+                                    <TH>Wtd Rate</TH><TH>Curr Value</TH><TH>Accrued</TH><TH>Status</TH>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {companiesWithDebt.map((c) => {
+                                    const positions = c.debtPositions ?? [];
+                                    const principal = positions.reduce((s, d) => s + d.principal, 0);
+                                    const currVal   = positions.reduce((s, d) => s + d.currentValue, 0);
+                                    const accrued   = currVal - principal;
+                                    const ratedPos  = positions.filter(d => d.interestRate !== undefined);
+                                    const compRate  = ratedPos.length > 0
+                                      ? ratedPos.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.principal, 0)
+                                      : null;
+                                    const rowKey = `debt-${c.id}`;
+                                    const isOpen = expandedRows.has(rowKey);
+                                    // Aggregate status — if any extended/default, show that
+                                    const status = positions.find(d => d.status === "Extended")?.status
+                                      ?? positions.find(d => d.status === "Current")?.status
+                                      ?? positions[0]?.status ?? "—";
+                                    return (
+                                      <>
+                                        <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
+                                          <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
+                                          <TD>
+                                            <div className="flex items-center gap-2">
+                                              {companyLogo(c)}
+                                              <div>
+                                                <p className="font-semibold text-slate-200">{c.name}</p>
+                                                <p className="text-[10px] text-slate-600">{positions.length} instrument{positions.length !== 1 ? "s" : ""}</p>
+                                              </div>
+                                            </div>
+                                          </TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(principal)}</TD>
+                                          <TD className="text-amber-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : <span className="text-slate-500">SAFE</span>}</TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(currVal)}</TD>
+                                          <TD className={accrued > 0 ? "text-emerald-400 tabular-nums" : "text-slate-600 tabular-nums"}>
+                                            {accrued > 0 ? `+${fmt(accrued)}` : "—"}
+                                          </TD>
+                                          <TD>
+                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                              status === "Extended" ? "bg-amber-500/10 text-amber-400"
+                                              : status === "Accruing" ? "bg-blue-500/10 text-blue-400"
+                                              : status === "Converted" ? "bg-violet-500/10 text-violet-400"
+                                              : status === "Repaid" ? "bg-emerald-500/10 text-emerald-400"
+                                              : "bg-slate-500/10 text-slate-400"
+                                            }`}>{status}</span>
+                                          </TD>
+                                        </tr>
+                                        {isOpen && positions.map((d, i) => (
+                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                            <td className="py-2 px-3 w-6" />
+                                            <td className="py-2 px-3 pl-11">
+                                              <p className="text-[11px] text-slate-400 font-medium">{d.instrument}</p>
+                                              <p className="text-[10px] text-slate-600">{d.date}</p>
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
+                                            <td className="py-2 px-3 text-[11px] text-amber-400 tabular-nums">
+                                              {d.interestRate !== undefined ? `${d.interestRate}%` : d.discountRate !== undefined ? `${d.discountRate}% disc.` : "—"}
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.currentValue)}</td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-500">
+                                              {d.valuationCap ? `$${(d.valuationCap / 1_000_000).toFixed(1)}M cap` : ""}
+                                              {d.maturityDate ? ` · ${d.maturityDate}` : ""}
+                                            </td>
+                                            <td className="py-2 px-3">
+                                              <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${
+                                                d.status === "Extended" ? "bg-amber-500/10 text-amber-400"
+                                                : d.status === "Accruing" ? "bg-blue-500/10 text-blue-400"
+                                                : d.status === "Converted" ? "bg-violet-500/10 text-violet-400"
+                                                : "bg-emerald-500/10 text-emerald-400"
+                                              }`}>{d.status}</span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </>
+                                    );
+                                  })}
+                                  <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                    <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalPrincipal)}</td>
+                                    <td className="py-2 px-3 text-xs text-amber-400 tabular-nums font-semibold">{wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—"}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCurrVal)}</td>
+                                    <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">+{fmt(totalCurrVal - totalPrincipal)}</td>
+                                    <td />
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="px-5 py-8 text-center text-xs text-slate-600">No debt positions in portfolio.</div>
+                          )
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
               </div>
               );
             })()}
