@@ -3,8 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --font-inter: "Inter", system-ui, sans-serif;
+  --font-sans: "Poppins", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+body {
+  font-family: var(--font-sans);
 }
 
 * {
@@ -30,8 +34,8 @@ body {
 /* Smooth selection */
 ::selection { background: rgba(99, 102, 241, 0.3); }
 
-/* Recharts / chart overrides */
-.recharts-wrapper { font-family: var(--font-inter); }
+/* Chart overrides */
+.recharts-wrapper { font-family: var(--font-sans); }
 
 @layer utilities {
   .text-balance { text-wrap: balance; }

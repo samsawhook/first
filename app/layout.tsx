@@ -24,11 +24,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,500;1,700&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+      <body style={{ fontFamily: "Poppins, system-ui, sans-serif" }}>
         {children}
       </body>
     </html>

@@ -33,17 +33,16 @@ export default function Dashboard() {
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
-                <span className="text-emerald-400 font-bold text-xs tracking-tighter">nth</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-100 leading-tight">
-                  nth Venture
-                </span>
-                <span className="text-xs text-slate-500 leading-tight hidden sm:block">
-                  Investor Portal
-                </span>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
+                alt="nth Venture"
+                className="h-8 w-auto"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+              <span className="text-xs text-slate-500 leading-tight hidden sm:block border-l border-[#1E2D3D] pl-3">
+                Investor Portal
+              </span>
             </div>
 
             {/* Fund quick stats */}
@@ -203,8 +202,14 @@ export default function Dashboard() {
             {/* Thesis reminder */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-6">
               <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-emerald-400 font-bold text-xs">nth</span>
+                <div className="w-10 h-10 rounded-lg bg-slate-900 border border-[#1E2D3D] flex items-center justify-center shrink-0 p-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
+                    alt="nth"
+                    className="w-full h-full object-contain"
+                    style={{ filter: "brightness(0) invert(1)" }}
+                  />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-slate-100 mb-2">Investment Thesis</h3>
