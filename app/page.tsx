@@ -15,11 +15,10 @@ import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
-import PerformanceChart from "@/components/PerformanceChart";
 import CompanyPage from "@/components/CompanyPage";
 import { portfolio } from "@/lib/data";
 import { investors } from "@/lib/investors";
-import type { Investor } from "@/lib/types";
+import type { Investor, ShareTransaction } from "@/lib/types";
 
 type Tab = "overview" | "pipeline" | "secondary" | "letters";
 
@@ -144,6 +143,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
+  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
 
   const selectedInvestor: Investor | undefined =
     selectedInvestorId === "fund"
@@ -297,209 +297,206 @@ export default function Dashboard() {
               <PortfolioAllocationChart investor={selectedInvestor} onCompanyClick={setActiveCompanyId} />
             </div>
 
-            {/* Performance chart */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-100">Fund Performance</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    NAV vs Called Capital · Q4 2021 – Q1 2026
-                  </p>
-                </div>
-                <span className="text-xs text-slate-500 bg-[#111D2E] border border-[#1E2D3D] px-2.5 py-1 rounded-lg">
-                  As of March 31, 2026
-                </span>
-              </div>
-              <PerformanceChart />
-            </div>
-
             {/* Portfolio at a Glance */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-              <h2 className="text-sm font-semibold text-slate-100 mb-4">
-                Portfolio at a Glance
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-[#1E2D3D]">
-                      {["Company", "Sector", "Invested", "Current Value", "MOIC", "Ownership", "Status"].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            className="pb-2 pr-4 text-left text-slate-500 font-medium uppercase tracking-wide"
-                          >
+            {(() => {
+              const fmtPrice = (n: number) => n < 1 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
+              const weightedAvg = (txns: ShareTransaction[]) => {
+                const totalShares = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
+                const totalAmount = txns.reduce((s, t) => s + t.amount, 0);
+                return totalShares > 0 ? totalAmount / totalShares : null;
+              };
+              return (
+              <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
+                <h2 className="text-sm font-semibold text-slate-100 mb-4">
+                  Portfolio at a Glance
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#1E2D3D]">
+                        <th className="pb-2 w-6" />
+                        {["Company", "Invested", "Curr Value", "MOIC", "Economic %", "Voting %", "Avg Cost/Share", "Status"].map((h) => (
+                          <th key={h} className="pb-2 pr-4 text-left text-slate-500 font-medium uppercase tracking-wide whitespace-nowrap">
                             {h}
                           </th>
-                        )
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#111D2E]">
-                    {portfolio.map((c) => {
-                      const moic = (c.currentValue / c.invested).toFixed(2);
-                      return (
-                        <tr
-                          key={c.id}
-                          className="hover:bg-[#111D2E]/50 transition-colors cursor-pointer"
-                          onClick={() => setActiveCompanyId(c.id)}
-                        >
-                          <td className="py-2.5 pr-4">
-                            <div className="flex items-center gap-2">
-                              {c.logoUrl ? (
-                                <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
-                                </div>
-                              ) : (
-                                <div
-                                  className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center shrink-0"
-                                  style={{ background: `${c.accentColor}18`, color: c.accentColor }}
-                                >
-                                  {c.initials[0]}
-                                </div>
-                              )}
-                              <span className="font-medium text-slate-200">{c.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-2.5 pr-4 text-slate-500">{c.sector}</td>
-                          <td className="py-2.5 pr-4 text-slate-300 tabular-nums">{fmt(c.invested)}</td>
-                          <td className="py-2.5 pr-4 tabular-nums" style={{ color: c.accentColor }}>
-                            {fmt(c.currentValue)}
-                          </td>
-                          <td className="py-2.5 pr-4 tabular-nums">
-                            <span
-                              className={
-                                parseFloat(moic) >= 1.5
-                                  ? "text-emerald-400"
-                                  : parseFloat(moic) >= 1
-                                  ? "text-slate-300"
-                                  : "text-rose-400"
-                              }
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {portfolio.map((c) => {
+                        const moic = (c.currentValue / c.invested).toFixed(2);
+                        const txns = c.shareTransactions;
+                        const avg = txns ? weightedAvg(txns) : null;
+                        const isExpanded = expandedCompanyId === c.id;
+                        const totalTxnShares = txns ? txns.reduce((s, t) => s + (t.shares ?? 0), 0) : 0;
+                        return (
+                          <>
+                            <tr
+                              key={c.id}
+                              className="border-t border-[#111D2E] hover:bg-[#111D2E]/50 transition-colors cursor-pointer"
+                              onClick={() => setActiveCompanyId(c.id)}
                             >
-                              {moic}x
-                            </span>
-                          </td>
-                          <td className="py-2.5 pr-4 text-slate-300 tabular-nums">{c.ownership}%</td>
-                          <td className="py-2.5">
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                c.status === "active"
-                                  ? "bg-emerald-500/10 text-emerald-400"
-                                  : c.status === "realized"
-                                  ? "bg-violet-500/10 text-violet-400"
+                              {/* Expand toggle */}
+                              <td className="py-2.5 pr-2 w-6">
+                                {txns && txns.length > 0 ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedCompanyId(isExpanded ? null : c.id);
+                                    }}
+                                    className="w-5 h-5 flex items-center justify-center rounded text-slate-500 hover:text-slate-300 hover:bg-[#1E2D3D] transition-colors"
+                                  >
+                                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                                  </button>
+                                ) : (
+                                  <span className="w-5 inline-block" />
+                                )}
+                              </td>
+                              <td className="py-2.5 pr-4">
+                                <div className="flex items-center gap-2">
+                                  {c.logoUrl ? (
+                                    <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center shrink-0"
+                                      style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
+                                      {c.initials[0]}
+                                    </div>
+                                  )}
+                                  <span className="font-medium text-slate-200 hover:text-emerald-400 transition-colors">{c.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 pr-4 text-slate-300 tabular-nums">{fmt(c.invested)}</td>
+                              <td className="py-2.5 pr-4 tabular-nums" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</td>
+                              <td className="py-2.5 pr-4 tabular-nums">
+                                <span className={parseFloat(moic) >= 1.5 ? "text-emerald-400" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}>
+                                  {moic}x
+                                </span>
+                              </td>
+                              <td className="py-2.5 pr-4 text-slate-300 tabular-nums">{c.ownership}%</td>
+                              <td className="py-2.5 pr-4 tabular-nums">
+                                {c.votingOwnership !== undefined ? (
+                                  <span className={c.votingOwnership < c.ownership ? "text-amber-400" : "text-slate-300"}>
+                                    {c.votingOwnership}%
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-600">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 pr-4 text-slate-400 tabular-nums">
+                                {avg !== null ? fmtPrice(avg) : <span className="text-slate-600">—</span>}
+                              </td>
+                              <td className="py-2.5">
+                                <span className={`px-1.5 py-0.5 rounded font-medium ${
+                                  c.status === "active" ? "bg-emerald-500/10 text-emerald-400"
+                                  : c.status === "realized" ? "bg-violet-500/10 text-violet-400"
                                   : "bg-slate-500/10 text-slate-400"
-                              }`}
-                            >
-                              {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                                }`}>
+                                  {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                                </span>
+                              </td>
+                            </tr>
+                            {/* Expanded share transaction detail */}
+                            {isExpanded && txns && txns.length > 0 && (
+                              <tr key={`${c.id}-expanded`} className="bg-[#080E1A]">
+                                <td />
+                                <td colSpan={8} className="pb-3 pt-1 pr-4">
+                                  <div className="rounded-lg border border-[#1E2D3D] overflow-hidden ml-2">
+                                    <table className="w-full text-xs">
+                                      <thead>
+                                        <tr className="border-b border-[#1E2D3D] bg-[#0D1421]">
+                                          {["Date", "Type", "Shares", "Price / Share", "Amount"].map((h) => (
+                                            <th key={h} className="py-1.5 px-3 text-left text-slate-600 font-medium uppercase tracking-wide">{h}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {txns.map((t, i) => (
+                                          <tr key={i} className="border-t border-[#111D2E]">
+                                            <td className="py-1.5 px-3 text-slate-400">{t.date}</td>
+                                            <td className="py-1.5 px-3">
+                                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                                style={{ background: `${c.accentColor}15`, color: c.accentColor }}>
+                                                {t.type}
+                                              </span>
+                                            </td>
+                                            <td className="py-1.5 px-3 text-slate-300 tabular-nums">
+                                              {t.shares !== undefined ? t.shares.toLocaleString() : "—"}
+                                            </td>
+                                            <td className="py-1.5 px-3 text-slate-300 tabular-nums">
+                                              {t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}
+                                            </td>
+                                            <td className="py-1.5 px-3 text-slate-300 tabular-nums">{fmt(t.amount)}</td>
+                                          </tr>
+                                        ))}
+                                        {/* Weighted average footer */}
+                                        <tr className="border-t border-[#1E2D3D] bg-[#0D1421]/60">
+                                          <td className="py-1.5 px-3 text-slate-500 font-medium uppercase tracking-wide">Weighted Avg</td>
+                                          <td className="py-1.5 px-3" />
+                                          <td className="py-1.5 px-3 text-slate-300 tabular-nums font-medium">{totalTxnShares.toLocaleString()}</td>
+                                          <td className="py-1.5 px-3 text-emerald-400 tabular-nums font-medium">
+                                            {avg !== null ? fmtPrice(avg) : "—"}
+                                          </td>
+                                          <td className="py-1.5 px-3 text-slate-300 tabular-nums font-medium">{fmt(c.invested)}</td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+              );
+            })()}
 
-            {/* Thesis + Letters */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-              {/* Thesis card — 3 cols */}
-              <div className="lg:col-span-3 bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-6 flex flex-col justify-between gap-5">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-slate-900 border border-[#1E2D3D] flex items-center justify-center shrink-0 p-1.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
-                        alt="nth" className="w-full h-full object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-                    </div>
-                    <p className="text-xs text-slate-500 uppercase tracking-widest font-medium">Investment Thesis</p>
+            {/* Thesis */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-6 flex flex-col justify-between gap-5">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 border border-[#1E2D3D] flex items-center justify-center shrink-0 p-1.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
+                      alt="nth" className="w-full h-full object-contain" style={{ filter: "brightness(0) invert(1)" }} />
                   </div>
-
-                  {/* Thesis principles */}
-                  <ul className="space-y-3 mb-4">
-                    {[
-                      "Invest for the long-term",
-                      "Minimize fees",
-                      "Ensure proper – but not excessive – diversification",
-                      "In straightforward businesses",
-                      "With passionate, effective and high-integrity managers",
-                    ].map((item) => (
-                      <li key={item} className="flex items-start gap-3">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 bg-emerald-500" />
-                        <span className="text-sm text-slate-200">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-xs text-slate-500 uppercase tracking-widest font-medium">Investment Thesis</p>
                 </div>
-
-                <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#1E2D3D]">
-                  <span className="text-xs text-slate-600">Corpus Christi, TX · Founded 2021 · Venture Studio</span>
-                  <a
-                    href="https://sawhook.substack.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto flex items-center gap-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5 hover:bg-orange-500/10 px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current" aria-hidden="true">
-                      <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/>
-                    </svg>
-                    sawhook.substack.com
-                  </a>
-                </div>
+                <ul className="space-y-3 mb-4">
+                  {[
+                    "Invest for the long-term",
+                    "Minimize fees",
+                    "Ensure proper – but not excessive – diversification",
+                    "In straightforward businesses",
+                    "With passionate, effective and high-integrity managers",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-3">
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 bg-emerald-500" />
+                      <span className="text-sm text-slate-200">{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-
-              {/* Letters column — 2 cols */}
-              <div className="lg:col-span-2 flex flex-col gap-3">
-                <p className="text-xs text-slate-500 uppercase tracking-widest font-medium px-1">From the Managing Partner</p>
-                {[
-                  {
-                    id: "q1-2026",
-                    period: "Q1 2026",
-                    date: "April 8, 2026",
-                    title: "Q1 2026 Letter to Limited Partners",
-                    excerpt: "The first quarter of 2026 marked a turning point for the portfolio — not in drama, but in depth.",
-                    color: "#10B981",
-                  },
-                  {
-                    id: "q4-2025",
-                    period: "Q4 2025",
-                    date: "January 15, 2026",
-                    title: "Q4 2025 Letter to Limited Partners",
-                    excerpt: "2025 was the year the portfolio grew up. Revenue became real. Ownership changes outcomes.",
-                    color: "#3B82F6",
-                  },
-                  {
-                    id: "annual-2024",
-                    period: "Annual 2024",
-                    date: "February 10, 2025",
-                    title: "2024 Annual Letter to Limited Partners",
-                    excerpt: "The venture studio model is not a shortcut. It's a longer road with a different destination.",
-                    color: "#8B5CF6",
-                  },
-                ].map((letter) => (
-                  <button
-                    key={letter.id}
-                    onClick={() => handleTabClick("letters")}
-                    className="text-left bg-[#0D1421] border border-[#1E2D3D] hover:border-slate-600 rounded-xl p-4 transition-colors group"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: `${letter.color}18`, color: letter.color }}
-                      >
-                        {letter.period}
-                      </span>
-                      <span className="text-[10px] text-slate-600">{letter.date}</span>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-300 group-hover:text-slate-100 transition-colors leading-snug mb-1">
-                      {letter.title}
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2">{letter.excerpt}</p>
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#1E2D3D]">
+                <span className="text-xs text-slate-600">Corpus Christi, TX · Founded 2021 · Venture Studio</span>
+                <a
+                  href="https://sawhook.substack.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto flex items-center gap-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5 hover:bg-orange-500/10 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current" aria-hidden="true">
+                    <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/>
+                  </svg>
+                  sawhook.substack.com
+                </a>
               </div>
-
             </div>
           </div>
         )}

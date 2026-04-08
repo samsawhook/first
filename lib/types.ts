@@ -80,6 +80,15 @@ export interface CompanyLetter {
   body: string;
 }
 
+export interface ShareTransaction {
+  date: string;                          // e.g. "Aug 2022"
+  type: "Common" | "Preferred" | "RSU" | "SAFE" | "Option" | "Convertible Note";
+  shares?: number;                       // omit for SAFEs pre-conversion
+  pricePerShare?: number;                // omit for SAFEs pre-conversion
+  amount: number;                        // cash deployed ($)
+  notes?: string;
+}
+
 export interface PortfolioCompany {
   id: string;
   name: string;
@@ -105,6 +114,8 @@ export interface PortfolioCompany {
   accentColor: string;
   valuationRefs?: ValuationRef[];
   ebitda?: number;               // trailing EBITDA ($); negative = loss
+  votingOwnership?: number;      // voting % (may be less than ownership due to non-voting RSUs)
+  shareTransactions?: ShareTransaction[]; // per-tranche purchase history ordered oldest → newest
   incomeStatement?: IncomeStatement;
   balanceSheet?: BalanceSheet;
   financingHistory?: FinancingRound[];
