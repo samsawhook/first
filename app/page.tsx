@@ -573,8 +573,8 @@ export default function Dashboard() {
                             <table className="w-full text-xs">
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
-                                  <TH></TH><TH wide>Company</TH><TH>Cost Basis</TH>
-                                  <TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH><TH></TH>
+                                  <TH></TH><TH wide>Company</TH><TH>Shares</TH><TH>Cost Basis</TH>
+                                  <TH>Share Price</TH><TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH><TH></TH>
                                 </tr>
                               </thead>
                               <tbody>
@@ -606,23 +606,47 @@ export default function Dashboard() {
                                               <p className="font-semibold text-slate-200">{c.name}</p>
                                               <p className="text-[10px] text-slate-600">{c.stage}</p>
                                             </div>
-                                            {userValuations[c.id] !== undefined && (
-                                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium border border-emerald-500/20">custom</span>
-                                            )}
                                           </div>
                                         </TD>
+                                        <TD className="tabular-nums text-slate-400">{sh > 0 ? sh.toLocaleString() : "—"}</TD>
                                         <TD className="text-slate-300 tabular-nums">{fmt(cost)}</TD>
+                                        <TD className="tabular-nums">
+                                          {(() => {
+                                            const defaultPps = c.totalShares ? c.impliedValuation / c.totalShares : null;
+                                            const customPps  = userValuations[c.id] !== undefined && c.totalShares ? userValuations[c.id] / c.totalShares : null;
+                                            if (customPps !== null && defaultPps !== null) {
+                                              return (
+                                                <div className="flex items-start gap-1.5">
+                                                  <div className="flex flex-col gap-0.5">
+                                                    <span className="text-slate-600 line-through leading-tight">${defaultPps.toFixed(4)}</span>
+                                                    <span className="text-emerald-400 font-semibold leading-tight">${customPps.toFixed(4)}</span>
+                                                  </div>
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setValuationModal({ company: c, pendingVal: effectiveImplied(c) }); }}
+                                                    className="p-0.5 mt-0.5 rounded hover:bg-white/10 text-emerald-600 hover:text-emerald-300 transition-colors"
+                                                    title="Edit share price / valuation"
+                                                  >
+                                                    <Pencil size={10} />
+                                                  </button>
+                                                </div>
+                                              );
+                                            }
+                                            return (
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="text-slate-300">{defaultPps !== null ? `$${defaultPps.toFixed(4)}` : "—"}</span>
+                                                <button
+                                                  onClick={(e) => { e.stopPropagation(); setValuationModal({ company: c, pendingVal: effectiveImplied(c) }); }}
+                                                  className="p-0.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors"
+                                                  title="Edit share price / valuation"
+                                                >
+                                                  <Pencil size={10} />
+                                                </button>
+                                              </div>
+                                            );
+                                          })()}
+                                        </TD>
                                         <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>
-                                          <div className="flex items-center gap-1.5">
-                                            <span>{currVal !== null ? fmt(currVal) : "—"}</span>
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); setValuationModal({ company: c, pendingVal: effectiveImplied(c) }); }}
-                                              className="p-0.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors"
-                                              title="Edit estimated value"
-                                            >
-                                              <Pencil size={10} />
-                                            </button>
-                                          </div>
+                                          {currVal !== null ? fmt(currVal) : "—"}
                                         </TD>
                                         <TD className={`tabular-nums font-medium ${cMoic !== null && cMoic >= 1 ? "text-emerald-400" : "text-rose-400"}`}>
                                           {cMoic !== null ? `${cMoic.toFixed(2)}×` : "—"}
@@ -645,15 +669,16 @@ export default function Dashboard() {
                                       {isOpen && txns.map((t, i) => (
                                         <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
                                           <td className="py-2 px-3 w-6" />
-                                          <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date} · {t.type}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums">
+                                            {t.pricePerShare !== undefined ? `$${t.pricePerShare.toFixed(4)}` : "—"}
+                                          </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
                                             {t.shares !== undefined && valPerSh !== null ? fmt(t.shares * valPerSh) : "—"}
                                           </td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-600 tabular-nums">
-                                            {t.shares !== undefined ? `${t.shares.toLocaleString()} sh @ ${t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}` : ""}
-                                          </td>
-                                          <td className="py-2 px-3" />
+                                          <td className="py-2 px-3" /><td className="py-2 px-3" /><td className="py-2 px-3" />
                                         </tr>
                                       ))}
                                     </>
@@ -661,7 +686,9 @@ export default function Dashboard() {
                                 })}
                                 <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                   <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                  <td className="py-2 px-3 text-xs text-slate-500 tabular-nums">{companiesWithCommon.reduce((s,c)=>s+(c.shareTransactions??[]).filter(t=>t.type==="Common").reduce((a,t)=>a+(t.shares??0),0),0).toLocaleString()}</td>
                                   <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCost)}</td>
+                                  <td />
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(estValue)}</td>
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{moic !== null ? `${moic.toFixed(2)}×` : "—"}</td>
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{annRoi !== null ? `${annRoi.toFixed(1)}%` : "—"}</td>
