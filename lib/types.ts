@@ -108,6 +108,34 @@ export interface DebtPosition {
   notes?: string;
 }
 
+export interface ManagedFundTransaction {
+  date: string;
+  type: "Capital Call" | "Distribution" | "Commitment";
+  units?: number;
+  amount: number;
+  notes?: string;
+}
+
+export interface ManagedFundPosition {
+  id: string;
+  fundName: string;
+  vintage: number;
+  unitPrice: number;           // $1.00 for Co-Owner Fund
+  unitsCommitted: number;
+  unitsCalled: number;
+  commitment: number;          // total $ commitment
+  called: number;              // $ called to date
+  uncalled: number;            // $ remaining commitment
+  nav: number;                 // current NAV of LP stake
+  distributions: number;       // total distributions received
+  dpi: number;
+  rvpi: number;
+  tvpi: number;
+  irr: number;
+  asOf: string;
+  transactions?: ManagedFundTransaction[];
+}
+
 export interface PortfolioCompany {
   id: string;
   name: string;

@@ -15,6 +15,8 @@ import type {
   CompanyLetter,
   ShareTransaction,
   DebtPosition,
+  ManagedFundPosition,
+  ManagedFundTransaction,
 } from "./types";
 
 export const fund: FundMetrics = {
@@ -824,6 +826,39 @@ export const secondaryLots: SecondaryLot[] = [
     impliedValuation: 4_500_000,
     sellerNote: "LP rebalancing. Will consider offers above $0.68/unit.",
     posted: "April 5, 2026",
+  },
+];
+
+export const managedFundPositions: ManagedFundPosition[] = [
+  {
+    id: "co-owner-fund",
+    fundName: "Co-Owner Fund, LP",
+    vintage: 2021,
+    unitPrice: 1.00,
+    unitsCommitted: 500_000,
+    unitsCalled:    295_000,
+    commitment:     500_000,
+    called:         295_000,
+    uncalled:       205_000,
+    nav:            442_500,   // called × RVPI (1.50)
+    distributions:   26_500,   // called × DPI  (0.09)
+    dpi:  0.09,
+    rvpi: 1.50,
+    tvpi: 1.59,
+    irr:  26.4,
+    asOf: "March 31, 2026",
+    transactions: [
+      { date: "Jan 2022", type: "Capital Call", units: 87_500, amount: 87_500,
+        notes: "Fund inception — initial portfolio deployment" },
+      { date: "Aug 2022", type: "Capital Call", units: 87_500, amount: 87_500,
+        notes: "Certd, Audily, Merchant Boxes investments" },
+      { date: "Mar 2023", type: "Capital Call", units: 60_000, amount: 60_000,
+        notes: "SBR2TH growth round" },
+      { date: "Nov 2023", type: "Capital Call", units: 60_000, amount: 60_000,
+        notes: "Falconer Series Seed" },
+      { date: "Sep 2025", type: "Distribution", amount: 26_500,
+        notes: "Partial realization — hep global GmbH exit proceeds" },
+    ] satisfies ManagedFundTransaction[],
   },
 ];
 

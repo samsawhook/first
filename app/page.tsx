@@ -16,7 +16,7 @@ import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
-import { portfolio } from "@/lib/data";
+import { portfolio, navHistory, fund, managedFundPositions } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction } from "@/lib/types";
 
@@ -143,7 +143,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "preferred", "debt"]));
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "preferred", "debt", "managed"]));
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
 
   const toggleTable = (key: string) =>
@@ -278,39 +278,183 @@ export default function Dashboard() {
 
         {!activeCompany && activeTab === "overview" && (
           <div className="space-y-8">
-            {/* Portfolio allocation */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-100">
-                    {selectedInvestor ? `${selectedInvestor.name}'s Holdings` : "Fund Holdings"}
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {selectedInvestor
-                      ? "Equity, LP units, and debt positions · marked at implied valuations"
-                      : "Co-Owner Fund, LP · portfolio allocation by current value"}
-                  </p>
+            {/* ── Overview Hero ── */}
+            {(() => {
+              // ── Donut data (by company current value) ──────────────────────────
+              const donutItems = portfolio
+                .filter(c => c.status === "active")
+                .map(c => ({ label: c.name, value: c.currentValue, color: c.accentColor, id: c.id }));
+              const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
+
+              // Build SVG donut arcs
+              const cx = 80; const cy = 80; const R = 62; const r = 40;
+              let angle = -Math.PI / 2;
+              const arcs = donutItems.map(d => {
+                const sweep = (d.value / donutTotal) * 2 * Math.PI;
+                const x1 = cx + R * Math.cos(angle); const y1 = cy + R * Math.sin(angle);
+                angle += sweep;
+                const x2 = cx + R * Math.cos(angle); const y2 = cy + R * Math.sin(angle);
+                const ix1 = cx + r * Math.cos(angle - sweep); const iy1 = cy + r * Math.sin(angle - sweep);
+                const ix2 = cx + r * Math.cos(angle); const iy2 = cy + r * Math.sin(angle);
+                const large = sweep > Math.PI ? 1 : 0;
+                return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
+              });
+
+              // ── NAV time chart ─────────────────────────────────────────────────
+              const W = 360; const H = 130; const PAD = { t: 10, r: 10, b: 28, l: 44 };
+              const chartW = W - PAD.l - PAD.r; const chartH = H - PAD.t - PAD.b;
+              const maxY = Math.max(...navHistory.map(d => d.nav)) * 1.08;
+              const xS = (i: number) => PAD.l + (i / (navHistory.length - 1)) * chartW;
+              const yS = (v: number) => PAD.t + chartH - (v / maxY) * chartH;
+              const navLine  = navHistory.map((d, i) => `${i === 0 ? "M" : "L"}${xS(i).toFixed(1)},${yS(d.nav).toFixed(1)}`).join(" ");
+              const calledLine = navHistory.map((d, i) => `${i === 0 ? "M" : "L"}${xS(i).toFixed(1)},${yS(d.called).toFixed(1)}`).join(" ");
+              const navFill = navLine + ` L${xS(navHistory.length - 1)},${(PAD.t + chartH).toFixed(1)} L${xS(0)},${(PAD.t + chartH).toFixed(1)} Z`;
+              const yTicks = [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY];
+              const xLabels = navHistory.filter((_, i) => i % 4 === 0);
+
+              // ── Allocation by security type ────────────────────────────────────
+              let equityBasis = 0, creditBasis = 0, convertBasis = 0;
+              for (const c of portfolio) {
+                for (const t of (c.shareTransactions ?? [])) {
+                  if (t.type === "Common") equityBasis += t.amount;
+                  else if (t.type === "Preferred") creditBasis += t.amount;
+                }
+                for (const d of (c.debtPositions ?? [])) convertBasis += d.principal;
+              }
+              const managedBasis    = managedFundPositions.reduce((s, p) => s + p.called, 0);
+              const allocTotal      = equityBasis + creditBasis + convertBasis + managedBasis;
+              const allocTypes = [
+                { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: equityBasis  / allocTotal },
+                { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: creditBasis  / allocTotal },
+                { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: convertBasis / allocTotal },
+                { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: managedBasis / allocTotal },
+              ];
+
+              return (
+              <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                {/* ── Metrics strip ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 border-b border-[#1E2D3D]">
+                  {[
+                    { label: "Portfolio NAV", value: `$${(fund.nav / 1_000_000).toFixed(2)}M`, accent: "#10B981" },
+                    { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
+                    { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
+                    { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
+                    { label: "IRR",   value: `${fund.irr}%`,   accent: null },
+                    { label: "Called Capital", value: `$${(fund.calledCapital / 1_000_000).toFixed(2)}M`, accent: null },
+                    { label: "Distributions",  value: `$${(navHistory[navHistory.length - 1].distributions / 1_000).toFixed(0)}K`, accent: null },
+                    { label: "Active Companies", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
+                  ].map(({ label, value, accent }) => (
+                    <div key={label} className="px-4 py-3.5 border-r border-[#1E2D3D] last:border-r-0">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">{label}</p>
+                      <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: accent ?? "#e2e8f0" }}>{value}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <label className="text-xs text-slate-500 whitespace-nowrap">Viewing as</label>
-                  <select
-                    value={selectedInvestorId}
-                    onChange={(e) => setSelectedInvestorId(e.target.value)}
-                    className="text-xs bg-[#111D2E] border border-[#1E2D3D] text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500/50 cursor-pointer"
-                  >
-                    <option value="fund">Co-Owner Fund, LP (fund view)</option>
-                    <optgroup label="Investors">
-                      {investors.map((inv) => (
-                        <option key={inv.id} value={inv.id}>
-                          {inv.name}
-                        </option>
+
+                {/* ── Three charts ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+
+                  {/* ① Company allocation donut */}
+                  <div className="p-5">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
+                    <div className="flex items-center gap-5">
+                      <svg width="160" height="160" viewBox="0 0 160 160" className="shrink-0">
+                        {arcs.map((a, i) => (
+                          <path
+                            key={i}
+                            d={a.path}
+                            fill={a.color}
+                            opacity={0.85}
+                            className="cursor-pointer hover:opacity-100 transition-opacity"
+                            onClick={() => setActiveCompanyId(a.id)}
+                          >
+                            <title>{a.label}: {fmt(a.value)}</title>
+                          </path>
+                        ))}
+                        <text x="80" y="76" textAnchor="middle" className="fill-slate-200 text-xs font-bold" style={{ fontSize: 12, fontWeight: 700, fill: "#e2e8f0" }}>{fmt(donutTotal)}</text>
+                        <text x="80" y="91" textAnchor="middle" style={{ fontSize: 9, fill: "#64748b" }}>total value</text>
+                      </svg>
+                      <div className="flex flex-col gap-1.5 min-w-0">
+                        {donutItems.map(d => (
+                          <button
+                            key={d.id}
+                            onClick={() => setActiveCompanyId(d.id)}
+                            className="flex items-center gap-2 group text-left"
+                          >
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
+                            <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors truncate">{d.label}</span>
+                            <span className="text-[11px] text-slate-600 tabular-nums ml-auto pl-2">{((d.value / donutTotal) * 100).toFixed(0)}%</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ② NAV over time */}
+                  <div className="p-5">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">NAV Over Time</p>
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+                      {/* Grid lines */}
+                      {yTicks.map((v, i) => (
+                        <g key={i}>
+                          <line x1={PAD.l} y1={yS(v)} x2={W - PAD.r} y2={yS(v)} stroke="#1E2D3D" strokeWidth="1" />
+                          <text x={PAD.l - 4} y={yS(v) + 3} textAnchor="end" style={{ fontSize: 8, fill: "#475569" }}>
+                            {v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(0)}M` : v > 0 ? `$${(v / 1000).toFixed(0)}K` : "$0"}
+                          </text>
+                        </g>
                       ))}
-                    </optgroup>
-                  </select>
+                      {/* X labels */}
+                      {xLabels.map((d, i) => {
+                        const idx = navHistory.indexOf(d);
+                        return <text key={i} x={xS(idx)} y={H - 4} textAnchor="middle" style={{ fontSize: 8, fill: "#475569" }}>{d.quarter}</text>;
+                      })}
+                      {/* NAV fill */}
+                      <path d={navFill} fill="#10B981" opacity="0.07" />
+                      {/* Called capital line */}
+                      <path d={calledLine} fill="none" stroke="#334155" strokeWidth="1.5" strokeDasharray="3 3" />
+                      {/* NAV line */}
+                      <path d={navLine} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
+                      {/* Current dot */}
+                      <circle cx={xS(navHistory.length - 1)} cy={yS(navHistory[navHistory.length - 1].nav)} r="3" fill="#10B981" />
+                    </svg>
+                    <div className="flex items-center gap-4 mt-1">
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-emerald-500" /><span className="text-[10px] text-slate-600">NAV</span></div>
+                      <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-slate-700" style={{ borderTop: "1.5px dashed #334155" }} /><span className="text-[10px] text-slate-600">Called Capital</span></div>
+                    </div>
+                  </div>
+
+                  {/* ③ Allocation by security type */}
+                  <div className="p-5">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">By Security Type <span className="normal-case text-slate-700">(cost basis)</span></p>
+                    <div className="space-y-3">
+                      {allocTypes.map(t => (
+                        <div key={t.label}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color }} />
+                              <span className="text-xs text-slate-300 font-medium">{t.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs tabular-nums text-slate-400">{fmt(t.amount)}</span>
+                              <span className="text-[10px] tabular-nums text-slate-600 w-8 text-right">{(t.pct * 100).toFixed(0)}%</span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${(t.pct * 100).toFixed(1)}%`, background: t.color, opacity: 0.8 }} />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total Deployed</span>
+                        <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
-              <PortfolioAllocationChart investor={selectedInvestor} onCompanyClick={setActiveCompanyId} />
-            </div>
+              );
+            })()}
 
             {/* Portfolio at a Glance */}
             {(() => {
@@ -355,8 +499,8 @@ export default function Dashboard() {
               );
 
               // ── Group transactions by company ──────────────────────────────────
-              const companiesWithCommon = portfolio.filter(c => c.shareTransactions?.some(t => t.type === "Common"));
-              const companiesWithPref   = portfolio.filter(c => c.shareTransactions?.some(t => t.type === "Preferred"));
+              const companiesWithCommon = portfolio.filter(c => (c.shareTransactions ?? []).some(t => t.type === "Common"));
+              const companiesWithPref   = portfolio.filter(c => (c.shareTransactions ?? []).some(t => t.type === "Preferred"));
               const companiesWithDebt   = portfolio.filter(c => c.debtPositions?.length);
 
               return (
@@ -689,6 +833,109 @@ export default function Dashboard() {
                           ) : (
                             <div className="px-5 py-8 text-center text-xs text-slate-600">No debt positions in portfolio.</div>
                           )
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* ══ 4. MANAGED FUNDS ════════════════════════════════════════════ */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  {(() => {
+                    const totalCommitment  = managedFundPositions.reduce((s, p) => s + p.commitment, 0);
+                    const totalCalled      = managedFundPositions.reduce((s, p) => s + p.called, 0);
+                    const totalUncalled    = managedFundPositions.reduce((s, p) => s + p.uncalled, 0);
+                    const totalNav         = managedFundPositions.reduce((s, p) => s + p.nav, 0);
+                    const totalDistrib     = managedFundPositions.reduce((s, p) => s + p.distributions, 0);
+                    const wtdTvpi          = totalCalled > 0 ? (totalNav + totalDistrib) / totalCalled : null;
+                    const wtdDpi           = totalCalled > 0 ? totalDistrib / totalCalled : null;
+                    return (
+                      <>
+                        <div className="border-b border-[#1E2D3D]">
+                          <SectionHeader label="Managed Funds" tableKey="managed" accent="#EC4899" pills={
+                            <>
+                              <span className="text-[10px] text-slate-500">{managedFundPositions.length} fund{managedFundPositions.length !== 1 ? "s" : ""}</span>
+                              <span className="text-slate-700 text-[10px]">·</span>
+                              <span className="text-[10px] text-slate-500">{fmt(totalCalled)} called</span>
+                              <span className="text-slate-700 text-[10px]">·</span>
+                              <span className="text-[10px] font-semibold text-pink-400">NAV {fmt(totalNav)}</span>
+                            </>
+                          } />
+                        </div>
+                        {openInstrumentTables.has("managed") && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                <tr>
+                                  <TH></TH><TH>Fund</TH><TH>Vintage</TH>
+                                  <TH>Unit Price</TH><TH>Units Called</TH><TH>Called</TH>
+                                  <TH>Uncalled</TH><TH>NAV</TH><TH>Distributions</TH>
+                                  <TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {managedFundPositions.map((p) => {
+                                  const rowKey = `fund-${p.id}`;
+                                  const isOpen = expandedRows.has(rowKey);
+                                  return (
+                                    <>
+                                      <tr key={p.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
+                                        <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
+                                        <TD>
+                                          <div>
+                                            <p className="font-semibold text-slate-200">{p.fundName}</p>
+                                            <p className="text-[10px] text-slate-600">As of {p.asOf}</p>
+                                          </div>
+                                        </TD>
+                                        <TD className="text-slate-400 tabular-nums">{p.vintage}</TD>
+                                        <TD className="text-slate-400 tabular-nums">${p.unitPrice.toFixed(2)}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{p.unitsCalled.toLocaleString()}</TD>
+                                        <TD className="text-slate-300 tabular-nums font-medium">{fmt(p.called)}</TD>
+                                        <TD className="text-slate-500 tabular-nums">{fmt(p.uncalled)}</TD>
+                                        <TD className="text-pink-400 tabular-nums font-semibold">{fmt(p.nav)}</TD>
+                                        <TD className="text-emerald-400 tabular-nums">{fmt(p.distributions)}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{p.dpi.toFixed(2)}×</TD>
+                                        <TD className="text-pink-400 tabular-nums font-medium">{p.tvpi.toFixed(2)}×</TD>
+                                        <TD className="text-emerald-400 tabular-nums">{p.irr.toFixed(1)}%</TD>
+                                      </tr>
+                                      {isOpen && (p.transactions ?? []).map((t, i) => (
+                                        <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                          <td className="py-2 px-3 w-6" />
+                                          <td className="py-2 px-3 pl-11">
+                                            <p className="text-[11px] text-slate-400 font-medium">{t.type}</p>
+                                            {t.notes && <p className="text-[10px] text-slate-600">{t.notes}</p>}
+                                          </td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-500">{t.date}</td>
+                                          <td />
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.units?.toLocaleString() ?? "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] tabular-nums font-medium">
+                                            <span className={t.type === "Distribution" ? "text-emerald-400" : "text-slate-300"}>
+                                              {t.type === "Distribution" ? "+" : ""}{fmt(t.amount)}
+                                            </span>
+                                          </td>
+                                          <td colSpan={6} />
+                                        </tr>
+                                      ))}
+                                    </>
+                                  );
+                                })}
+                                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                  <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                  <td /><td />
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">
+                                    {managedFundPositions.reduce((s, p) => s + p.unitsCalled, 0).toLocaleString()}
+                                  </td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalCalled)}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-500 tabular-nums font-semibold">{fmt(totalUncalled)}</td>
+                                  <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{fmt(totalNav)}</td>
+                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(totalDistrib)}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—"}</td>
+                                  <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—"}</td>
+                                  <td />
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
                         )}
                       </>
                     );
