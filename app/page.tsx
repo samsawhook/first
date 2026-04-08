@@ -143,6 +143,14 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set<string>());
+
+  const toggleTable = (key: string) =>
+    setOpenInstrumentTables((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   const selectedInvestor: Investor | undefined =
     selectedInvestorId === "fund"
@@ -299,129 +307,204 @@ export default function Dashboard() {
             {/* Portfolio at a Glance */}
             {(() => {
               const fmtPrice = (n: number) => `$${n.toFixed(3)}`;
-              const weightedAvg = (txns: ShareTransaction[]) => {
-                const totalShares = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
-                const totalAmount = txns.reduce((s, t) => s + t.amount, 0);
-                return totalShares > 0 ? totalAmount / totalShares : null;
-              };
-              return (
-              <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-                <h2 className="text-sm font-semibold text-slate-100 mb-4">Portfolio at a Glance</h2>
-                <div className="space-y-0 divide-y divide-[#1E2D3D]">
-                  {portfolio.map((c) => {
-                    const moic = (c.currentValue / c.invested).toFixed(2);
-                    const txns = c.shareTransactions;
-                    const avg = txns ? weightedAvg(txns) : null;
-                    const totalTxnShares = txns ? txns.reduce((s, t) => s + (t.shares ?? 0), 0) : 0;
-                    return (
-                      <div key={c.id}>
-                        {/* Company summary row */}
-                        <div
-                          className="grid gap-x-4 items-center py-3 px-2 hover:bg-[#111D2E]/40 transition-colors cursor-pointer rounded-lg"
-                          style={{ gridTemplateColumns: "2fr 1fr 1fr auto auto auto auto auto" }}
-                          onClick={() => setActiveCompanyId(c.id)}
-                        >
-                          {/* Company */}
-                          <div className="flex items-center gap-2 min-w-0">
-                            {c.logoUrl ? (
-                              <div className="w-7 h-7 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
-                              </div>
-                            ) : (
-                              <div className="w-7 h-7 rounded text-xs font-bold flex items-center justify-center shrink-0"
-                                style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
-                                {c.initials[0]}
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-slate-200 truncate">{c.name}</p>
-                              <p className="text-[10px] text-slate-600 truncate">{c.sector} · {c.stage}</p>
-                            </div>
-                          </div>
-                          {/* Invested */}
-                          <div>
-                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Invested</p>
-                            <p className="text-xs text-slate-300 tabular-nums font-medium">{fmt(c.invested)}</p>
-                          </div>
-                          {/* Current value */}
-                          <div>
-                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Value</p>
-                            <p className="text-xs tabular-nums font-medium" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</p>
-                          </div>
-                          {/* MOIC */}
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">MOIC</p>
-                            <p className={`text-xs tabular-nums font-semibold ${parseFloat(moic) >= 1.5 ? "text-emerald-400" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}`}>{moic}x</p>
-                          </div>
-                          {/* Economic % */}
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Econ %</p>
-                            <p className="text-xs text-slate-300 tabular-nums">{c.ownership}%</p>
-                          </div>
-                          {/* Voting % */}
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Vote %</p>
-                            <p className="text-xs tabular-nums text-slate-300">{c.votingOwnership ?? c.ownership}%</p>
-                          </div>
-                          {/* Avg cost */}
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Avg $/sh</p>
-                            <p className="text-xs text-slate-400 tabular-nums">{avg !== null ? fmtPrice(avg) : "—"}</p>
-                          </div>
-                          {/* Status */}
-                          <div className="text-right">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                              c.status === "active" ? "bg-emerald-500/10 text-emerald-400"
-                              : c.status === "realized" ? "bg-violet-500/10 text-violet-400"
-                              : "bg-slate-500/10 text-slate-400"
-                            }`}>{c.status.charAt(0).toUpperCase() + c.status.slice(1)}</span>
-                          </div>
-                        </div>
 
-                        {/* Transaction subrows */}
-                        {txns && txns.length > 0 && (
-                          <div className="ml-9 mb-2 rounded-lg overflow-hidden border border-[#1A2535]">
-                            <table className="w-full text-[11px]">
-                              <thead>
-                                <tr className="bg-[#080E1A] border-b border-[#1A2535]">
-                                  {["Date", "Type", "Shares", "Price / Share", "Amount"].map((h) => (
-                                    <th key={h} className="py-1.5 px-3 text-left text-slate-600 font-medium uppercase tracking-wider">{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-[#111D2E]">
-                                {txns.map((t, i) => (
-                                  <tr key={i} className="bg-[#0A1220]">
-                                    <td className="py-1.5 px-3 text-slate-400">{t.date}</td>
-                                    <td className="py-1.5 px-3">
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                                        style={{ background: `${c.accentColor}15`, color: c.accentColor }}>
-                                        {t.type}
-                                      </span>
-                                    </td>
-                                    <td className="py-1.5 px-3 text-slate-300 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
-                                    <td className="py-1.5 px-3 text-slate-300 tabular-nums">{t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}</td>
-                                    <td className="py-1.5 px-3 text-slate-300 tabular-nums">{fmt(t.amount)}</td>
-                                  </tr>
-                                ))}
-                                {/* Totals row */}
-                                <tr className="bg-[#080E1A] border-t border-[#1E2D3D]">
-                                  <td className="py-1.5 px-3 text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                                  <td className="py-1.5 px-3" />
-                                  <td className="py-1.5 px-3 text-slate-300 tabular-nums font-semibold">{totalTxnShares.toLocaleString()}</td>
-                                  <td className="py-1.5 px-3 tabular-nums font-semibold" style={{ color: c.accentColor }}>
-                                    {avg !== null ? fmtPrice(avg) : "—"}
-                                  </td>
-                                  <td className="py-1.5 px-3 text-slate-200 tabular-nums font-semibold">{fmt(c.invested)}</td>
-                                </tr>
-                              </tbody>
-                            </table>
+              // Flatten all transactions across the portfolio, tagged with company
+              type TxnRow = ShareTransaction & { company: typeof portfolio[0] };
+              const allTxns: TxnRow[] = portfolio.flatMap((c) =>
+                (c.shareTransactions ?? []).map((t) => ({ ...t, company: c }))
+              );
+              const commonTxns   = allTxns.filter((t) => t.type === "Common");
+              const preferredTxns = allTxns.filter((t) => t.type === "Preferred");
+              const debtTxns     = allTxns.filter((t) =>
+                t.type === "Convertible Note" || t.type === "SAFE" || t.type === "Option"
+              );
+
+              const tableWtdAvg = (rows: TxnRow[]) => {
+                const sh = rows.reduce((s, t) => s + (t.shares ?? 0), 0);
+                const am = rows.reduce((s, t) => s + t.amount, 0);
+                return { shares: sh, amount: am, avg: sh > 0 ? am / sh : null };
+              };
+
+              const InstrumentSection = ({
+                label, tableKey, rows, accent,
+              }: {
+                label: string; tableKey: string; rows: TxnRow[]; accent: string;
+              }) => {
+                const isOpen = openInstrumentTables.has(tableKey);
+                const { shares, amount, avg } = tableWtdAvg(rows);
+                return (
+                  <div className="rounded-xl border border-[#1E2D3D] overflow-hidden">
+                    {/* Header / toggle */}
+                    <button
+                      onClick={() => toggleTable(tableKey)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-[#0D1421] hover:bg-[#111D2E] transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full" style={{ background: accent }} />
+                        <span className="text-xs font-semibold text-slate-200">{label}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                          style={{ background: `${accent}15`, color: accent }}>
+                          {rows.length} transaction{rows.length !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {/* Summary pills — always visible even when collapsed */}
+                        {rows.length > 0 && (
+                          <div className="hidden sm:flex items-center gap-3 text-[10px] text-slate-500">
+                            <span>{shares.toLocaleString()} shares</span>
+                            <span className="text-slate-700">·</span>
+                            <span>{avg !== null ? `${fmtPrice(avg)} wtd avg` : ""}</span>
+                            <span className="text-slate-700">·</span>
+                            <span className="font-semibold" style={{ color: accent }}>{fmt(amount)}</span>
                           </div>
                         )}
+                        <ChevronDown
+                          size={14}
+                          className={`text-slate-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                        />
                       </div>
-                    );
-                  })}
+                    </button>
+
+                    {/* Expandable table */}
+                    {isOpen && (
+                      rows.length > 0 ? (
+                        <table className="w-full text-xs border-t border-[#1E2D3D]">
+                          <thead>
+                            <tr className="bg-[#080E1A]">
+                              {["Company", "Date", "Shares", "Price / Share", "Amount"].map((h) => (
+                                <th key={h} className="py-2 px-4 text-left text-slate-600 font-medium uppercase tracking-wider text-[10px]">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#111D2E]">
+                            {rows.map((t, i) => (
+                              <tr
+                                key={i}
+                                className="hover:bg-[#111D2E]/30 transition-colors cursor-pointer"
+                                onClick={() => setActiveCompanyId(t.company.id)}
+                              >
+                                <td className="py-2.5 px-4">
+                                  <div className="flex items-center gap-2">
+                                    {t.company.logoUrl ? (
+                                      <div className="w-5 h-5 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={t.company.logoUrl} alt={t.company.name} className="w-full h-full object-contain" />
+                                      </div>
+                                    ) : (
+                                      <div className="w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center shrink-0"
+                                        style={{ background: `${t.company.accentColor}20`, color: t.company.accentColor }}>
+                                        {t.company.initials[0]}
+                                      </div>
+                                    )}
+                                    <span className="font-medium text-slate-300">{t.company.name}</span>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-4 text-slate-500">{t.date}</td>
+                                <td className="py-2.5 px-4 text-slate-300 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
+                                <td className="py-2.5 px-4 tabular-nums" style={{ color: accent }}>
+                                  {t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}
+                                </td>
+                                <td className="py-2.5 px-4 text-slate-200 tabular-nums font-medium">{fmt(t.amount)}</td>
+                              </tr>
+                            ))}
+                            {/* Totals row */}
+                            <tr className="bg-[#080E1A] border-t border-[#1E2D3D]">
+                              <td className="py-2 px-4 text-slate-500 text-[10px] font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                              <td className="py-2 px-4" />
+                              <td className="py-2 px-4 text-slate-300 tabular-nums font-semibold">{shares.toLocaleString()}</td>
+                              <td className="py-2 px-4 tabular-nums font-semibold" style={{ color: accent }}>
+                                {avg !== null ? fmtPrice(avg) : "—"}
+                              </td>
+                              <td className="py-2 px-4 text-slate-100 tabular-nums font-semibold">{fmt(amount)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="px-4 py-6 text-center text-xs text-slate-600 border-t border-[#1E2D3D]">
+                          No {label.toLowerCase()} positions in portfolio.
+                        </div>
+                      )
+                    )}
+                  </div>
+                );
+              };
+
+              return (
+              <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5 space-y-5">
+                <h2 className="text-sm font-semibold text-slate-100">Portfolio at a Glance</h2>
+
+                {/* ── Main summary table ── */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#1E2D3D]">
+                        {["Company", "Sector", "Invested", "Curr Value", "MOIC", "Economic %", "Voting %", "Avg Cost/Share", "Status"].map((h) => (
+                          <th key={h} className="pb-2 pr-5 text-left text-[10px] text-slate-500 font-medium uppercase tracking-wider whitespace-nowrap last:pr-0">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#111D2E]">
+                      {portfolio.map((c) => {
+                        const moic = (c.currentValue / c.invested).toFixed(2);
+                        const txns = c.shareTransactions ?? [];
+                        const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
+                        const am = txns.reduce((s, t) => s + t.amount, 0);
+                        const avg = sh > 0 ? am / sh : null;
+                        return (
+                          <tr
+                            key={c.id}
+                            className="hover:bg-[#111D2E]/50 transition-colors cursor-pointer"
+                            onClick={() => setActiveCompanyId(c.id)}
+                          >
+                            <td className="py-3 pr-5">
+                              <div className="flex items-center gap-2">
+                                {c.logoUrl ? (
+                                  <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
+                                  </div>
+                                ) : (
+                                  <div className="w-6 h-6 rounded font-bold flex items-center justify-center shrink-0 text-[10px]"
+                                    style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
+                                    {c.initials[0]}
+                                  </div>
+                                )}
+                                <span className="font-semibold text-slate-200 hover:text-emerald-400 transition-colors whitespace-nowrap">{c.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 pr-5 text-slate-500 whitespace-nowrap">{c.sector}</td>
+                            <td className="py-3 pr-5 text-slate-300 tabular-nums">{fmt(c.invested)}</td>
+                            <td className="py-3 pr-5 tabular-nums font-medium" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</td>
+                            <td className="py-3 pr-5 tabular-nums">
+                              <span className={parseFloat(moic) >= 1.5 ? "text-emerald-400 font-semibold" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}>
+                                {moic}x
+                              </span>
+                            </td>
+                            <td className="py-3 pr-5 text-slate-300 tabular-nums">{c.ownership}%</td>
+                            <td className="py-3 pr-5 tabular-nums text-slate-300">{c.votingOwnership ?? c.ownership}%</td>
+                            <td className="py-3 pr-5 tabular-nums text-slate-400">{avg !== null ? fmtPrice(avg) : <span className="text-slate-700">—</span>}</td>
+                            <td className="py-3">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                c.status === "active" ? "bg-emerald-500/10 text-emerald-400"
+                                : c.status === "realized" ? "bg-violet-500/10 text-violet-400"
+                                : "bg-slate-500/10 text-slate-400"
+                              }`}>
+                                {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── Instrument tables ── */}
+                <div className="border-t border-[#1E2D3D] pt-4 space-y-2">
+                  <p className="text-[10px] text-slate-600 uppercase tracking-widest font-medium mb-3">Transaction Detail by Instrument</p>
+                  <InstrumentSection label="Common Stock"    tableKey="common"    rows={commonTxns}    accent="#10B981" />
+                  <InstrumentSection label="Preferred Stock" tableKey="preferred" rows={preferredTxns} accent="#6366F1" />
+                  <InstrumentSection label="Debt / Convertible" tableKey="debt"  rows={debtTxns}      accent="#F59E0B" />
                 </div>
               </div>
               );
