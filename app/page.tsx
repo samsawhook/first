@@ -419,18 +419,15 @@ export default function Dashboard() {
                   {/* Thesis principles */}
                   <ul className="space-y-3 mb-4">
                     {[
-                      { text: "Invest for the long-term", detail: "Patient capital aligned with founders, not fund cycles." },
-                      { text: "Minimize fees", detail: "Lean structure. No management fee drag eating into returns." },
-                      { text: "Ensure proper — but not excessive — diversification", detail: "Concentrated enough to matter, spread enough to survive." },
-                      { text: "In straightforward businesses", detail: "Understandable models. No black boxes, no buzzword leverage." },
-                      { text: "With passionate, effective, and high-integrity managers", detail: "Character compounds. We back people before products." },
+                      "Invest for the long-term",
+                      "Minimize fees",
+                      "Ensure proper – but not excessive – diversification",
+                      "In straightforward businesses",
+                      "With passionate, effective and high-integrity managers",
                     ].map((item) => (
-                      <li key={item.text} className="flex items-start gap-3">
+                      <li key={item} className="flex items-start gap-3">
                         <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 bg-emerald-500" />
-                        <div>
-                          <span className="text-sm text-slate-200 font-medium">{item.text}</span>
-                          <span className="text-sm text-slate-500"> — {item.detail}</span>
-                        </div>
+                        <span className="text-sm text-slate-200">{item}</span>
                       </li>
                     ))}
                   </ul>
