@@ -143,7 +143,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
 
   const selectedInvestor: Investor | undefined =
     selectedInvestorId === "fund"
@@ -299,7 +298,7 @@ export default function Dashboard() {
 
             {/* Portfolio at a Glance */}
             {(() => {
-              const fmtPrice = (n: number) => n < 1 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`;
+              const fmtPrice = (n: number) => `$${n.toFixed(3)}`;
               const weightedAvg = (txns: ShareTransaction[]) => {
                 const totalShares = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
                 const totalAmount = txns.reduce((s, t) => s + t.amount, 0);
@@ -307,151 +306,122 @@ export default function Dashboard() {
               };
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-                <h2 className="text-sm font-semibold text-slate-100 mb-4">
-                  Portfolio at a Glance
-                </h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-[#1E2D3D]">
-                        <th className="pb-2 w-6" />
-                        {["Company", "Invested", "Curr Value", "MOIC", "Economic %", "Voting %", "Avg Cost/Share", "Status"].map((h) => (
-                          <th key={h} className="pb-2 pr-4 text-left text-slate-500 font-medium uppercase tracking-wide whitespace-nowrap">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {portfolio.map((c) => {
-                        const moic = (c.currentValue / c.invested).toFixed(2);
-                        const txns = c.shareTransactions;
-                        const avg = txns ? weightedAvg(txns) : null;
-                        const isExpanded = expandedCompanyId === c.id;
-                        const totalTxnShares = txns ? txns.reduce((s, t) => s + (t.shares ?? 0), 0) : 0;
-                        return (
-                          <>
-                            <tr
-                              key={c.id}
-                              className="border-t border-[#111D2E] hover:bg-[#111D2E]/50 transition-colors cursor-pointer"
-                              onClick={() => setActiveCompanyId(c.id)}
-                            >
-                              {/* Expand toggle */}
-                              <td className="py-2.5 pr-2 w-6">
-                                {txns && txns.length > 0 ? (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedCompanyId(isExpanded ? null : c.id);
-                                    }}
-                                    className="w-5 h-5 flex items-center justify-center rounded text-slate-500 hover:text-slate-300 hover:bg-[#1E2D3D] transition-colors"
-                                  >
-                                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                                  </button>
-                                ) : (
-                                  <span className="w-5 inline-block" />
-                                )}
-                              </td>
-                              <td className="py-2.5 pr-4">
-                                <div className="flex items-center gap-2">
-                                  {c.logoUrl ? (
-                                    <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
-                                    </div>
-                                  ) : (
-                                    <div className="w-6 h-6 rounded text-xs font-bold flex items-center justify-center shrink-0"
-                                      style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
-                                      {c.initials[0]}
-                                    </div>
-                                  )}
-                                  <span className="font-medium text-slate-200 hover:text-emerald-400 transition-colors">{c.name}</span>
-                                </div>
-                              </td>
-                              <td className="py-2.5 pr-4 text-slate-300 tabular-nums">{fmt(c.invested)}</td>
-                              <td className="py-2.5 pr-4 tabular-nums" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</td>
-                              <td className="py-2.5 pr-4 tabular-nums">
-                                <span className={parseFloat(moic) >= 1.5 ? "text-emerald-400" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}>
-                                  {moic}x
-                                </span>
-                              </td>
-                              <td className="py-2.5 pr-4 text-slate-300 tabular-nums">{c.ownership}%</td>
-                              <td className="py-2.5 pr-4 tabular-nums">
-                                {c.votingOwnership !== undefined ? (
-                                  <span className={c.votingOwnership < c.ownership ? "text-amber-400" : "text-slate-300"}>
-                                    {c.votingOwnership}%
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-600">—</span>
-                                )}
-                              </td>
-                              <td className="py-2.5 pr-4 text-slate-400 tabular-nums">
-                                {avg !== null ? fmtPrice(avg) : <span className="text-slate-600">—</span>}
-                              </td>
-                              <td className="py-2.5">
-                                <span className={`px-1.5 py-0.5 rounded font-medium ${
-                                  c.status === "active" ? "bg-emerald-500/10 text-emerald-400"
-                                  : c.status === "realized" ? "bg-violet-500/10 text-violet-400"
-                                  : "bg-slate-500/10 text-slate-400"
-                                }`}>
-                                  {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                                </span>
-                              </td>
-                            </tr>
-                            {/* Expanded share transaction detail */}
-                            {isExpanded && txns && txns.length > 0 && (
-                              <tr key={`${c.id}-expanded`} className="bg-[#080E1A]">
-                                <td />
-                                <td colSpan={8} className="pb-3 pt-1 pr-4">
-                                  <div className="rounded-lg border border-[#1E2D3D] overflow-hidden ml-2">
-                                    <table className="w-full text-xs">
-                                      <thead>
-                                        <tr className="border-b border-[#1E2D3D] bg-[#0D1421]">
-                                          {["Date", "Type", "Shares", "Price / Share", "Amount"].map((h) => (
-                                            <th key={h} className="py-1.5 px-3 text-left text-slate-600 font-medium uppercase tracking-wide">{h}</th>
-                                          ))}
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {txns.map((t, i) => (
-                                          <tr key={i} className="border-t border-[#111D2E]">
-                                            <td className="py-1.5 px-3 text-slate-400">{t.date}</td>
-                                            <td className="py-1.5 px-3">
-                                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                                                style={{ background: `${c.accentColor}15`, color: c.accentColor }}>
-                                                {t.type}
-                                              </span>
-                                            </td>
-                                            <td className="py-1.5 px-3 text-slate-300 tabular-nums">
-                                              {t.shares !== undefined ? t.shares.toLocaleString() : "—"}
-                                            </td>
-                                            <td className="py-1.5 px-3 text-slate-300 tabular-nums">
-                                              {t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}
-                                            </td>
-                                            <td className="py-1.5 px-3 text-slate-300 tabular-nums">{fmt(t.amount)}</td>
-                                          </tr>
-                                        ))}
-                                        {/* Weighted average footer */}
-                                        <tr className="border-t border-[#1E2D3D] bg-[#0D1421]/60">
-                                          <td className="py-1.5 px-3 text-slate-500 font-medium uppercase tracking-wide">Weighted Avg</td>
-                                          <td className="py-1.5 px-3" />
-                                          <td className="py-1.5 px-3 text-slate-300 tabular-nums font-medium">{totalTxnShares.toLocaleString()}</td>
-                                          <td className="py-1.5 px-3 text-emerald-400 tabular-nums font-medium">
-                                            {avg !== null ? fmtPrice(avg) : "—"}
-                                          </td>
-                                          <td className="py-1.5 px-3 text-slate-300 tabular-nums font-medium">{fmt(c.invested)}</td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </td>
-                              </tr>
+                <h2 className="text-sm font-semibold text-slate-100 mb-4">Portfolio at a Glance</h2>
+                <div className="space-y-0 divide-y divide-[#1E2D3D]">
+                  {portfolio.map((c) => {
+                    const moic = (c.currentValue / c.invested).toFixed(2);
+                    const txns = c.shareTransactions;
+                    const avg = txns ? weightedAvg(txns) : null;
+                    const totalTxnShares = txns ? txns.reduce((s, t) => s + (t.shares ?? 0), 0) : 0;
+                    return (
+                      <div key={c.id}>
+                        {/* Company summary row */}
+                        <div
+                          className="grid gap-x-4 items-center py-3 px-2 hover:bg-[#111D2E]/40 transition-colors cursor-pointer rounded-lg"
+                          style={{ gridTemplateColumns: "2fr 1fr 1fr auto auto auto auto auto" }}
+                          onClick={() => setActiveCompanyId(c.id)}
+                        >
+                          {/* Company */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            {c.logoUrl ? (
+                              <div className="w-7 h-7 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={c.logoUrl} alt={c.name} className="w-full h-full object-contain" />
+                              </div>
+                            ) : (
+                              <div className="w-7 h-7 rounded text-xs font-bold flex items-center justify-center shrink-0"
+                                style={{ background: `${c.accentColor}18`, color: c.accentColor }}>
+                                {c.initials[0]}
+                              </div>
                             )}
-                          </>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-200 truncate">{c.name}</p>
+                              <p className="text-[10px] text-slate-600 truncate">{c.sector} · {c.stage}</p>
+                            </div>
+                          </div>
+                          {/* Invested */}
+                          <div>
+                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Invested</p>
+                            <p className="text-xs text-slate-300 tabular-nums font-medium">{fmt(c.invested)}</p>
+                          </div>
+                          {/* Current value */}
+                          <div>
+                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Value</p>
+                            <p className="text-xs tabular-nums font-medium" style={{ color: c.accentColor }}>{fmt(c.currentValue)}</p>
+                          </div>
+                          {/* MOIC */}
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">MOIC</p>
+                            <p className={`text-xs tabular-nums font-semibold ${parseFloat(moic) >= 1.5 ? "text-emerald-400" : parseFloat(moic) >= 1 ? "text-slate-300" : "text-rose-400"}`}>{moic}x</p>
+                          </div>
+                          {/* Economic % */}
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Econ %</p>
+                            <p className="text-xs text-slate-300 tabular-nums">{c.ownership}%</p>
+                          </div>
+                          {/* Voting % */}
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Vote %</p>
+                            <p className="text-xs tabular-nums text-slate-300">{c.votingOwnership ?? c.ownership}%</p>
+                          </div>
+                          {/* Avg cost */}
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-600 uppercase tracking-wide">Avg $/sh</p>
+                            <p className="text-xs text-slate-400 tabular-nums">{avg !== null ? fmtPrice(avg) : "—"}</p>
+                          </div>
+                          {/* Status */}
+                          <div className="text-right">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                              c.status === "active" ? "bg-emerald-500/10 text-emerald-400"
+                              : c.status === "realized" ? "bg-violet-500/10 text-violet-400"
+                              : "bg-slate-500/10 text-slate-400"
+                            }`}>{c.status.charAt(0).toUpperCase() + c.status.slice(1)}</span>
+                          </div>
+                        </div>
+
+                        {/* Transaction subrows */}
+                        {txns && txns.length > 0 && (
+                          <div className="ml-9 mb-2 rounded-lg overflow-hidden border border-[#1A2535]">
+                            <table className="w-full text-[11px]">
+                              <thead>
+                                <tr className="bg-[#080E1A] border-b border-[#1A2535]">
+                                  {["Date", "Type", "Shares", "Price / Share", "Amount"].map((h) => (
+                                    <th key={h} className="py-1.5 px-3 text-left text-slate-600 font-medium uppercase tracking-wider">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#111D2E]">
+                                {txns.map((t, i) => (
+                                  <tr key={i} className="bg-[#0A1220]">
+                                    <td className="py-1.5 px-3 text-slate-400">{t.date}</td>
+                                    <td className="py-1.5 px-3">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                        style={{ background: `${c.accentColor}15`, color: c.accentColor }}>
+                                        {t.type}
+                                      </span>
+                                    </td>
+                                    <td className="py-1.5 px-3 text-slate-300 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
+                                    <td className="py-1.5 px-3 text-slate-300 tabular-nums">{t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}</td>
+                                    <td className="py-1.5 px-3 text-slate-300 tabular-nums">{fmt(t.amount)}</td>
+                                  </tr>
+                                ))}
+                                {/* Totals row */}
+                                <tr className="bg-[#080E1A] border-t border-[#1E2D3D]">
+                                  <td className="py-1.5 px-3 text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                  <td className="py-1.5 px-3" />
+                                  <td className="py-1.5 px-3 text-slate-300 tabular-nums font-semibold">{totalTxnShares.toLocaleString()}</td>
+                                  <td className="py-1.5 px-3 tabular-nums font-semibold" style={{ color: c.accentColor }}>
+                                    {avg !== null ? fmtPrice(avg) : "—"}
+                                  </td>
+                                  <td className="py-1.5 px-3 text-slate-200 tabular-nums font-semibold">{fmt(c.invested)}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               );

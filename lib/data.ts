@@ -58,7 +58,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
     ebitda: 350_000,
-    votingOwnership: 17.5,
+    votingOwnership: 22.1,
     shareTransactions: [
       { date: "Aug 2022", type: "Common",    shares: 5_000_000, pricePerShare: 0.10,  amount: 500_000  },
       { date: "Mar 2024", type: "Preferred", shares: 3_500_000, pricePerShare: 0.386, amount: 1_350_000 },
@@ -159,7 +159,7 @@ Thank you for your continued support.
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
     ebitda: -180_000,
-    votingOwnership: 22.0,
+    votingOwnership: 27.8,
     shareTransactions: [
       { date: "Jun 2022", type: "Common",    shares: 4_000_000, pricePerShare: 0.075, amount: 300_000  },
       { date: "Sep 2023", type: "Preferred", shares: 3_000_000, pricePerShare: 0.30,  amount: 900_000  },
@@ -262,7 +262,7 @@ Thank you for your patience and continued confidence.
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/84711983-f208-406e-aeb1-60e8f271e02d/Screenshot+2025-10-29+162326.png",
     accentColor: "#10B981",
     ebitda: -850_000,
-    votingOwnership: 28.5,
+    votingOwnership: 35.2,
     shareTransactions: [
       { date: "Mar 2022", type: "Common",    shares: 3_500_000, pricePerShare: 0.057, amount: 200_000 },
       { date: "Nov 2023", type: "Preferred", shares: 2_800_000, pricePerShare: 0.25,  amount: 700_000 },
@@ -366,7 +366,7 @@ Thank you for your patience — this is a complex market to move in, and we are 
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
     ebitda: -320_000,
-    votingOwnership: 25.5,
+    votingOwnership: 32.4,
     shareTransactions: [
       { date: "Sep 2021", type: "Common",    shares: 4_000_000, pricePerShare: 0.05,  amount: 200_000 },
       { date: "Jul 2023", type: "Preferred", shares: 2_000_000, pricePerShare: 0.20,  amount: 400_000 },
@@ -472,7 +472,7 @@ All six Audily employees hold meaningful equity. When I tell you our churn is ze
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
     ebitda: 480_000,
-    votingOwnership: 20.0,
+    votingOwnership: 25.6,
     shareTransactions: [
       { date: "Apr 2022", type: "Common",    shares: 3_000_000, pricePerShare: 0.133, amount: 400_000 },
       { date: "Jan 2024", type: "Preferred", shares: 2_333_333, pricePerShare: 0.30,  amount: 700_000 },
