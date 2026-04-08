@@ -1,13 +1,13 @@
 "use client";
 import { useState } from "react";
 import { LayoutDashboard, Briefcase, Zap, ArrowLeftRight, BookOpen, Lock } from "lucide-react";
-import FundMetrics from "@/components/FundMetrics";
+import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import PortfolioGrid from "@/components/PortfolioGrid";
 import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import PerformanceChart from "@/components/PerformanceChart";
-import { fund, portfolio } from "@/lib/data";
+import { portfolio } from "@/lib/data";
 
 type Tab = "overview" | "portfolio" | "pipeline" | "secondary" | "letters";
 
@@ -45,25 +45,29 @@ export default function Dashboard() {
               </span>
             </div>
 
-            {/* Fund quick stats */}
-            <div className="hidden lg:flex items-center gap-6 text-xs">
-              <div className="text-right">
-                <p className="text-slate-500">NAV</p>
-                <p className="text-emerald-400 font-semibold tabular-nums">{fmt(fund.nav)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-slate-500">TVPI</p>
-                <p className="text-slate-200 font-semibold tabular-nums">{fund.tvpi.toFixed(2)}x</p>
-              </div>
-              <div className="text-right">
-                <p className="text-slate-500">Net IRR</p>
-                <p className="text-slate-200 font-semibold tabular-nums">{fund.irr.toFixed(1)}%</p>
-              </div>
-              <div className="text-right">
-                <p className="text-slate-500">Companies</p>
-                <p className="text-slate-200 font-semibold tabular-nums">{portfolio.length}</p>
-              </div>
-            </div>
+            {/* Quick stats */}
+            {(() => {
+              const active = portfolio.filter((c) => c.status === "active");
+              const totalValue = active.reduce((s, c) => s + c.currentValue, 0);
+              const totalInvested = active.reduce((s, c) => s + c.invested, 0);
+              const moic = (totalValue / totalInvested).toFixed(2);
+              return (
+                <div className="hidden lg:flex items-center gap-6 text-xs">
+                  <div className="text-right">
+                    <p className="text-slate-500">Portfolio Value</p>
+                    <p className="text-emerald-400 font-semibold tabular-nums">{fmt(totalValue)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-slate-500">MOIC</p>
+                    <p className="text-slate-200 font-semibold tabular-nums">{moic}x</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-slate-500">Companies</p>
+                    <p className="text-slate-200 font-semibold tabular-nums">{active.length}</p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Confidential badge */}
             <div className="flex items-center gap-1.5 text-xs text-slate-500 border border-[#1E2D3D] rounded-lg px-2.5 py-1.5">
@@ -101,7 +105,21 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === "overview" && (
           <div className="space-y-8">
-            <FundMetrics />
+            {/* Portfolio allocation */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-100">Your Holdings</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Co-Owner Fund, LP · Portfolio allocation by current value
+                  </p>
+                </div>
+                <span className="text-xs text-slate-500 bg-[#111D2E] border border-[#1E2D3D] px-2.5 py-1 rounded-lg">
+                  As of March 31, 2026
+                </span>
+              </div>
+              <PortfolioAllocationChart />
+            </div>
 
             {/* Performance chart card */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
@@ -113,7 +131,7 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <span className="text-xs text-slate-500 bg-[#111D2E] border border-[#1E2D3D] px-2.5 py-1 rounded-lg">
-                  As of {fund.asOf}
+                  As of March 31, 2026
                 </span>
               </div>
               <PerformanceChart />
