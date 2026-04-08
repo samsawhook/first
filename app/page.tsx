@@ -476,26 +476,26 @@ export default function Dashboard() {
                 label: string; tableKey: string; accent: string;
                 stats: { label: string; value: string; color?: string }[];
               }) => (
-                <div>
-                  <button
-                    onClick={() => toggleTable(tableKey)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#111D2E]/60 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: accent }} />
-                      <span className="text-sm font-semibold text-slate-200">{label}</span>
-                    </div>
-                    <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
-                  </button>
-                  <div className="grid border-t border-[#1E2D3D]" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
-                    {stats.map((s, i) => (
-                      <div key={s.label} className={`px-4 py-2.5 ${i < stats.length - 1 ? "border-r border-[#1E2D3D]" : ""}`}>
+                <button
+                  onClick={() => toggleTable(tableKey)}
+                  className="w-full flex items-stretch hover:bg-[#111D2E]/60 transition-colors"
+                >
+                  <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: accent }} />
+                    <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">{label}</span>
+                  </div>
+                  <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                    {stats.map(s => (
+                      <div key={s.label} className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
                         <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium whitespace-nowrap">{s.label}</p>
-                        <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: s.color ?? "#e2e8f0" }}>{s.value}</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums whitespace-nowrap" style={{ color: s.color ?? "#e2e8f0" }}>{s.value}</p>
                       </div>
                     ))}
                   </div>
-                </div>
+                  <div className="flex items-center px-4 shrink-0 border-l border-[#1E2D3D]">
+                    <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
               );
 
               // ── Group transactions by company ──────────────────────────────────
@@ -509,17 +509,36 @@ export default function Dashboard() {
                 {/* ══ 1. EQUITY (Common Stock) ══════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const totalShares = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + (t.shares ?? 0), 0), 0);
-                    const totalCost   = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + t.amount, 0), 0);
-                    const wtdAvg      = totalShares > 0 ? totalCost / totalShares : null;
+                    const parseDate = (s: string) => {
+                      const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+                      const [m, y] = s.split(" "); return new Date(parseInt(y), mo[m]);
+                    };
+                    const totalCost = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + t.amount, 0), 0);
+                    const estValue  = companiesWithCommon.reduce((s, c) => {
+                      const txns = (c.shareTransactions ?? []).filter(t => t.type === "Common");
+                      const sh = txns.reduce((a, t) => a + (t.shares ?? 0), 0);
+                      const pps = c.totalShares ? c.impliedValuation / c.totalShares : null;
+                      return s + (pps !== null ? sh * pps : 0);
+                    }, 0);
+                    const moic = totalCost > 0 && estValue > 0 ? estValue / totalCost : null;
+                    // Annualized ROI — cost-weighted avg hold period
+                    const { weightedYears, totalW } = companiesWithCommon.reduce<{ weightedYears: number; totalW: number }>((acc, c) => {
+                      for (const t of (c.shareTransactions ?? []).filter(tx => tx.type === "Common")) {
+                        const yrs = (Date.now() - parseDate(t.date).getTime()) / (365.25 * 86400_000);
+                        acc.weightedYears += t.amount * yrs; acc.totalW += t.amount;
+                      }
+                      return acc;
+                    }, { weightedYears: 0, totalW: 0 });
+                    const avgYrs = totalW > 0 ? weightedYears / totalW : null;
+                    const annRoi = moic !== null && avgYrs !== null && avgYrs > 0 ? (Math.pow(moic, 1 / avgYrs) - 1) * 100 : null;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Equity" tableKey="common" accent="#10B981" stats={[
-                            { label: "Companies", value: String(companiesWithCommon.length) },
-                            { label: "Total Shares", value: totalShares.toLocaleString() },
-                            { label: "Wtd Avg Cost", value: wtdAvg !== null ? fmtPrice(wtdAvg) : "—" },
-                            { label: "Cost Basis", value: fmt(totalCost), color: "#10B981" },
+                            { label: "Cost Basis",     value: fmt(totalCost) },
+                            { label: "Est. Value",     value: fmt(estValue), color: "#10B981" },
+                            { label: "MOIC",           value: moic !== null ? `${moic.toFixed(2)}×` : "—", color: moic && moic >= 1 ? "#10B981" : "#F87171" },
+                            { label: "Ann. ROI",       value: annRoi !== null ? `${annRoi.toFixed(1)}%` : "—", color: "#10B981" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("common") && (
@@ -527,8 +546,8 @@ export default function Dashboard() {
                             <table className="w-full text-xs">
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
-                                  <TH></TH><TH wide>Company</TH><TH>Total Shares</TH>
-                                  <TH>Avg Cost/sh</TH><TH>Cost Basis</TH><TH>Curr Value</TH><TH>Gain / Loss</TH>
+                                  <TH></TH><TH wide>Company</TH><TH>Cost Basis</TH>
+                                  <TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH>
                                 </tr>
                               </thead>
                               <tbody>
@@ -536,18 +555,23 @@ export default function Dashboard() {
                                   const txns = (c.shareTransactions ?? []).filter(t => t.type === "Common");
                                   const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
                                   const cost = txns.reduce((s, t) => s + t.amount, 0);
-                                  const avg = sh > 0 ? cost / sh : null;
                                   const valPerSh = c.totalShares ? c.impliedValuation / c.totalShares : null;
                                   const currVal = valPerSh !== null ? sh * valPerSh : null;
-                                  const gain = currVal !== null ? currVal - cost : null;
+                                  const cMoic = cost > 0 && currVal !== null ? currVal / cost : null;
+                                  // Per-company annualized ROI
+                                  const { wY, wD } = txns.reduce<{ wY: number; wD: number }>((a, t) => {
+                                    const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+                                    const [mn, yr] = t.date.split(" ");
+                                    const yrs = (Date.now() - new Date(parseInt(yr), mo[mn]).getTime()) / (365.25 * 86400_000);
+                                    a.wY += t.amount * yrs; a.wD += t.amount; return a;
+                                  }, { wY: 0, wD: 0 });
+                                  const cAnnRoi = cMoic !== null && wD > 0 && wY / wD > 0 ? (Math.pow(cMoic, wD / wY) - 1) * 100 : null;
                                   const rowKey = `common-${c.id}`;
                                   const isOpen = expandedRows.has(rowKey);
                                   return (
                                     <>
                                       <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
-                                        <TD>
-                                          <ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                                        </TD>
+                                        <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
                                         <TD>
                                           <div className="flex items-center gap-2">
                                             {companyLogo(c)}
@@ -557,29 +581,29 @@ export default function Dashboard() {
                                             </div>
                                           </div>
                                         </TD>
-                                        <TD className="text-slate-300 tabular-nums">{sh.toLocaleString()}</TD>
-                                        <TD className="text-emerald-400 tabular-nums">{avg !== null ? fmtPrice(avg) : "—"}</TD>
                                         <TD className="text-slate-300 tabular-nums">{fmt(cost)}</TD>
                                         <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>
                                           {currVal !== null ? fmt(currVal) : "—"}
                                         </TD>
-                                        <TD>
-                                          {gain !== null ? (
-                                            <span className={gain >= 0 ? "text-emerald-400 tabular-nums" : "text-rose-400 tabular-nums"}>
-                                              {gain >= 0 ? "+" : ""}{fmt(gain)}
-                                            </span>
-                                          ) : "—"}
+                                        <TD className={`tabular-nums font-medium ${cMoic !== null && cMoic >= 1 ? "text-emerald-400" : "text-rose-400"}`}>
+                                          {cMoic !== null ? `${cMoic.toFixed(2)}×` : "—"}
+                                        </TD>
+                                        <TD className="text-emerald-400 tabular-nums">
+                                          {cAnnRoi !== null ? `${cAnnRoi.toFixed(1)}%` : "—"}
                                         </TD>
                                       </tr>
                                       {isOpen && txns.map((t, i) => (
                                         <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
                                           <td className="py-2 px-3 w-6" />
                                           <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
+                                            {t.shares !== undefined && valPerSh !== null ? fmt(t.shares * valPerSh) : "—"}
+                                          </td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-600 tabular-nums">
+                                            {t.shares !== undefined ? `${t.shares.toLocaleString()} sh @ ${t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}` : ""}
+                                          </td>
                                           <td className="py-2 px-3" />
-                                          <td className="py-2 px-3 text-[11px] text-slate-600">{t.notes ?? ""}</td>
                                         </tr>
                                       ))}
                                     </>
@@ -587,10 +611,10 @@ export default function Dashboard() {
                                 })}
                                 <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                   <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalShares.toLocaleString()}</td>
-                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{wtdAvg !== null ? fmtPrice(wtdAvg) : "—"}</td>
                                   <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCost)}</td>
-                                  <td /><td />
+                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(estValue)}</td>
+                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{moic !== null ? `${moic.toFixed(2)}×` : "—"}</td>
+                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{annRoi !== null ? `${annRoi.toFixed(1)}%` : "—"}</td>
                                 </tr>
                               </tbody>
                             </table>
@@ -604,17 +628,41 @@ export default function Dashboard() {
                 {/* ══ 2. CREDIT (Preferred Stock) ══════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const totalShares = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + (t.shares ?? 0), 0), 0);
-                    const totalCost   = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + t.amount, 0), 0);
-                    const wtdAvg      = totalShares > 0 ? totalCost / totalShares : null;
+                    const parseDate = (s: string) => {
+                      const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+                      const [m, y] = s.split(" "); return new Date(parseInt(y), mo[m]);
+                    };
+                    const totalInvested = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + t.amount, 0), 0);
+                    // Outstanding principal = sum of liquidation preferences
+                    const outstandingPrincipal = companiesWithPref.reduce((s, c) => {
+                      const txns = (c.shareTransactions ?? []).filter(t => t.type === "Preferred");
+                      return s + txns.reduce((a, t) => a + t.amount * (t.liquidationMultiple ?? 1), 0);
+                    }, 0);
+                    // Weighted current yield (by cost basis)
+                    const { yieldNum, yieldDen } = companiesWithPref.reduce<{ yieldNum: number; yieldDen: number }>((acc, c) => {
+                      for (const t of (c.shareTransactions ?? []).filter(tx => tx.type === "Preferred")) {
+                        if (t.dividendRate !== undefined) { acc.yieldNum += t.amount * t.dividendRate; acc.yieldDen += t.amount; }
+                      }
+                      return acc;
+                    }, { yieldNum: 0, yieldDen: 0 });
+                    const wtdYield = yieldDen > 0 ? yieldNum / yieldDen : null;
+                    // Weighted duration in years (by cost basis)
+                    const { durNum, durDen } = companiesWithPref.reduce<{ durNum: number; durDen: number }>((acc, c) => {
+                      for (const t of (c.shareTransactions ?? []).filter(tx => tx.type === "Preferred")) {
+                        const yrs = (Date.now() - parseDate(t.date).getTime()) / (365.25 * 86400_000);
+                        acc.durNum += t.amount * yrs; acc.durDen += t.amount;
+                      }
+                      return acc;
+                    }, { durNum: 0, durDen: 0 });
+                    const wtdDuration = durDen > 0 ? durNum / durDen : null;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Credit" tableKey="preferred" accent="#6366F1" stats={[
-                            { label: "Companies", value: String(companiesWithPref.length) },
-                            { label: "Total Shares", value: totalShares.toLocaleString() },
-                            { label: "Wtd Avg Cost", value: wtdAvg !== null ? fmtPrice(wtdAvg) : "—" },
-                            { label: "Cost Basis", value: fmt(totalCost), color: "#6366F1" },
+                            { label: "Total Investments",     value: fmt(totalInvested) },
+                            { label: "Outstanding Principal", value: fmt(outstandingPrincipal), color: "#6366F1" },
+                            { label: "Wtd Current Yield",     value: wtdYield !== null ? `${wtdYield.toFixed(1)}%` : "—" },
+                            { label: "Wtd Duration",          value: wtdDuration !== null ? `${wtdDuration.toFixed(1)} yrs` : "—" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("preferred") && (
@@ -622,9 +670,9 @@ export default function Dashboard() {
                             <table className="w-full text-xs">
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
-                                  <TH></TH><TH wide>Company</TH><TH>Shares</TH><TH>Type</TH>
-                                  <TH>Liq Pref</TH><TH>Conv Ratio</TH><TH>Sh if Conv</TH>
-                                  <TH>Div Rate</TH><TH>Avg Cost/sh</TH><TH>Cost Basis</TH>
+                                  <TH></TH><TH wide>Company</TH><TH>Invested</TH>
+                                  <TH>Liq Pref</TH><TH>Wtd Yield</TH><TH>Duration</TH>
+                                  <TH>Shares</TH><TH>Type</TH><TH>Conv Ratio</TH><TH>Sh if Conv</TH>
                                 </tr>
                               </thead>
                               <tbody>
@@ -632,18 +680,20 @@ export default function Dashboard() {
                                   const txns = (c.shareTransactions ?? []).filter(t => t.type === "Preferred");
                                   const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
                                   const cost = txns.reduce((s, t) => s + t.amount, 0);
-                                  const avg = sh > 0 ? cost / sh : null;
-                                  // Weighted liq pref (weighted by share count)
-                                  const wtdLiq = sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.liquidationMultiple ?? 1), 0) / sh : null;
-                                  // Weighted conv ratio
+                                  const liqPref = txns.reduce((s, t) => s + t.amount * (t.liquidationMultiple ?? 1), 0);
                                   const wtdConv = sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.conversionRatio ?? 1), 0) / sh : 1;
                                   const sharesIfConv = Math.round(sh * (wtdConv ?? 1));
-                                  // Weighted div rate
                                   const hasDivs = txns.some(t => t.dividendRate !== undefined);
-                                  const wtdDiv = hasDivs && sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.dividendRate ?? 0), 0) / sh : null;
+                                  const wtdDiv = hasDivs && cost > 0 ? txns.reduce((s, t) => s + t.amount * (t.dividendRate ?? 0), 0) / cost : null;
+                                  const { dN, dD } = txns.reduce<{ dN: number; dD: number }>((a, t) => {
+                                    const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+                                    const [mn, yr] = t.date.split(" ");
+                                    const yrs = (Date.now() - new Date(parseInt(yr), mo[mn]).getTime()) / (365.25 * 86400_000);
+                                    a.dN += t.amount * yrs; a.dD += t.amount; return a;
+                                  }, { dN: 0, dD: 0 });
+                                  const dur = dD > 0 ? dN / dD : null;
                                   const rowKey = `pref-${c.id}`;
                                   const isOpen = expandedRows.has(rowKey);
-                                  // Representative type (most common)
                                   const prefType = txns[0]?.preferredType ?? "—";
                                   return (
                                     <>
@@ -658,31 +708,27 @@ export default function Dashboard() {
                                             </div>
                                           </div>
                                         </TD>
-                                        <TD className="text-slate-300 tabular-nums">{sh.toLocaleString()}</TD>
-                                        <TD>
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-400">{prefType}</span>
-                                        </TD>
-                                        <TD className="text-slate-300 tabular-nums">{wtdLiq !== null ? `${wtdLiq.toFixed(1)}×` : "—"}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{wtdConv !== null ? `${wtdConv.toFixed(2)}:1` : "—"}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{sharesIfConv.toLocaleString()}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{wtdDiv !== null ? `${wtdDiv.toFixed(1)}%` : <span className="text-slate-700">—</span>}</TD>
-                                        <TD className="text-indigo-400 tabular-nums">{avg !== null ? fmtPrice(avg) : "—"}</TD>
                                         <TD className="text-slate-300 tabular-nums font-medium">{fmt(cost)}</TD>
+                                        <TD className="text-indigo-400 tabular-nums">{fmt(liqPref)}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{wtdDiv !== null ? `${wtdDiv.toFixed(1)}%` : <span className="text-slate-600">—</span>}</TD>
+                                        <TD className="text-slate-400 tabular-nums">{dur !== null ? `${dur.toFixed(1)} yr` : "—"}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{sh.toLocaleString()}</TD>
+                                        <TD><span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-400">{prefType}</span></TD>
+                                        <TD className="text-slate-400 tabular-nums">{`${wtdConv.toFixed(2)}:1`}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{sharesIfConv.toLocaleString()}</TD>
                                       </tr>
                                       {isOpen && txns.map((t, i) => (
                                         <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
                                           <td className="py-2 px-3 w-6" />
                                           <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares?.toLocaleString()}</td>
-                                          <td className="py-2 px-3">
-                                            {t.preferredType && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{t.preferredType}</span>}
-                                          </td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.liquidationMultiple !== undefined ? `${t.liquidationMultiple}×` : "—"}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
+                                          <td className="py-2 px-3 text-[11px] text-indigo-400 tabular-nums">{fmt(t.amount * (t.liquidationMultiple ?? 1))}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.dividendRate !== undefined ? `${t.dividendRate}%` : "—"}</td>
+                                          <td className="py-2 px-3" />
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
+                                          <td className="py-2 px-3">{t.preferredType && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{t.preferredType}</span>}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400">{t.conversionRatio !== undefined ? `${t.conversionRatio}:1` : "—"}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares && t.conversionRatio !== undefined ? Math.round(t.shares * t.conversionRatio).toLocaleString() : "—"}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.dividendRate !== undefined ? `${t.dividendRate}%` : "—"}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.pricePerShare !== undefined ? fmtPrice(t.pricePerShare) : "—"}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
                                         </tr>
                                       ))}
                                     </>
@@ -690,14 +736,11 @@ export default function Dashboard() {
                                 })}
                                 <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                   <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalShares.toLocaleString()}</td>
-                                  <td /><td /><td />
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">
-                                    {companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + Math.round((t.shares ?? 0) * (t.conversionRatio ?? 1)), 0), 0).toLocaleString()}
-                                  </td>
-                                  <td />
-                                  <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{wtdAvg !== null ? fmtPrice(wtdAvg) : "—"}</td>
-                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCost)}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalInvested)}</td>
+                                  <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{fmt(outstandingPrincipal)}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdYield !== null ? `${wtdYield.toFixed(1)}%` : "—"}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDuration !== null ? `${wtdDuration.toFixed(1)} yrs` : "—"}</td>
+                                  <td /><td /><td /><td />
                                 </tr>
                               </tbody>
                             </table>
@@ -722,10 +765,10 @@ export default function Dashboard() {
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Convertibles" tableKey="debt" accent="#F59E0B" stats={[
-                            { label: "Companies", value: String(companiesWithDebt.length) },
-                            { label: "Wtd Rate", value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
-                            { label: "Principal", value: fmt(totalPrincipal), color: "#F59E0B" },
-                            { label: "Current Value", value: fmt(totalCurrVal), color: "#e2e8f0" },
+                            { label: "Basis",          value: fmt(totalPrincipal), color: "#F59E0B" },
+                            { label: "Wtd Yield",      value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
+                            { label: "Current Value",  value: fmt(totalCurrVal) },
+                            { label: "Accrued",        value: totalCurrVal > totalPrincipal ? `+${fmt(totalCurrVal - totalPrincipal)}` : "—", color: "#10B981" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("debt") && (
@@ -734,26 +777,28 @@ export default function Dashboard() {
                               <table className="w-full text-xs">
                                 <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                   <tr>
-                                    <TH></TH><TH wide>Company</TH><TH>Principal</TH>
-                                    <TH>Wtd Rate</TH><TH>Curr Value</TH><TH>Accrued</TH><TH>Status</TH>
+                                    <TH></TH><TH wide>Company</TH><TH>Type</TH>
+                                    <TH>Basis</TH><TH>Yield</TH><TH># Sh if Conv</TH><TH>Conv Ratio</TH>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {companiesWithDebt.map((c) => {
                                     const positions = c.debtPositions ?? [];
                                     const principal = positions.reduce((s, d) => s + d.principal, 0);
-                                    const currVal   = positions.reduce((s, d) => s + d.currentValue, 0);
-                                    const accrued   = currVal - principal;
                                     const ratedPos  = positions.filter(d => d.interestRate !== undefined);
                                     const compRate  = ratedPos.length > 0
                                       ? ratedPos.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.principal, 0)
                                       : null;
+                                    // Est shares if converted (per cap)
+                                    const estShares = positions.reduce((s, d) => {
+                                      if (d.valuationCap && c.totalShares) {
+                                        return s + Math.round(d.principal * c.totalShares / d.valuationCap);
+                                      }
+                                      return s;
+                                    }, 0);
                                     const rowKey = `debt-${c.id}`;
                                     const isOpen = expandedRows.has(rowKey);
-                                    // Aggregate status — if any extended/default, show that
-                                    const status = positions.find(d => d.status === "Extended")?.status
-                                      ?? positions.find(d => d.status === "Current")?.status
-                                      ?? positions[0]?.status ?? "—";
+                                    const instrType = positions.length === 1 ? positions[0].instrument : `${positions.length} instruments`;
                                     return (
                                       <>
                                         <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
@@ -767,64 +812,57 @@ export default function Dashboard() {
                                               </div>
                                             </div>
                                           </TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(principal)}</TD>
-                                          <TD className="text-amber-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : <span className="text-slate-500">SAFE</span>}</TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(currVal)}</TD>
-                                          <TD className={accrued > 0 ? "text-emerald-400 tabular-nums" : "text-slate-600 tabular-nums"}>
-                                            {accrued > 0 ? `+${fmt(accrued)}` : "—"}
-                                          </TD>
                                           <TD>
-                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                              status === "Extended" ? "bg-amber-500/10 text-amber-400"
-                                              : status === "Accruing" ? "bg-blue-500/10 text-blue-400"
-                                              : status === "Converted" ? "bg-violet-500/10 text-violet-400"
-                                              : status === "Repaid" ? "bg-emerald-500/10 text-emerald-400"
-                                              : "bg-slate-500/10 text-slate-400"
-                                            }`}>{status}</span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium">{instrType}</span>
                                           </TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(principal)}</TD>
+                                          <TD className="text-amber-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : <span className="text-slate-500">—</span>}</TD>
+                                          <TD className="text-slate-300 tabular-nums">{estShares > 0 ? estShares.toLocaleString() : "—"}</TD>
+                                          <TD className="text-slate-500">—</TD>
                                         </tr>
-                                        {isOpen && positions.map((d, i) => (
-                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                            <td className="py-2 px-3 w-6" />
-                                            <td className="py-2 px-3 pl-11">
-                                              <p className="text-[11px] text-slate-400 font-medium">{d.instrument}</p>
-                                              <p className="text-[10px] text-slate-600">{d.date}</p>
-                                            </td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
-                                            <td className="py-2 px-3 text-[11px] text-amber-400 tabular-nums">
-                                              {d.interestRate !== undefined ? `${d.interestRate}%` : d.discountRate !== undefined ? `${d.discountRate}% disc.` : "—"}
-                                            </td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.currentValue)}</td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-500">
-                                              {d.valuationCap ? `$${(d.valuationCap / 1_000_000).toFixed(1)}M cap` : ""}
-                                              {d.maturityDate ? ` · ${d.maturityDate}` : ""}
-                                            </td>
-                                            <td className="py-2 px-3">
-                                              <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${
-                                                d.status === "Extended" ? "bg-amber-500/10 text-amber-400"
-                                                : d.status === "Accruing" ? "bg-blue-500/10 text-blue-400"
-                                                : d.status === "Converted" ? "bg-violet-500/10 text-violet-400"
-                                                : "bg-emerald-500/10 text-emerald-400"
-                                              }`}>{d.status}</span>
-                                            </td>
-                                          </tr>
-                                        ))}
+                                        {isOpen && positions.map((d, i) => {
+                                          const shConv = d.valuationCap && c.totalShares ? Math.round(d.principal * c.totalShares / d.valuationCap) : null;
+                                          return (
+                                            <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                              <td className="py-2 px-3 w-6" />
+                                              <td className="py-2 px-3 pl-11">
+                                                <p className="text-[11px] text-slate-500">{d.date}</p>
+                                                {d.notes && <p className="text-[10px] text-slate-600 max-w-xs truncate">{d.notes}</p>}
+                                              </td>
+                                              <td className="py-2 px-3">
+                                                <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400">{d.instrument}</span>
+                                              </td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
+                                              <td className="py-2 px-3 text-[11px] text-amber-400 tabular-nums">
+                                                {d.interestRate !== undefined ? `${d.interestRate}%` : d.discountRate !== undefined ? `${d.discountRate}% disc.` : "—"}
+                                              </td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
+                                                {shConv !== null ? shConv.toLocaleString() : d.valuationCap ? `(cap $${(d.valuationCap/1_000_000).toFixed(1)}M)` : "—"}
+                                              </td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-600">—</td>
+                                            </tr>
+                                          );
+                                        })}
                                       </>
                                     );
                                   })}
                                   <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                     <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                    <td />
                                     <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalPrincipal)}</td>
                                     <td className="py-2 px-3 text-xs text-amber-400 tabular-nums font-semibold">{wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—"}</td>
-                                    <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCurrVal)}</td>
-                                    <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">+{fmt(totalCurrVal - totalPrincipal)}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">
+                                      {companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => {
+                                        return a + (d.valuationCap && c.totalShares ? Math.round(d.principal * c.totalShares / d.valuationCap) : 0);
+                                      }, 0), 0).toLocaleString()}
+                                    </td>
                                     <td />
                                   </tr>
                                 </tbody>
                               </table>
                             </div>
                           ) : (
-                            <div className="px-5 py-8 text-center text-xs text-slate-600">No debt positions in portfolio.</div>
+                            <div className="px-5 py-8 text-center text-xs text-slate-600">No convertible positions in portfolio.</div>
                           )
                         )}
                       </>
@@ -832,25 +870,28 @@ export default function Dashboard() {
                   })()}
                 </div>
 
-                {/* ══ 4. MANAGED FUNDS ════════════════════════════════════════════ */}
+                {/* ══ 4. MANAGED FUNDS (Evergreen) ════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const totalCommitment  = managedFundPositions.reduce((s, p) => s + p.commitment, 0);
-                    const totalCalled      = managedFundPositions.reduce((s, p) => s + p.called, 0);
-                    const totalUncalled    = managedFundPositions.reduce((s, p) => s + p.uncalled, 0);
-                    const totalNav         = managedFundPositions.reduce((s, p) => s + p.nav, 0);
-                    const totalDistrib     = managedFundPositions.reduce((s, p) => s + p.distributions, 0);
-                    const wtdTvpi          = totalCalled > 0 ? (totalNav + totalDistrib) / totalCalled : null;
-                    const wtdDpi           = totalCalled > 0 ? totalDistrib / totalCalled : null;
+                    const totalLpBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
+                    const totalNav     = managedFundPositions.reduce((s, p) => s + p.nav, 0);
+                    const totalDistrib = managedFundPositions.reduce((s, p) => s + p.distributions, 0);
+                    const wtdTvpi      = totalLpBasis > 0 ? (totalNav + totalDistrib) / totalLpBasis : null;
+                    const wtdDpi       = totalLpBasis > 0 ? totalDistrib / totalLpBasis : null;
+                    // Weighted IRR by LP basis
+                    const { irrNum, irrDen } = managedFundPositions.reduce<{ irrNum: number; irrDen: number }>((acc, p) => {
+                      acc.irrNum += p.called * p.irr; acc.irrDen += p.called; return acc;
+                    }, { irrNum: 0, irrDen: 0 });
+                    const wtdIrr = irrDen > 0 ? irrNum / irrDen : null;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Managed Funds" tableKey="managed" accent="#EC4899" stats={[
-                            { label: "Called", value: fmt(totalCalled) },
-                            { label: "Uncalled", value: fmt(totalUncalled) },
-                            { label: "NAV", value: fmt(totalNav), color: "#EC4899" },
-                            { label: "DPI", value: wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—" },
-                            { label: "TVPI", value: wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—", color: "#EC4899" },
+                            { label: "LP Basis",   value: fmt(totalLpBasis) },
+                            { label: "NAV",        value: fmt(totalNav), color: "#EC4899" },
+                            { label: "DPI",        value: wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—" },
+                            { label: "TVPI",       value: wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—", color: "#EC4899" },
+                            { label: "IRR",        value: wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—", color: "#10B981" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("managed") && (
@@ -859,9 +900,8 @@ export default function Dashboard() {
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
                                   <TH></TH><TH wide>Fund</TH><TH>Vintage</TH>
-                                  <TH>Unit Price</TH><TH>Units Called</TH><TH>Called</TH>
-                                  <TH>Uncalled</TH><TH>NAV</TH><TH>Distributions</TH>
-                                  <TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
+                                  <TH>Unit Price</TH><TH>LP Basis</TH>
+                                  <TH>NAV</TH><TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
                                 </tr>
                               </thead>
                               <tbody>
@@ -880,11 +920,8 @@ export default function Dashboard() {
                                         </TD>
                                         <TD className="text-slate-400 tabular-nums">{p.vintage}</TD>
                                         <TD className="text-slate-400 tabular-nums">${p.unitPrice.toFixed(2)}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{p.unitsCalled.toLocaleString()}</TD>
                                         <TD className="text-slate-300 tabular-nums font-medium">{fmt(p.called)}</TD>
-                                        <TD className="text-slate-500 tabular-nums">{fmt(p.uncalled)}</TD>
                                         <TD className="text-pink-400 tabular-nums font-semibold">{fmt(p.nav)}</TD>
-                                        <TD className="text-emerald-400 tabular-nums">{fmt(p.distributions)}</TD>
                                         <TD className="text-slate-300 tabular-nums">{p.dpi.toFixed(2)}×</TD>
                                         <TD className="text-pink-400 tabular-nums font-medium">{p.tvpi.toFixed(2)}×</TD>
                                         <TD className="text-emerald-400 tabular-nums">{p.irr.toFixed(1)}%</TD>
@@ -898,13 +935,12 @@ export default function Dashboard() {
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-500">{t.date}</td>
                                           <td />
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.units?.toLocaleString() ?? "—"}</td>
                                           <td className="py-2 px-3 text-[11px] tabular-nums font-medium">
                                             <span className={t.type === "Distribution" ? "text-emerald-400" : "text-slate-300"}>
                                               {t.type === "Distribution" ? "+" : ""}{fmt(t.amount)}
                                             </span>
                                           </td>
-                                          <td colSpan={6} />
+                                          <td colSpan={4} />
                                         </tr>
                                       ))}
                                     </>
@@ -913,16 +949,11 @@ export default function Dashboard() {
                                 <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                   <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
                                   <td /><td />
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">
-                                    {managedFundPositions.reduce((s, p) => s + p.unitsCalled, 0).toLocaleString()}
-                                  </td>
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalCalled)}</td>
-                                  <td className="py-2 px-3 text-xs text-slate-500 tabular-nums font-semibold">{fmt(totalUncalled)}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalLpBasis)}</td>
                                   <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{fmt(totalNav)}</td>
-                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(totalDistrib)}</td>
                                   <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—"}</td>
                                   <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—"}</td>
-                                  <td />
+                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—"}</td>
                                 </tr>
                               </tbody>
                             </table>
