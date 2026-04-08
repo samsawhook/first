@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   LayoutDashboard,
@@ -10,8 +10,13 @@ import {
   ChevronDown,
   Building2,
   User,
+  Pencil,
+  X,
+  Check,
+  RotateCcw,
 } from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
+import FootballField from "@/components/FootballField";
 import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
@@ -145,6 +150,28 @@ export default function Dashboard() {
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "preferred", "debt", "managed"]));
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
+
+  // ── User-set valuations (persistent) ─────────────────────────────────────────
+  const [userValuations, setUserValuations] = useState<Record<string, number>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("nth-user-valuations") ?? "{}"); }
+    catch { return {}; }
+  });
+  // Modal state: which company is being edited, and the live pending value
+  const [valuationModal, setValuationModal] = useState<{ company: typeof portfolio[0]; pendingVal: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    try { localStorage.setItem("nth-user-valuations", JSON.stringify(userValuations)); } catch {}
+  }, [userValuations]);
+
+  // Helpers: effective implied valuation and portfolio current value
+  const effectiveImplied = useCallback((c: typeof portfolio[0]) =>
+    userValuations[c.id] ?? c.impliedValuation, [userValuations]);
+  const effectiveCurrVal = useCallback((c: typeof portfolio[0]) => {
+    if (userValuations[c.id] === undefined) return c.currentValue;
+    return c.currentValue * (userValuations[c.id] / c.impliedValuation);
+  }, [userValuations]);
 
   const toggleTable = (key: string) =>
     setOpenInstrumentTables((prev) => {
@@ -280,10 +307,10 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* ── Overview Hero ── */}
             {(() => {
-              // ── Donut data (by company current value) ──────────────────────────
+              // ── Donut data (by effective current value) ────────────────────────
               const donutItems = portfolio
                 .filter(c => c.status === "active")
-                .map(c => ({ label: c.name, value: c.currentValue, color: c.accentColor, id: c.id }));
+                .map(c => ({ label: c.name, value: effectiveCurrVal(c), color: c.accentColor, id: c.id }));
               const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
 
               // Build SVG donut arcs
@@ -335,7 +362,7 @@ export default function Dashboard() {
                 {/* ── Metrics strip ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
                   {[
-                    { label: "Portfolio Value", value: `$${(fund.nav / 1_000_000).toFixed(2)}M`, accent: "#10B981" },
+                    { label: "Portfolio Value", value: fmt(portfolio.filter(c => c.status === "active").reduce((s, c) => s + effectiveCurrVal(c), 0)), accent: "#10B981" },
                     { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
                     { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
                     { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
@@ -517,7 +544,7 @@ export default function Dashboard() {
                     const estValue  = companiesWithCommon.reduce((s, c) => {
                       const txns = (c.shareTransactions ?? []).filter(t => t.type === "Common");
                       const sh = txns.reduce((a, t) => a + (t.shares ?? 0), 0);
-                      const pps = c.totalShares ? c.impliedValuation / c.totalShares : null;
+                      const pps = c.totalShares ? effectiveImplied(c) / c.totalShares : null;
                       return s + (pps !== null ? sh * pps : 0);
                     }, 0);
                     const moic = totalCost > 0 && estValue > 0 ? estValue / totalCost : null;
@@ -555,7 +582,7 @@ export default function Dashboard() {
                                   const txns = (c.shareTransactions ?? []).filter(t => t.type === "Common");
                                   const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
                                   const cost = txns.reduce((s, t) => s + t.amount, 0);
-                                  const valPerSh = c.totalShares ? c.impliedValuation / c.totalShares : null;
+                                  const valPerSh = c.totalShares ? effectiveImplied(c) / c.totalShares : null;
                                   const currVal = valPerSh !== null ? sh * valPerSh : null;
                                   const cMoic = cost > 0 && currVal !== null ? currVal / cost : null;
                                   // Per-company annualized ROI
@@ -579,11 +606,23 @@ export default function Dashboard() {
                                               <p className="font-semibold text-slate-200">{c.name}</p>
                                               <p className="text-[10px] text-slate-600">{c.stage}</p>
                                             </div>
+                                            {userValuations[c.id] !== undefined && (
+                                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium border border-emerald-500/20">custom</span>
+                                            )}
                                           </div>
                                         </TD>
                                         <TD className="text-slate-300 tabular-nums">{fmt(cost)}</TD>
                                         <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>
-                                          {currVal !== null ? fmt(currVal) : "—"}
+                                          <div className="flex items-center gap-1.5">
+                                            <span>{currVal !== null ? fmt(currVal) : "—"}</span>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setValuationModal({ company: c, pendingVal: effectiveImplied(c) }); }}
+                                              className="p-0.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors"
+                                              title="Edit estimated value"
+                                            >
+                                              <Pencil size={10} />
+                                            </button>
+                                          </div>
                                         </TD>
                                         <TD className={`tabular-nums font-medium ${cMoic !== null && cMoic >= 1 ? "text-emerald-400" : "text-rose-400"}`}>
                                           {cMoic !== null ? `${cMoic.toFixed(2)}×` : "—"}
@@ -1069,6 +1108,132 @@ export default function Dashboard() {
           </div>
         </div>
       </footer>
+
+      {/* ── Valuation Modal ── */}
+      {mounted && valuationModal && createPortal(
+        (() => {
+          const { company: mc, pendingVal } = valuationModal;
+          // Live preview metrics at pending valuation
+          const txns = (mc.shareTransactions ?? []).filter(t => t.type === "Common");
+          const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
+          const cost = txns.reduce((s, t) => s + t.amount, 0);
+          const estVal = mc.totalShares ? sh * (pendingVal / mc.totalShares) : null;
+          const moicLive = cost > 0 && estVal !== null ? estVal / cost : null;
+          const parseDate = (s: string) => {
+            const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+            const [m, y] = s.split(" "); return new Date(parseInt(y), mo[m]);
+          };
+          const { wY, wD } = txns.reduce<{ wY: number; wD: number }>((a, t) => {
+            const yrs = (Date.now() - parseDate(t.date).getTime()) / (365.25 * 86400_000);
+            a.wY += t.amount * yrs; a.wD += t.amount; return a;
+          }, { wY: 0, wD: 0 });
+          const annRoiLive = moicLive !== null && wD > 0 && wY > 0 ? (Math.pow(moicLive, wD / wY) - 1) * 100 : null;
+          const prevVal = userValuations[mc.id] ?? mc.impliedValuation;
+          const hasCustom = userValuations[mc.id] !== undefined;
+          const delta = pendingVal - prevVal;
+          const deltaStr = delta === 0 ? "no change"
+            : `${delta > 0 ? "+" : ""}${fmt(Math.abs(delta))} vs ${hasCustom ? "custom" : "default"}`;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-[#060B14]/80 backdrop-blur-sm"
+                onClick={() => setValuationModal(null)}
+              />
+              {/* Panel */}
+              <div className="relative w-full max-w-2xl bg-[#0D1421] border border-[#1E2D3D] rounded-2xl shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E2D3D]">
+                  <div className="flex items-center gap-3">
+                    {mc.logoUrl ? (
+                      <div className="w-7 h-7 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={mc.logoUrl} alt={mc.name} className="w-full h-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded font-bold flex items-center justify-center text-[10px]"
+                        style={{ background: `${mc.accentColor}18`, color: mc.accentColor }}>{mc.initials[0]}</div>
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold text-slate-200">{mc.name}</p>
+                      <p className="text-[10px] text-slate-500">Set estimated equity valuation</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setValuationModal(null)} className="text-slate-500 hover:text-slate-300 transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Football field */}
+                <div className="px-5 pt-4 pb-2">
+                  <FootballField
+                    company={mc}
+                    controlled={{
+                      value: pendingVal,
+                      onChange: (v) => setValuationModal(prev => prev ? { ...prev, pendingVal: v } : null),
+                    }}
+                  />
+                </div>
+
+                {/* Live preview strip */}
+                <div className="mx-5 mb-4 border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  <div className="flex divide-x divide-[#1E2D3D]">
+                    {[
+                      { label: "Est. Value (common)", value: estVal !== null ? fmt(estVal) : "—", color: mc.accentColor },
+                      { label: "MOIC", value: moicLive !== null ? `${moicLive.toFixed(2)}×` : "—", color: moicLive !== null && moicLive >= 1 ? "#10B981" : "#F87171" },
+                      { label: "Ann. ROI", value: annRoiLive !== null ? `${annRoiLive.toFixed(1)}%` : "—", color: "#10B981" },
+                      { label: "vs. prev", value: deltaStr, color: delta > 0 ? "#10B981" : delta < 0 ? "#F87171" : "#64748B" },
+                    ].map(s => (
+                      <div key={s.label} className="flex-1 px-3 py-2.5 bg-[#080E1A]">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">{s.label}</p>
+                        <p className="text-xs font-bold mt-0.5 tabular-nums" style={{ color: s.color }}>{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer actions */}
+                <div className="flex items-center justify-between px-5 pb-5 gap-3">
+                  {hasCustom && (
+                    <button
+                      onClick={() => {
+                        setUserValuations(prev => { const n = { ...prev }; delete n[mc.id]; return n; });
+                        setValuationModal(null);
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 border border-[#1E2D3D] hover:border-slate-500 px-3 py-2 rounded-lg transition-colors"
+                    >
+                      <RotateCcw size={12} />
+                      Reset to default
+                    </button>
+                  )}
+                  {!hasCustom && <div />}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setValuationModal(null)}
+                      className="text-xs text-slate-500 hover:text-slate-300 px-4 py-2 rounded-lg border border-[#1E2D3D] hover:border-slate-500 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUserValuations(prev => ({ ...prev, [mc.id]: pendingVal }));
+                        setValuationModal(null);
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-white px-4 py-2 rounded-lg transition-colors"
+                      style={{ background: mc.accentColor }}
+                    >
+                      <Check size={12} />
+                      Set Value
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })(),
+        document.body
+      )}
     </div>
   );
 }

@@ -43,7 +43,13 @@ const STAGE_H = 28;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function FootballField({ company }: { company: PortfolioCompany }) {
+export default function FootballField({
+  company,
+  controlled,
+}: {
+  company: PortfolioCompany;
+  controlled?: { value: number; onChange: (v: number) => void };
+}) {
   const refs = company.valuationRefs ?? [];
   const totalShares = company.totalShares ?? 0;
   const invested = company.invested;
@@ -56,8 +62,10 @@ export default function FootballField({ company }: { company: PortfolioCompany }
   const axisMax = Math.max(...allVals) * 1.3;
   const axisMin = 0;
 
-  // Slider: equity valuation in dollars (continuous)
-  const [sliderVal, setSliderVal] = useState(company.impliedValuation);
+  // Slider: controlled externally (modal) or internal state (CompanyPage)
+  const [localVal, setLocalVal] = useState(company.impliedValuation);
+  const sliderVal = controlled ? controlled.value : localVal;
+  const setSliderVal = controlled ? controlled.onChange : setLocalVal;
 
   // Derived per-share price
   const pricePerShare = totalShares > 0 ? sliderVal / totalShares : 0;
