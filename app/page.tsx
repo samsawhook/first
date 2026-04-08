@@ -574,7 +574,7 @@ export default function Dashboard() {
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
                                   <TH></TH><TH wide>Company</TH><TH>Cost Basis</TH>
-                                  <TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH>
+                                  <TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH><TH></TH>
                                 </tr>
                               </thead>
                               <tbody>
@@ -630,6 +630,17 @@ export default function Dashboard() {
                                         <TD className="text-emerald-400 tabular-nums">
                                           {cAnnRoi !== null ? `${cAnnRoi.toFixed(1)}%` : "—"}
                                         </TD>
+                                        <TD>
+                                          {userValuations[c.id] !== undefined && (
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setUserValuations(prev => { const n = { ...prev }; delete n[c.id]; return n; }); }}
+                                              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors whitespace-nowrap"
+                                              title="Reset to default valuation"
+                                            >
+                                              <RotateCcw size={9} /> Reset
+                                            </button>
+                                          )}
+                                        </TD>
                                       </tr>
                                       {isOpen && txns.map((t, i) => (
                                         <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
@@ -654,6 +665,20 @@ export default function Dashboard() {
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(estValue)}</td>
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{moic !== null ? `${moic.toFixed(2)}×` : "—"}</td>
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{annRoi !== null ? `${annRoi.toFixed(1)}%` : "—"}</td>
+                                  <td className="py-2 px-3">
+                                    {Object.keys(userValuations).some(id => companiesWithCommon.some(c => c.id === id)) && (
+                                      <button
+                                        onClick={() => setUserValuations(prev => {
+                                          const n = { ...prev };
+                                          for (const c of companiesWithCommon) delete n[c.id];
+                                          return n;
+                                        })}
+                                        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors whitespace-nowrap"
+                                      >
+                                        <RotateCcw size={9} /> Reset All
+                                      </button>
+                                    )}
+                                  </td>
                                 </tr>
                               </tbody>
                             </table>
