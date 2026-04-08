@@ -7,6 +7,46 @@ export interface ValuationRef {
   note?: string;       // e.g. "3–8× on $2.1M ARR"
 }
 
+export interface IncomeStatement {
+  period: string;                // e.g. "FY 2025"
+  revenue: number;
+  costOfRevenue: number;
+  grossProfit: number;
+  operatingExpenses: number;
+  ebitda: number;
+  depreciation: number;
+  netIncome: number;
+}
+
+export interface BalanceSheet {
+  asOf: string;                  // e.g. "March 31, 2026"
+  cash: number;
+  accountsReceivable: number;
+  otherCurrentAssets?: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  netEquity: number;
+  monthlyBurn?: number;          // positive = cash outflow per month; omit if profitable
+  runwayMonths?: number;
+}
+
+export interface FinancingRound {
+  date: string;
+  type: "Pre-Seed" | "Seed" | "Series A" | "Series B" | "Series C" | "Bridge" | "Convertible Note" | "Growth";
+  amountRaised: number;
+  postMoneyValuation?: number;
+  investors: string[];
+  notes?: string;
+}
+
+export interface NewsItem {
+  source: string;                // e.g. "LinkedIn", "TechCrunch"
+  date: string;
+  headline: string;
+  snippet: string;
+  url?: string;
+}
+
 export interface PortfolioCompany {
   id: string;
   name: string;
@@ -27,10 +67,15 @@ export interface PortfolioCompany {
   impliedValuation: number;
   totalShares?: number; // fully-diluted share count; enables per-share price calc
   website?: string;
+  linkedInUrl?: string;
   logoUrl?: string;
   accentColor: string;
   valuationRefs?: ValuationRef[];
-  ebitda?: number;            // trailing EBITDA ($); negative = loss
+  ebitda?: number;               // trailing EBITDA ($); negative = loss
+  incomeStatement?: IncomeStatement;
+  balanceSheet?: BalanceSheet;
+  financingHistory?: FinancingRound[];
+  news?: NewsItem[];
 }
 
 export interface FundMetrics {

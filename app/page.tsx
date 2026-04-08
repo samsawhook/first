@@ -1,96 +1,157 @@
 "use client";
-import { useState } from "react";
-import { LayoutDashboard, Briefcase, Zap, ArrowLeftRight, BookOpen, Lock, TrendingUp } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import {
+  LayoutDashboard,
+  Zap,
+  ArrowLeftRight,
+  BookOpen,
+  Lock,
+  ChevronDown,
+  Building2,
+} from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
-import PortfolioGrid from "@/components/PortfolioGrid";
 import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import PerformanceChart from "@/components/PerformanceChart";
-import FootballField from "@/components/FootballField";
+import CompanyPage from "@/components/CompanyPage";
 import { portfolio } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor } from "@/lib/types";
 
-type Tab = "overview" | "portfolio" | "pipeline" | "secondary" | "letters" | "valuation";
+type Tab = "overview" | "pipeline" | "secondary" | "letters";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "overview",   label: "Overview",   icon: <LayoutDashboard size={15} /> },
-  { id: "portfolio",  label: "Portfolio",  icon: <Briefcase size={15} /> },
-  { id: "pipeline",   label: "Pipeline",   icon: <Zap size={15} /> },
-  { id: "secondary",  label: "Secondary",  icon: <ArrowLeftRight size={15} /> },
-  { id: "letters",    label: "Letters",    icon: <BookOpen size={15} /> },
-  { id: "valuation",  label: "Valuation",  icon: <TrendingUp size={15} /> },
+  { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
+  { id: "pipeline",  label: "Pipeline",  icon: <Zap size={15} /> },
+  { id: "secondary", label: "Secondary", icon: <ArrowLeftRight size={15} /> },
+  { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 
 const fmt = (n: number) =>
   n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${(n / 1_000).toFixed(0)}K`;
 
-function ValuationTab() {
-  const valuableCompanies = portfolio.filter((c) => c.valuationRefs && c.valuationRefs.length > 0);
-  const [selectedId, setSelectedId] = useState(valuableCompanies[0]?.id ?? "");
-  const company = valuableCompanies.find((c) => c.id === selectedId);
+// ── Companies dropdown tab ────────────────────────────────────────────────────
+
+function CompaniesDropdown({
+  activeCompanyId,
+  onSelect,
+}: {
+  activeCompanyId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const activeCompany = activeCompanyId
+    ? portfolio.find((c) => c.id === activeCompanyId)
+    : null;
+
+  const isActive = activeCompanyId !== null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-100">Football Field Valuation</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Interactive valuation ranges across 409A, transaction, and market-multiple references.
-          </p>
-        </div>
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="text-sm bg-[#111D2E] border border-[#1E2D3D] text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500/50 cursor-pointer shrink-0"
-        >
-          {valuableCompanies.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </div>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+          isActive
+            ? "border-emerald-500 text-emerald-400"
+            : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
+        }`}
+      >
+        <Building2 size={15} />
+        {activeCompany ? activeCompany.name : "Companies"}
+        <ChevronDown
+          size={13}
+          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
 
-      {company && (
-        <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5 space-y-1">
-          {/* Company header */}
-          <div className="flex items-center gap-3 mb-5">
-            {company.logoUrl ? (
-              <div className="w-9 h-9 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={company.logoUrl} alt={company.name} className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div
-                className="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center shrink-0"
-                style={{ background: `${company.accentColor}20`, color: company.accentColor }}
-              >
-                {company.initials}
-              </div>
-            )}
-            <div>
-              <h2 className="text-sm font-semibold text-slate-100">{company.name}</h2>
-              <p className="text-xs text-slate-500">
-                {company.stage} · {company.sector}
-                {company.revenue && ` · ${fmt(company.revenue)} ARR`}
-                {company.ebitda !== undefined && ` · ${company.ebitda < 0 ? "-" : ""}${fmt(Math.abs(company.ebitda))} EBITDA`}
-              </p>
-            </div>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-56 bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl z-50 overflow-hidden">
+          <div className="p-1">
+            {portfolio
+              .filter((c) => c.status !== "written-off")
+              .map((company) => (
+                <button
+                  key={company.id}
+                  onClick={() => {
+                    onSelect(company.id);
+                    setOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                    activeCompanyId === company.id
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "text-slate-300 hover:bg-[#111D2E]"
+                  }`}
+                >
+                  {company.logoUrl ? (
+                    <div className="w-6 h-6 rounded overflow-hidden bg-white flex items-center justify-center p-0.5 shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={company.logoUrl}
+                        alt={company.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center shrink-0"
+                      style={{
+                        background: `${company.accentColor}20`,
+                        color: company.accentColor,
+                      }}
+                    >
+                      {company.initials[0]}
+                    </div>
+                  )}
+                  <span className="truncate">{company.name}</span>
+                  <span
+                    className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: `${company.accentColor}15`,
+                      color: company.accentColor,
+                    }}
+                  >
+                    {company.stage.split(" ")[0]}
+                  </span>
+                </button>
+              ))}
           </div>
-          <FootballField company={company} />
         </div>
       )}
     </div>
   );
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
+
   const selectedInvestor: Investor | undefined =
     selectedInvestorId === "fund"
       ? undefined
       : investors.find((i) => i.id === selectedInvestorId);
+
+  const activeCompany = activeCompanyId
+    ? portfolio.find((c) => c.id === activeCompanyId)
+    : null;
+
+  const handleTabClick = (tab: Tab) => {
+    setActiveTab(tab);
+    setActiveCompanyId(null);
+  };
 
   return (
     <div className="min-h-screen bg-[#060B14]">
@@ -153,9 +214,9 @@ export default function Dashboard() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabClick(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  activeTab === tab.id
+                  activeCompanyId === null && activeTab === tab.id
                     ? "border-emerald-500 text-emerald-400"
                     : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
                 }`}
@@ -164,13 +225,26 @@ export default function Dashboard() {
                 {tab.label}
               </button>
             ))}
+
+            {/* Companies dropdown tab */}
+            <CompaniesDropdown
+              activeCompanyId={activeCompanyId}
+              onSelect={(id) => {
+                setActiveCompanyId(id);
+              }}
+            />
           </div>
         </div>
       </div>
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === "overview" && (
+        {/* Company detail page */}
+        {activeCompany && (
+          <CompanyPage company={activeCompany} />
+        )}
+
+        {!activeCompany && activeTab === "overview" && (
           <div className="space-y-8">
             {/* Portfolio allocation */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
@@ -206,7 +280,7 @@ export default function Dashboard() {
               <PortfolioAllocationChart investor={selectedInvestor} />
             </div>
 
-            {/* Performance chart card */}
+            {/* Performance chart */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -222,7 +296,7 @@ export default function Dashboard() {
               <PerformanceChart />
             </div>
 
-            {/* Portfolio allocation */}
+            {/* Portfolio at a Glance */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
               <h2 className="text-sm font-semibold text-slate-100 mb-4">
                 Portfolio at a Glance
@@ -247,7 +321,11 @@ export default function Dashboard() {
                     {portfolio.map((c) => {
                       const moic = (c.currentValue / c.invested).toFixed(2);
                       return (
-                        <tr key={c.id} className="hover:bg-[#111D2E]/50 transition-colors">
+                        <tr
+                          key={c.id}
+                          className="hover:bg-[#111D2E]/50 transition-colors cursor-pointer"
+                          onClick={() => setActiveCompanyId(c.id)}
+                        >
                           <td className="py-2.5 pr-4">
                             <div className="flex items-center gap-2">
                               {c.logoUrl ? (
@@ -306,7 +384,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Thesis reminder */}
+            {/* Thesis */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-6">
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded-lg bg-slate-900 border border-[#1E2D3D] flex items-center justify-center shrink-0 p-1.5">
@@ -334,19 +412,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === "portfolio" && (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-xl font-semibold text-slate-100">Portfolio Companies</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                {portfolio.length} companies · {portfolio.filter((c) => c.secondaryAvailable).length} with secondary market access
-              </p>
-            </div>
-            <PortfolioGrid />
-          </div>
-        )}
-
-        {activeTab === "pipeline" && (
+        {!activeCompany && activeTab === "pipeline" && (
           <div className="space-y-6">
             <div>
               <h1 className="text-xl font-semibold text-slate-100">Deal Pipeline</h1>
@@ -358,7 +424,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === "secondary" && (
+        {!activeCompany && activeTab === "secondary" && (
           <div className="space-y-6">
             <div>
               <h1 className="text-xl font-semibold text-slate-100">Secondary Market</h1>
@@ -371,7 +437,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === "letters" && (
+        {!activeCompany && activeTab === "letters" && (
           <div className="space-y-6">
             <div>
               <h1 className="text-xl font-semibold text-slate-100">Letters to LPs</h1>
@@ -381,10 +447,6 @@ export default function Dashboard() {
             </div>
             <LettersSection />
           </div>
-        )}
-
-        {activeTab === "valuation" && (
-          <ValuationTab />
         )}
       </main>
 
