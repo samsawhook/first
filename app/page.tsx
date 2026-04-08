@@ -416,26 +416,24 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-500 uppercase tracking-widest font-medium">Investment Thesis</p>
                   </div>
 
-                  {/* Pull quote */}
-                  <blockquote className="border-l-2 border-emerald-500/40 pl-4 mb-4">
-                    <p className="text-sm text-slate-200 leading-relaxed italic">
-                      "Traditional venture funds pick winners from a field of candidates. We grow winners from scratch.
-                      The difference is enormous — in timeline, in effort, in risk profile, and ultimately in the depth
-                      of the relationship between the studio and the companies we build."
-                    </p>
-                    <cite className="text-xs text-slate-600 not-italic mt-2 block">— 2024 Annual Letter</cite>
-                  </blockquote>
-
-                  <p className="text-sm text-slate-400 leading-relaxed mb-3">
-                    When we started nth Venture in 2021, we made a bet that felt obvious to us but wasn&apos;t obvious to
-                    the market: <span className="text-slate-200">people work harder, care more, and stay longer when they own what they&apos;re building.</span> Four
-                    years in, we&apos;ve seen it in every single portfolio company. The companies where employees hold equity —
-                    real equity, not token amounts — outperform the ones that don&apos;t.
-                  </p>
-                  <p className="text-sm text-slate-500 leading-relaxed">
-                    We&apos;re not passive capital. We&apos;re co-builders. The studio earns its equity.
-                    This isn&apos;t an accident. It&apos;s a design principle.
-                  </p>
+                  {/* Thesis principles */}
+                  <ul className="space-y-3 mb-4">
+                    {[
+                      { text: "Invest for the long-term", detail: "Patient capital aligned with founders, not fund cycles." },
+                      { text: "Minimize fees", detail: "Lean structure. No management fee drag eating into returns." },
+                      { text: "Ensure proper — but not excessive — diversification", detail: "Concentrated enough to matter, spread enough to survive." },
+                      { text: "In straightforward businesses", detail: "Understandable models. No black boxes, no buzzword leverage." },
+                      { text: "With passionate, effective, and high-integrity managers", detail: "Character compounds. We back people before products." },
+                    ].map((item) => (
+                      <li key={item.text} className="flex items-start gap-3">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 bg-emerald-500" />
+                        <div>
+                          <span className="text-sm text-slate-200 font-medium">{item.text}</span>
+                          <span className="text-sm text-slate-500"> — {item.detail}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#1E2D3D]">
