@@ -401,30 +401,110 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Thesis */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-6">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-lg bg-slate-900 border border-[#1E2D3D] flex items-center justify-center shrink-0 p-1.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
-                    alt="nth"
-                    className="w-full h-full object-contain"
-                    style={{ filter: "brightness(0) invert(1)" }}
-                  />
-                </div>
+            {/* Thesis + Letters */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+              {/* Thesis card — 3 cols */}
+              <div className="lg:col-span-3 bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-6 flex flex-col justify-between gap-5">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-100 mb-2">Investment Thesis</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed max-w-2xl">
-                    We build companies where employees are owners — not just workers. Radical incentive alignment
-                    produces better products, lower churn, and outcomes that are good for everyone. Every company
-                    in this portfolio was built with that principle as the foundation, not an afterthought.
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 border border-[#1E2D3D] flex items-center justify-center shrink-0 p-1.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
+                        alt="nth" className="w-full h-full object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+                    </div>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest font-medium">Investment Thesis</p>
+                  </div>
+
+                  {/* Pull quote */}
+                  <blockquote className="border-l-2 border-emerald-500/40 pl-4 mb-4">
+                    <p className="text-sm text-slate-200 leading-relaxed italic">
+                      "Traditional venture funds pick winners from a field of candidates. We grow winners from scratch.
+                      The difference is enormous — in timeline, in effort, in risk profile, and ultimately in the depth
+                      of the relationship between the studio and the companies we build."
+                    </p>
+                    <cite className="text-xs text-slate-600 not-italic mt-2 block">— 2024 Annual Letter</cite>
+                  </blockquote>
+
+                  <p className="text-sm text-slate-400 leading-relaxed mb-3">
+                    When we started nth Venture in 2021, we made a bet that felt obvious to us but wasn&apos;t obvious to
+                    the market: <span className="text-slate-200">people work harder, care more, and stay longer when they own what they&apos;re building.</span> Four
+                    years in, we&apos;ve seen it in every single portfolio company. The companies where employees hold equity —
+                    real equity, not token amounts — outperform the ones that don&apos;t.
                   </p>
-                  <p className="text-xs text-slate-500 mt-3">
-                    Corpus Christi, TX · Founded 2021 · Venture Studio
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    We&apos;re not passive capital. We&apos;re co-builders. The studio earns its equity.
+                    This isn&apos;t an accident. It&apos;s a design principle.
                   </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#1E2D3D]">
+                  <span className="text-xs text-slate-600">Corpus Christi, TX · Founded 2021 · Venture Studio</span>
+                  <a
+                    href="https://sawhook.substack.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto flex items-center gap-1.5 text-xs font-medium text-orange-400 hover:text-orange-300 border border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5 hover:bg-orange-500/10 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current" aria-hidden="true">
+                      <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/>
+                    </svg>
+                    sawhook.substack.com
+                  </a>
                 </div>
               </div>
+
+              {/* Letters column — 2 cols */}
+              <div className="lg:col-span-2 flex flex-col gap-3">
+                <p className="text-xs text-slate-500 uppercase tracking-widest font-medium px-1">From the Managing Partner</p>
+                {[
+                  {
+                    id: "q1-2026",
+                    period: "Q1 2026",
+                    date: "April 8, 2026",
+                    title: "Q1 2026 Letter to Limited Partners",
+                    excerpt: "The first quarter of 2026 marked a turning point for the portfolio — not in drama, but in depth.",
+                    color: "#10B981",
+                  },
+                  {
+                    id: "q4-2025",
+                    period: "Q4 2025",
+                    date: "January 15, 2026",
+                    title: "Q4 2025 Letter to Limited Partners",
+                    excerpt: "2025 was the year the portfolio grew up. Revenue became real. Ownership changes outcomes.",
+                    color: "#3B82F6",
+                  },
+                  {
+                    id: "annual-2024",
+                    period: "Annual 2024",
+                    date: "February 10, 2025",
+                    title: "2024 Annual Letter to Limited Partners",
+                    excerpt: "The venture studio model is not a shortcut. It's a longer road with a different destination.",
+                    color: "#8B5CF6",
+                  },
+                ].map((letter) => (
+                  <button
+                    key={letter.id}
+                    onClick={() => handleTabClick("letters")}
+                    className="text-left bg-[#0D1421] border border-[#1E2D3D] hover:border-slate-600 rounded-xl p-4 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ background: `${letter.color}18`, color: letter.color }}
+                      >
+                        {letter.period}
+                      </span>
+                      <span className="text-[10px] text-slate-600">{letter.date}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-300 group-hover:text-slate-100 transition-colors leading-snug mb-1">
+                      {letter.title}
+                    </p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2">{letter.excerpt}</p>
+                  </button>
+                ))}
+              </div>
+
             </div>
           </div>
         )}
