@@ -111,6 +111,16 @@ export interface DebtPosition {
   notes?: string;
 }
 
+export interface BalanceSheetSnapshot {
+  period: string;                  // e.g. "Q4 2021"
+  cash: number;                    // total bank accounts
+  totalCurrentAssets: number;
+  totalAssets: number;
+  totalCurrentLiabilities: number;
+  totalLiabilities: number;
+  totalEquity: number;
+}
+
 export interface ManagedFundTransaction {
   date: string;
   type: "Capital Call" | "Distribution" | "Commitment";
@@ -169,6 +179,7 @@ export interface PortfolioCompany {
   debtPositions?: DebtPosition[];        // outstanding debt / convertible instruments held by the fund
   incomeStatement?: IncomeStatement;
   balanceSheet?: BalanceSheet;
+  balanceSheetHistory?: BalanceSheetSnapshot[];
   financingHistory?: FinancingRound[];
   financialHistory?: FinancialPeriod[];   // ordered oldest → newest; QB import target
   news?: NewsItem[];

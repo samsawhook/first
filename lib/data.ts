@@ -11,6 +11,7 @@ import type {
   BalanceSheet,
   FinancingRound,
   FinancialPeriod,
+  BalanceSheetSnapshot,
   NewsItem,
   CompanyLetter,
   ShareTransaction,
@@ -147,16 +148,37 @@ export const portfolio: PortfolioCompany[] = [
         color: "#8B5CF6", note: "$0.10/sh × 52,004,140 shares" },
     ] satisfies ValuationRef[],
     balanceSheet: {
-      asOf: "December 31, 2024",
-      cash: 58_000,
+      asOf: "December 31, 2025",
+      cash: 48_804,
       accountsReceivable: 0,
-      otherCurrentAssets: 32_000,        // security deposits
-      totalAssets: 520_000,
-      totalLiabilities: 331_000,         // Term debt $83K + Other notes $55K + SBA EIDL $153K + Other term $40K
-      netEquity: 190_000,
-      monthlyBurn: 34_000,
-      preferredLiquidation: 534_000,     // Series A preferred liquidation preference
+      otherCurrentAssets: 337_799,       // TPP advances to employees + misc
+      totalAssets: 912_213,
+      totalLiabilities: 633_669,
+      netEquity: 278_544,
+      // monthlyBurn omitted — FY 2025 near breakeven, Q4 2025 profitable
+      preferredLiquidation: 533_750,     // Series A: Jillian $325K + Neil $62.5K + nth Venture $115K + Sally $31.25K
     } satisfies BalanceSheet,
+    balanceSheetHistory: [
+      // Quarterly snapshots — cash basis per QuickBooks export
+      { period: "Q4'21", cash:   5_001, totalCurrentAssets:   5_001, totalAssets:     5_001, totalCurrentLiabilities:       0, totalLiabilities:       0, totalEquity:    5_001 },
+      { period: "Q1'22", cash:   1_297, totalCurrentAssets:   1_297, totalAssets:     1_297, totalCurrentLiabilities:       0, totalLiabilities:       0, totalEquity:    1_297 },
+      { period: "Q2'22", cash:     319, totalCurrentAssets:     319, totalAssets:       319, totalCurrentLiabilities:       0, totalLiabilities:       0, totalEquity:      319 },
+      { period: "Q3'22", cash:   3_546, totalCurrentAssets:   3_546, totalAssets:     3_546, totalCurrentLiabilities:       0, totalLiabilities:       0, totalEquity:    3_546 },
+      { period: "Q4'22", cash:   4_638, totalCurrentAssets:   4_638, totalAssets:     4_638, totalCurrentLiabilities:   6_919, totalLiabilities:   6_919, totalEquity:   -2_281 },
+      { period: "Q1'23", cash:  24_025, totalCurrentAssets:  24_025, totalAssets:    28_362, totalCurrentLiabilities:       0, totalLiabilities:       0, totalEquity:   28_362 },
+      { period: "Q2'23", cash:  65_908, totalCurrentAssets:  65_908, totalAssets:   566_160, totalCurrentLiabilities: 249_997, totalLiabilities: 402_897, totalEquity:  163_263 },
+      { period: "Q3'23", cash:   5_667, totalCurrentAssets:   5_667, totalAssets:   505_919, totalCurrentLiabilities: 242_527, totalLiabilities: 395_427, totalEquity:  110_492 },
+      { period: "Q4'23", cash:  38_253, totalCurrentAssets:  38_253, totalAssets:   517_871, totalCurrentLiabilities: 258_965, totalLiabilities: 411_865, totalEquity:  106_005 },
+      { period: "Q1'24", cash:  53_854, totalCurrentAssets:  53_854, totalAssets:   533_472, totalCurrentLiabilities: 232_097, totalLiabilities: 384_997, totalEquity:  148_475 },
+      { period: "Q2'24", cash:  45_460, totalCurrentAssets:  45_460, totalAssets:   525_078, totalCurrentLiabilities: 221_111, totalLiabilities: 424_511, totalEquity:  100_567 },
+      { period: "Q3'24", cash:  72_937, totalCurrentAssets:  72_937, totalAssets:   552_555, totalCurrentLiabilities: 184_541, totalLiabilities: 386_288, totalEquity:  166_267 },
+      { period: "Q4'24", cash:  57_917, totalCurrentAssets:  57_917, totalAssets:   520_411, totalCurrentLiabilities: 130_991, totalLiabilities: 330_527, totalEquity:  189_884 },
+      { period: "Q1'25", cash:  41_174, totalCurrentAssets:  92_962, totalAssets:   606_651, totalCurrentLiabilities: 200_424, totalLiabilities: 425_855, totalEquity:  180_796 },
+      { period: "Q2'25", cash:   6_997, totalCurrentAssets: 103_042, totalAssets:   628_653, totalCurrentLiabilities: 275_926, totalLiabilities: 492_352, totalEquity:  136_301 },
+      { period: "Q3'25", cash:   5_738, totalCurrentAssets: 198_581, totalAssets:   724_192, totalCurrentLiabilities: 267_871, totalLiabilities: 478_085, totalEquity:  246_107 },
+      { period: "Q4'25", cash:  48_804, totalCurrentAssets: 386_603, totalAssets:   912_213, totalCurrentLiabilities: 298_319, totalLiabilities: 633_669, totalEquity:  278_544 },
+      { period: "Q1'26", cash: 271_748, totalCurrentAssets: 652_536, totalAssets: 1_178_146, totalCurrentLiabilities: 369_139, totalLiabilities: 702_595, totalEquity:  475_552 },
+    ] satisfies BalanceSheetSnapshot[],
     shareTransactions: [
       { date: "Sep 2021", type: "Common", shares: 16_537_717, amount: 0, certificateNumber: "CS-04" },
     ] satisfies ShareTransaction[],

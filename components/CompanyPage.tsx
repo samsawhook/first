@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp } from "lucide-react";
 import FootballField from "@/components/FootballField";
-import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter } from "@/lib/types";
+import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter, BalanceSheetSnapshot } from "@/lib/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -259,6 +259,90 @@ function PLHistoryChart({ history, accentColor }: { history: FinancialPeriod[]; 
   );
 }
 
+// ── Balance Sheet History Chart ───────────────────────────────────────────────
+
+function BalanceSheetHistoryChart({ history, accentColor }: { history: BalanceSheetSnapshot[]; accentColor: string }) {
+  const PAD = { top: 24, right: 12, bottom: 32, left: 60 };
+  const W = 620, H = 190;
+  const CW = W - PAD.left - PAD.right;
+  const CH = H - PAD.top - PAD.bottom;
+
+  const maxVal = Math.max(...history.map(h => h.totalAssets)) * 1.08;
+  const minVal = Math.min(0, ...history.map(h => h.totalEquity)) * 1.25;
+  const range = maxVal - minVal;
+
+  const toY = (v: number) => PAD.top + CH - ((v - minVal) / range) * CH;
+  const toX = (i: number) => PAD.left + (i / (history.length - 1)) * CW;
+
+  const path = (fn: (h: BalanceSheetSnapshot) => number) =>
+    history.map((h, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(fn(h)).toFixed(1)}`).join(" ");
+
+  const assetsPath  = path(h => h.totalAssets);
+  const liabPath    = path(h => h.totalLiabilities);
+  const equityPath  = path(h => h.totalEquity);
+
+  const tickCount = 5;
+  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => minVal + (i / tickCount) * range);
+
+  // X label indices: every 4 quarters + last
+  const labelIdxs = history.reduce<number[]>((acc, _, i) => {
+    if (i % 4 === 0 || i === history.length - 1) acc.push(i);
+    return acc;
+  }, []);
+
+  const baseline = toY(0);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 320 }}>
+      {/* Grid + Y ticks */}
+      {ticks.map((t, i) => (
+        <g key={i}>
+          <line x1={PAD.left} y1={toY(t)} x2={W - PAD.right} y2={toY(t)}
+            stroke={t === 0 ? "#2D3E50" : "#111D2E"} strokeWidth={t === 0 ? 1.5 : 1} />
+          <text x={PAD.left - 6} y={toY(t) + 4} textAnchor="end" fontSize="9" fill="#475569" fontFamily="Poppins,sans-serif">
+            {fmtMShort(t)}
+          </text>
+        </g>
+      ))}
+
+      {/* Cash dots */}
+      {history.map((h, i) => (
+        <circle key={i} cx={toX(i)} cy={toY(h.cash)} r="2.5" fill="#22D3EE" opacity={0.75} />
+      ))}
+
+      {/* Lines */}
+      <path d={liabPath}   fill="none" stroke="#F59E0B" strokeWidth="1.5" strokeDasharray="5 3" strokeLinejoin="round" />
+      <path d={equityPath} fill="none" stroke="#10B981" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d={assetsPath} fill="none" stroke={accentColor} strokeWidth="2" strokeLinejoin="round" />
+
+      {/* X labels */}
+      {labelIdxs.map(i => (
+        <text key={i} x={toX(i)} y={H - PAD.bottom + 13} textAnchor="middle" fontSize="9"
+          fill="#475569" fontFamily="Poppins,sans-serif">
+          {history[i].period}
+        </text>
+      ))}
+
+      {/* Zero baseline label */}
+      {minVal < 0 && (
+        <text x={PAD.left - 6} y={baseline + 4} textAnchor="end" fontSize="8" fill="#2D3E50" fontFamily="Poppins,sans-serif">$0</text>
+      )}
+
+      {/* Legend */}
+      <g transform={`translate(${PAD.left},4)`}>
+        <line x1={0} y1={8} x2={18} y2={8} stroke={accentColor} strokeWidth="2" />
+        <text x={22} y={12} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">Assets</text>
+        <line x1={68} y1={8} x2={86} y2={8} stroke="#F59E0B" strokeWidth="1.5" strokeDasharray="5 3" />
+        <text x={90} y={12} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">Liabilities</text>
+        <line x1={150} y1={8} x2={168} y2={8} stroke="#10B981" strokeWidth="1.5" />
+        <text x={172} y={12} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">Equity</text>
+        <circle cx={218} cy={8} r="2.5" fill="#22D3EE" opacity={0.75} />
+        <text x={224} y={12} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">Cash</text>
+      </g>
+    </svg>
+  );
+}
+
 // ── Financials ────────────────────────────────────────────────────────────────
 
 function FinancialsSection({ company }: { company: PortfolioCompany }) {
@@ -286,6 +370,16 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
           <PLHistoryChart history={hist} accentColor={company.accentColor} />
           <p className="text-[10px] text-slate-600 mt-2">
             QuickBooks import ready — map Total Income → revenue, COGS → costOfRevenue, Net Operating Income → ebitda per period.
+          </p>
+        </div>
+      )}
+
+      {company.balanceSheetHistory && company.balanceSheetHistory.length > 0 && (
+        <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
+          <SectionHeader title="Capital Structure History" />
+          <BalanceSheetHistoryChart history={company.balanceSheetHistory} accentColor={company.accentColor} />
+          <p className="text-[10px] text-slate-600 mt-2">
+            Quarterly snapshots · cash basis · Assets = Liabilities + Equity
           </p>
         </div>
       )}
