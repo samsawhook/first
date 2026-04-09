@@ -126,6 +126,9 @@ export const portfolio: PortfolioCompany[] = [
     stage: "Seed",
     founded: 2021,
     employees: 0,
+    revenue: 1_153_000,      // FY 2024 per P&L
+    revenueGrowth: 24.6,     // 2023→2024 ($926K → $1,153K)
+    ebitda: -332_000,        // FY 2024: net -$406K + interest $38K + D&A $36K
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. $0.03/share × 52,004,140 total shares
@@ -147,6 +150,32 @@ export const portfolio: PortfolioCompany[] = [
         status: "Current", currentValue: 25_000,
         notes: "1-year amortizing note at 20% annual rate. Monthly payment ~$2,309. 12 equal monthly installments." },
     ] satisfies DebtPosition[],
+    financialHistory: [
+      {
+        period: "FY 2021", periodType: "annual",
+        revenue: 5_000, costOfRevenue: 0, grossProfit: 5_000,
+        operatingExpenses: 0, ebitda: 5_000, netIncome: 5_000,
+      },
+      {
+        period: "FY 2022", periodType: "annual",
+        revenue: 49_000, costOfRevenue: 0, grossProfit: 49_000,
+        operatingExpenses: 56_000, ebitda: -7_000, netIncome: -7_000,
+      },
+      {
+        period: "FY 2023", periodType: "annual",
+        revenue: 926_000, costOfRevenue: 0, grossProfit: 926_000,
+        // opex excludes interest ($16K) and amortization ($15K)
+        operatingExpenses: 986_000, ebitda: -61_000,
+        depreciation: 15_000, netIncome: -92_000,
+      },
+      {
+        period: "FY 2024", periodType: "annual",
+        revenue: 1_153_000, costOfRevenue: 0, grossProfit: 1_153_000,
+        // opex excludes interest ($38K), depreciation ($5K), amortization ($31K)
+        operatingExpenses: 1_485_000, ebitda: -332_000,
+        depreciation: 36_000, netIncome: -406_000,
+      },
+    ] satisfies FinancialPeriod[],
   },
   {
     id: "sbr2th",
