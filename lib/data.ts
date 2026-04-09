@@ -225,9 +225,6 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Oct 2025", periodType: "monthly", revenue: 86_185, costOfRevenue: 0, grossProfit: 86_185, operatingExpenses: 65_431, ebitda: 20_753, netIncome: 20_231 },
       { period: "Nov 2025", periodType: "monthly", revenue: 36_965, costOfRevenue: 0, grossProfit: 36_965, operatingExpenses: 42_214, ebitda: -5_249, netIncome: -5_783 },
       { period: "Dec 2025", periodType: "monthly", revenue: 65_921, costOfRevenue: 0, grossProfit: 65_921, operatingExpenses: 47_410, ebitda: 18_512, netIncome: 17_990 },
-      // ── 2026 (YTD) ────────────────────────────────────────────────────────
-      { period: "Jan 2026", periodType: "monthly", revenue: 49_212, costOfRevenue: 0, grossProfit: 49_212, operatingExpenses: 36_516, ebitda: 12_696, netIncome: 12_113 },
-      { period: "Feb 2026", periodType: "monthly", revenue: 53_430, costOfRevenue: 0, grossProfit: 53_430, operatingExpenses: 31_928, ebitda: 21_502, netIncome: 21_502 },
     ] satisfies FinancialPeriod[],
     news: [
       {
