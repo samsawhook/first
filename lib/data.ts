@@ -217,7 +217,7 @@ export const portfolio: PortfolioCompany[] = [
       "Full-service podcast and audio production studio. Audily handles strategy, recording, editing, and distribution for B2B brands that want to own their category conversation.",
     invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
     currentValue: 496_132,   // 16,537,717 shares × est. $0.03/share
-    ownership: 13.6,         // 16,537,717 ÷ 121,288,833 (adj FD ex-pool)
+    ownership: 13.5,         // 16,537,717 ÷ 122,438,000 (adj FD ex-pool)
     stage: "Seed",
     founded: 2021,
     employees: 8,
@@ -227,7 +227,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. per-share × fully diluted
-    totalShares: 132_188_837,     // Pulley 4/9/26 adj FD: 53M common + 4.19M pref-converted + 49.1M RSUs + 10.9M pool + 15M contingent
+    totalShares: 133_338_000,     // Pulley 4/9/26 adj FD: 53M common + 5.338M pref-converted (1:1000) + 49.1M RSUs + 10.9M pool + 15M contingent
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
@@ -237,11 +237,10 @@ export const portfolio: PortfolioCompany[] = [
       asOf: "April 9, 2026",
       source: "Pulley",
       authorizedCommon: 125_000_000,
-      adjustedFullyDiluted: 132_188_837,
+      adjustedFullyDiluted: 133_338_000,
       classes: [
-        { label: "Co-Owner Fund",       shares: 16_537_717, color: "#10B981", note: "Common · CS-01" },
-        { label: "Other Common",        shares: 36_462_283, color: "#8B5CF6", note: "Founders, employees, converted SAFEs" },
-        { label: "Preferred Series A",  shares: 4_188_837,  color: "#3B82F6", note: "5,338 pref × ~785 conv. ratio · $490K capital contribution" },
+        { label: "Common Stock",        shares: 53_000_000, color: "#8B5CF6", note: "Founders, employees, fund & converted SAFEs" },
+        { label: "Preferred Series A",  shares: 5_338_000,  color: "#3B82F6", note: "5,338 shares × 1,000 conv. ratio · $490K capital contribution" },
         { label: "RSUs Outstanding",    shares: 49_099_996, color: "#F59E0B", note: "2025 Incentive Award Plan" },
         { label: "Unissued Pool",       shares: 10_900_004, color: "#1E2D3D", note: "Available for grant", isPool: true },
         { label: "Contingent Options",  shares: 15_000_000, color: "#EF4444", note: "Exceed authorized; contingent on future share authorization", isContingent: true },
