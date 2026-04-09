@@ -178,6 +178,7 @@ export default function Dashboard() {
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
     return defaults;
   });
+  const [editingVarianceId, setEditingVarianceId] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
 
   // ── User-set valuations (persistent) ─────────────────────────────────────────
@@ -1038,14 +1039,10 @@ export default function Dashboard() {
                 {/* ══ 4. OPTIONS & WARRANTS ═══════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    // Per-position valuation helpers
-                    const optPps   = (c: typeof portfolio[0]) => c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
-                    const intrinsic = (o: NonNullable<typeof portfolio[0]["optionPositions"]>[0], pps: number) =>
-                      o.shares * Math.max(pps - o.strikePrice, 0);
-                    const timeVal   = (o: NonNullable<typeof portfolio[0]["optionPositions"]>[0], pps: number) =>
-                      o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
-                    const totalVal  = (o: NonNullable<typeof portfolio[0]["optionPositions"]>[0], pps: number) =>
-                      intrinsic(o, pps) + timeVal(o, pps);
+                    const optPps    = (c: typeof portfolio[0]) => c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
+                    type OptPos = NonNullable<typeof portfolio[0]["optionPositions"]>[0];
+                    const intrinsic = (o: OptPos, pps: number) => o.shares * Math.max(pps - o.strikePrice, 0);
+                    const timeVal   = (o: OptPos, pps: number) => o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
 
                     const allRows = companiesWithOptions.flatMap(c => (c.optionPositions ?? []).map(o => ({ o, c, pps: optPps(c) })));
                     const grandIntrinsic = allRows.reduce((s, { o, pps }) => s + intrinsic(o, pps), 0);
@@ -1072,86 +1069,81 @@ export default function Dashboard() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {companiesWithOptions.map((c) => {
-                                    const positions = c.optionPositions ?? [];
-                                    const pps = optPps(c);
-                                    const rowKey = `opt-${c.id}`;
+                                  {allRows.map(({ o, c, pps }) => {
+                                    const iv      = intrinsic(o, pps);
+                                    const tv      = timeVal(o, pps);
+                                    const tot     = iv + tv;
+                                    const varPct  = optionVariances[o.id] ?? 0;
+                                    const defVar  = o.defaultVariancePct ?? 0;
+                                    const isCustom = varPct !== defVar;
+                                    const isEditing = editingVarianceId === o.id;
+                                    const rowKey = `opt-notes-${o.id}`;
                                     const isOpen = expandedRows.has(rowKey);
-                                    const compIntrinsic = positions.reduce((s, o) => s + intrinsic(o, pps), 0);
-                                    const compTime      = positions.reduce((s, o) => s + timeVal(o, pps), 0);
-                                    const compTotal     = compIntrinsic + compTime;
                                     return (
                                       <>
-                                        <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
-                                          <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
+                                        <tr key={o.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => o.notes && toggleRow(rowKey)}>
+                                          <TD><ChevronDown size={12} className={`transition-transform ${o.notes ? "text-slate-600" : "text-[#1E2D3D]"} ${isOpen ? "rotate-180" : ""}`} /></TD>
                                           <TD>
                                             <div className="flex items-center gap-2">
                                               {companyLogo(c)}
                                               <div>
                                                 <p className="font-semibold text-slate-200">{c.name}</p>
-                                                <p className="text-[10px] text-slate-600">{positions.length} position{positions.length !== 1 ? "s" : ""}</p>
+                                                <p className="text-[10px] text-slate-600">{c.stage}</p>
                                               </div>
                                             </div>
                                           </TD>
                                           <TD>
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-medium">
-                                              {positions.length === 1 ? positions[0].instrument : `${positions.length} instruments`}
-                                            </span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-medium">{o.instrument}</span>
                                           </TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">
-                                            {(positions.reduce((s, o) => s + o.shares, 0) / 1_000_000).toFixed(1)}M
-                                          </TD>
-                                          <TD className="text-rose-400 tabular-nums">
-                                            {positions.length === 1 ? `$${positions[0].strikePrice.toFixed(4)}` : "—"}
-                                          </TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{(o.shares / 1_000_000).toFixed(1)}M</TD>
+                                          <TD className="text-rose-400 tabular-nums">${o.strikePrice.toFixed(4)}</TD>
                                           <TD className="text-slate-400 tabular-nums">{pps > 0 ? `$${pps.toFixed(4)}` : "—"}</TD>
-                                          <TD className={`tabular-nums font-medium ${compIntrinsic > 0 ? "text-emerald-400" : "text-slate-600"}`}>{compIntrinsic > 0 ? fmt(compIntrinsic) : "—"}</TD>
-                                          <TD className="tabular-nums">—</TD>
-                                          <TD className="text-rose-400 tabular-nums font-medium">{compTime > 0 ? fmt(compTime) : "—"}</TD>
-                                          <TD className="text-slate-200 tabular-nums font-semibold">{compTotal > 0 ? fmt(compTotal) : "—"}</TD>
-                                          <TD className="text-slate-500">
-                                            {positions.every(o => !o.expirationDate) ? <span className="text-emerald-500/60 text-[10px]">No expiry</span> : positions.length === 1 ? positions[0].expirationDate : "—"}
-                                          </TD>
+                                          <TD className={`tabular-nums font-medium ${iv > 0 ? "text-emerald-400" : "text-slate-600"}`}>{iv > 0 ? fmt(iv) : "—"}</TD>
+                                          <td className="py-2 px-3" onClick={e => e.stopPropagation()}>
+                                            {isEditing ? (
+                                              <div className="flex items-center gap-1">
+                                                <input
+                                                  autoFocus
+                                                  type="number" min={0} max={500} step={5}
+                                                  defaultValue={varPct}
+                                                  onBlur={e  => { setOptionVariances(p => ({ ...p, [o.id]: Math.max(0, Number(e.target.value)) })); setEditingVarianceId(null); }}
+                                                  onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur(); }}
+                                                  className="w-14 bg-[#111D2E] border border-rose-500/50 rounded px-1.5 py-0.5 text-[11px] text-slate-200 tabular-nums text-right focus:outline-none"
+                                                />
+                                                <span className="text-[10px] text-slate-600">%</span>
+                                              </div>
+                                            ) : (
+                                              <div className="flex items-center gap-1.5">
+                                                {isCustom ? (
+                                                  <div className="flex flex-col gap-0.5">
+                                                    <span className="text-slate-600 line-through leading-tight">{defVar}%</span>
+                                                    <span className="text-rose-400 font-semibold leading-tight">{varPct}%</span>
+                                                  </div>
+                                                ) : (
+                                                  <span className="text-slate-300 tabular-nums">{varPct}%</span>
+                                                )}
+                                                <button
+                                                  onClick={e => { e.stopPropagation(); setEditingVarianceId(o.id); }}
+                                                  className={`p-0.5 rounded hover:bg-white/10 transition-colors ${isCustom ? "text-rose-600 hover:text-rose-300" : "text-slate-500 hover:text-slate-300"}`}
+                                                  title="Edit variance %"
+                                                >
+                                                  <Pencil size={10} />
+                                                </button>
+                                              </div>
+                                            )}
+                                          </td>
+                                          <TD className="text-rose-400 tabular-nums font-medium">{tv > 0 ? fmt(tv) : "—"}</TD>
+                                          <TD className="text-slate-200 tabular-nums font-semibold">{tot > 0 ? fmt(tot) : "—"}</TD>
+                                          <TD className="text-slate-500">{o.expirationDate ?? <span className="text-emerald-500/60 text-[10px]">No expiry</span>}</TD>
                                         </tr>
-                                        {isOpen && positions.map((o, i) => {
-                                          const iv = intrinsic(o, pps);
-                                          const tv = timeVal(o, pps);
-                                          const tot = iv + tv;
-                                          const varPct = optionVariances[o.id] ?? 0;
-                                          return (
-                                            <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                              <td className="py-2 px-3 w-6" />
-                                              <td className="py-2 px-3 pl-11">
-                                                {o.date && <p className="text-[11px] text-slate-500">{o.date}</p>}
-                                                {o.notes && <p className="text-[10px] text-slate-600 max-w-xs">{o.notes}</p>}
-                                              </td>
-                                              <td className="py-2 px-3">
-                                                <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400">{o.instrument}</span>
-                                              </td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{o.shares.toLocaleString()}</td>
-                                              <td className="py-2 px-3 text-[11px] text-rose-400 tabular-nums">${o.strikePrice.toFixed(4)}</td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{pps > 0 ? `$${pps.toFixed(4)}` : "—"}</td>
-                                              <td className="py-2 px-3 text-[11px] tabular-nums">
-                                                <span className={iv > 0 ? "text-emerald-400" : "text-slate-600"}>{iv > 0 ? fmt(iv) : "—"}</span>
-                                              </td>
-                                              <td className="py-2 px-3" onClick={e => e.stopPropagation()}>
-                                                <div className="flex items-center gap-1">
-                                                  <input
-                                                    type="number"
-                                                    min={0} max={500} step={5}
-                                                    value={varPct}
-                                                    onChange={e => setOptionVariances(prev => ({ ...prev, [o.id]: Math.max(0, Number(e.target.value)) }))}
-                                                    className="w-14 bg-[#111D2E] border border-[#1E2D3D] rounded px-1.5 py-0.5 text-[11px] text-slate-200 tabular-nums text-right focus:outline-none focus:border-rose-500/50"
-                                                  />
-                                                  <span className="text-[10px] text-slate-600">%</span>
-                                                </div>
-                                              </td>
-                                              <td className="py-2 px-3 text-[11px] text-rose-400 tabular-nums">{tv > 0 ? fmt(tv) : "—"}</td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-200 tabular-nums font-semibold">{tot > 0 ? fmt(tot) : "—"}</td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-500">{o.expirationDate ?? <span className="text-emerald-500/60">No expiry</span>}</td>
-                                            </tr>
-                                          );
-                                        })}
+                                        {isOpen && o.notes && (
+                                          <tr className="border-t border-[#0D1421] bg-[#080E1A]">
+                                            <td />
+                                            <td colSpan={10} className="py-2 px-3 pl-11">
+                                              <p className="text-[10px] text-slate-500 max-w-lg">{o.notes}</p>
+                                            </td>
+                                          </tr>
+                                        )}
                                       </>
                                     );
                                   })}
