@@ -44,100 +44,23 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Full-journey investment advisory boutique",
     description:
       "Boutique investment advisory firm helping founders and families navigate liquidity events, estate planning, and capital allocation with radical alignment.",
-    invested: 1_850_000,
-    currentValue: 3_420_000,
-    ownership: 19.2,
+    invested: 702_399,
+    currentValue: 561_919,   // 7,023,990 shares × est. $0.08/share
+    ownership: 17.8,         // 7,023,990 ÷ 39,460,619
     stage: "Growth",
     founded: 2022,
-    employees: 14,
-    revenue: 2_100_000,
-    revenueGrowth: 61,
+    employees: 0,
     status: "active",
-    secondaryAvailable: true,
-    impliedValuation: 17_800_000,
-    totalShares: 39_460_619, // 7,023,990 Co-Owner shares ÷ 17.8%
+    secondaryAvailable: false,
+    impliedValuation: 3_156_849,  // est. $0.08/share × 39,460,619 total shares
+    totalShares: 39_460_619,
     website: "https://falconer.com",
     linkedInUrl: "https://www.linkedin.com/company/falconerco",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
-    ebitda: 350_000,
-    votingOwnership: 22.1,
     shareTransactions: [
-      { date: "Aug 2022", type: "Common",    shares: 7_023_990, pricePerShare: 0.10,  amount: 702_399,  certificateNumber: "CS-01" },
-      { date: "Mar 2024", type: "Preferred", shares: 3_500_000, pricePerShare: 0.386, amount: 1_350_000, certificateNumber: "PS-01",
-        preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0, dividendRate: 8 },
+      { date: "Aug 2022", type: "Common", shares: 7_023_990, pricePerShare: 0.10, amount: 702_399, certificateNumber: "CS-01" },
     ] satisfies ShareTransaction[],
-    valuationRefs: [
-      { label: "409A",            date: "Jan 2025", low: 5_800_000,  high: 11_200_000, color: "#64748B", note: "Most recent 409A range" },
-      { label: "Last Round",      date: "Mar 2024", low: 17_800_000, high: 17_800_000, color: "#3B82F6", note: "Series Seed @ $17.8M post-money" },
-      { label: "Rev Multiple",               low: 6_300_000,  high: 16_800_000, color: "#10B981", note: "3–8× on $2.1M ARR" },
-      { label: "EBITDA Multiple",            low: 2_800_000,  high: 5_250_000,  color: "#F59E0B", note: "8–15× on $350K EBITDA" },
-    ] satisfies ValuationRef[],
-    incomeStatement: {
-      period: "FY 2025",
-      revenue: 2_100_000,
-      costOfRevenue: 840_000,
-      grossProfit: 1_260_000,
-      operatingExpenses: 910_000,
-      ebitda: 350_000,
-      depreciation: 70_000,
-      netIncome: 280_000,
-    } satisfies IncomeStatement,
-    balanceSheet: {
-      asOf: "March 31, 2026",
-      cash: 2_200_000,
-      accountsReceivable: 380_000,
-      totalAssets: 3_100_000,
-      totalLiabilities: 420_000,
-      netEquity: 2_680_000,
-    } satisfies BalanceSheet,
-    financingHistory: [
-      { date: "Aug 2022", type: "Pre-Seed", amountRaised: 500_000, postMoneyValuation: 2_500_000, investors: ["nth Venture", "Angel Syndicate"] },
-      { date: "Mar 2024", type: "Seed",     amountRaised: 1_850_000, postMoneyValuation: 9_250_000, investors: ["Co-Owner Fund, LP", "Existing Angels"], notes: "Lead by Co-Owner Fund; bridge converted" },
-    ] satisfies FinancingRound[],
-    news: [
-      { source: "LinkedIn", date: "Mar 25, 2026", headline: "Falconer Adds Wealth Transition Advisory Practice", snippet: "Falconer announced the launch of a dedicated wealth transition team to serve founders and families navigating liquidity events in 2026.", url: "https://www.linkedin.com/company/falconerco" },
-      { source: "Barron's", date: "Feb 14, 2026", headline: "Boutique RIAs Gain Share as Ultra-HNW Clients Seek Alignment", snippet: "A wave of ultra-high-net-worth clients are moving relationships to smaller, fee-only advisors — firms like Falconer that stake compensation entirely on client outcomes.", url: "https://www.barrons.com" },
-      { source: "LinkedIn", date: "Dec 10, 2025", headline: "Falconer Crosses $2M ARR Milestone", snippet: "Our team hit $2M in annualized revenue this quarter. This milestone reflects both top-line growth and the deepening of relationships with our client families.", url: "https://www.linkedin.com/company/falconerco" },
-    ] satisfies NewsItem[],
-    financialHistory: [
-      { period: "FY 2024", periodType: "annual", revenue: 1_300_000, costOfRevenue: 520_000, grossProfit: 780_000, operatingExpenses: 660_000, ebitda: 120_000, depreciation: 40_000, netIncome: 90_000, cash: 1_100_000, accountsReceivable: 210_000 },
-      { period: "Q1 2025", periodType: "quarterly", startDate: "2025-01-01", endDate: "2025-03-31", revenue: 420_000, costOfRevenue: 168_000, grossProfit: 252_000, operatingExpenses: 202_000, ebitda: 50_000, depreciation: 15_000, netIncome: 35_000 },
-      { period: "Q2 2025", periodType: "quarterly", startDate: "2025-04-01", endDate: "2025-06-30", revenue: 480_000, costOfRevenue: 192_000, grossProfit: 288_000, operatingExpenses: 218_000, ebitda: 70_000, depreciation: 16_000, netIncome: 52_000 },
-      { period: "Q3 2025", periodType: "quarterly", startDate: "2025-07-01", endDate: "2025-09-30", revenue: 540_000, costOfRevenue: 216_000, grossProfit: 324_000, operatingExpenses: 234_000, ebitda: 90_000, depreciation: 18_000, netIncome: 68_000 },
-      { period: "Q4 2025", periodType: "quarterly", startDate: "2025-10-01", endDate: "2025-12-31", revenue: 660_000, costOfRevenue: 264_000, grossProfit: 396_000, operatingExpenses: 256_000, ebitda: 140_000, depreciation: 21_000, netIncome: 105_000 },
-    ] satisfies FinancialPeriod[],
-    annualMeetingDate: "March 12, 2026",
-    annualMeetingUrl: "https://www.loom.com",
-    shareholderLetters: [
-      {
-        id: "falconer-q4-2025",
-        date: "January 20, 2026",
-        period: "Q4 2025",
-        title: "Q4 2025 Shareholder Update — Momentum Into 2026",
-        author: "Falconer Management",
-        excerpt: "Q4 was our strongest quarter to date. We crossed $2M in annualized revenue and are entering 2026 with a full pipeline and a focused team.",
-        body: `Dear Shareholders,
-
-Q4 2025 was Falconer's strongest quarter since founding. Revenue came in at $660K for the quarter — a 22% increase over Q3 — bringing full-year 2025 revenue to $2.1M and EBITDA to $350K.
-
-**What Drove Q4**
-
-Two client relationships that had been in diligence since Q2 finally closed in October and November. Both are multigenerational family offices — exactly the clients we built Falconer to serve. These are long-duration, high-trust relationships that compound over time.
-
-We also made progress on the team. We added our third advisor in December, which positions us to take on an additional $8–10M in advisory relationships in 2026 without straining capacity.
-
-**Looking Ahead**
-
-We expect Q1 2026 to be softer seasonally — it always is in wealth advisory — but the pipeline entering the year is the deepest we've seen. We're tracking four prospective mandates that would individually represent 15–20% revenue lifts if they close.
-
-The wealth transition advisory practice we're launching in Q1 is a direct response to market demand. Founders are sitting on meaningful illiquid equity and need sophisticated guidance on how to think about it. We're uniquely positioned here.
-
-Thank you for your continued support.
-
-— Falconer Management`,
-      },
-    ] satisfies CompanyLetter[],
   },
   {
     id: "merchant-boxes",
@@ -147,101 +70,22 @@ Thank you for your continued support.
     tagline: "Modern packaging for modern commerce",
     description:
       "Design-led packaging sourcing and fulfillment partner for DTC brands and eCommerce operators. Turns packaging from cost center to brand asset.",
-    invested: 1_200_000,
-    currentValue: 2_040_000,
-    ownership: 24.5,
+    invested: 489_790,
+    currentValue: 326_526,   // 6,530,527 shares × est. $0.05/share
+    ownership: 16.4,         // 6,530,527 ÷ 39,820,287
     stage: "Pre-Series A",
     founded: 2022,
-    employees: 9,
-    revenue: 3_800_000,
-    revenueGrowth: 34,
+    employees: 0,
     status: "active",
-    secondaryAvailable: true,
-    impliedValuation: 8_330_000,
-    totalShares: 39_820_287, // 6,530,527 Co-Owner shares ÷ 16.4%
+    secondaryAvailable: false,
+    impliedValuation: 1_991_014,  // est. $0.05/share × 39,820,287 total shares
+    totalShares: 39_820_287,
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
-    ebitda: -180_000,
-    votingOwnership: 27.8,
     shareTransactions: [
-      { date: "Jun 2022", type: "Common",    shares: 6_530_527, pricePerShare: 0.075, amount: 489_790,  certificateNumber: "CS-02" },
-      { date: "Sep 2023", type: "Preferred", shares: 3_000_000, pricePerShare: 0.30,  amount: 900_000,  certificateNumber: "PS-02",
-        preferredType: "Participating w/ Cap", liquidationMultiple: 1.0, conversionRatio: 1.0 },
+      { date: "Jun 2022", type: "Common", shares: 6_530_527, pricePerShare: 0.075, amount: 489_790, certificateNumber: "CS-02" },
     ] satisfies ShareTransaction[],
-    valuationRefs: [
-      { label: "409A",        date: "Feb 2025", low: 2_000_000, high: 4_500_000,  color: "#64748B", note: "Most recent 409A range" },
-      { label: "Last Round",  date: "Sep 2023", low: 8_330_000, high: 8_330_000,  color: "#F59E0B", note: "Seed @ $8.33M post-money" },
-      { label: "Rev Multiple",               low: 3_800_000, high: 11_400_000, color: "#10B981", note: "1–3× on $3.8M ARR" },
-    ] satisfies ValuationRef[],
-    incomeStatement: {
-      period: "FY 2025",
-      revenue: 3_800_000,
-      costOfRevenue: 2_850_000,
-      grossProfit: 950_000,
-      operatingExpenses: 1_130_000,
-      ebitda: -180_000,
-      depreciation: 50_000,
-      netIncome: -230_000,
-    } satisfies IncomeStatement,
-    balanceSheet: {
-      asOf: "March 31, 2026",
-      cash: 1_100_000,
-      accountsReceivable: 620_000,
-      otherCurrentAssets: 280_000,
-      totalAssets: 2_400_000,
-      totalLiabilities: 980_000,
-      netEquity: 1_420_000,
-      monthlyBurn: 15_000,
-      runwayMonths: 73,
-    } satisfies BalanceSheet,
-    financingHistory: [
-      { date: "Jun 2022", type: "Pre-Seed", amountRaised: 350_000, postMoneyValuation: 1_750_000, investors: ["nth Venture"] },
-      { date: "Sep 2023", type: "Seed",     amountRaised: 1_200_000, postMoneyValuation: 5_000_000, investors: ["Co-Owner Fund, LP"], notes: "National retail partnership announced same month" },
-    ] satisfies FinancingRound[],
-    news: [
-      { source: "LinkedIn", date: "Mar 18, 2026", headline: "Merchant Boxes Lands National Retail Partnership", snippet: "We've signed a national fulfillment agreement that we expect to significantly expand order volume throughout 2026. Proud of the team for closing this." },
-      { source: "Packaging Digest", date: "Feb 5, 2026", headline: "DTC Packaging Costs Under Pressure as Tariffs Hit Paper Imports", snippet: "Tariffs on paper and cardboard imports from key markets are squeezing DTC packaging margins, with operators like Merchant Boxes working to diversify supply chains.", url: "https://www.packagingdigest.com" },
-      { source: "LinkedIn", date: "Jan 9, 2026", headline: "Merchant Boxes Launches Eco-Line Packaging for Sustainable DTC Brands", snippet: "Our new eco-certified line of packaging is designed for DTC brands that want sustainable materials without sacrificing the unboxing experience." },
-    ] satisfies NewsItem[],
-    financialHistory: [
-      { period: "FY 2024", periodType: "annual", revenue: 2_800_000, costOfRevenue: 2_100_000, grossProfit: 700_000, operatingExpenses: 980_000, ebitda: -280_000, depreciation: 60_000, netIncome: -340_000, cash: 800_000, accountsReceivable: 480_000 },
-      { period: "Q1 2025", periodType: "quarterly", startDate: "2025-01-01", endDate: "2025-03-31", revenue: 820_000, costOfRevenue: 615_000, grossProfit: 205_000, operatingExpenses: 265_000, ebitda: -60_000, depreciation: 12_000, netIncome: -75_000 },
-      { period: "Q2 2025", periodType: "quarterly", startDate: "2025-04-01", endDate: "2025-06-30", revenue: 900_000, costOfRevenue: 675_000, grossProfit: 225_000, operatingExpenses: 275_000, ebitda: -50_000, depreciation: 13_000, netIncome: -62_000 },
-      { period: "Q3 2025", periodType: "quarterly", startDate: "2025-07-01", endDate: "2025-09-30", revenue: 1_000_000, costOfRevenue: 750_000, grossProfit: 250_000, operatingExpenses: 290_000, ebitda: -40_000, depreciation: 13_000, netIncome: -52_000 },
-      { period: "Q4 2025", periodType: "quarterly", startDate: "2025-10-01", endDate: "2025-12-31", revenue: 1_080_000, costOfRevenue: 810_000, grossProfit: 270_000, operatingExpenses: 300_000, ebitda: -30_000, depreciation: 12_000, netIncome: -41_000 },
-    ] satisfies FinancialPeriod[],
-    annualMeetingDate: "March 19, 2026",
-    annualMeetingUrl: "https://www.loom.com",
-    shareholderLetters: [
-      {
-        id: "mb-q4-2025",
-        date: "January 28, 2026",
-        period: "Q4 2025",
-        title: "Q4 2025 Shareholder Update — National Partnership & Path to Profitability",
-        author: "Merchant Boxes Management",
-        excerpt: "Q4 was defined by the national retail partnership we announced in March. The deal took eight months to negotiate and changes our trajectory materially.",
-        body: `Dear Shareholders,
-
-Q4 2025 revenue came in at $1.08M — our best quarter ever and a 23% sequential increase. Full-year 2025 revenue was $3.8M, up 36% from $2.8M in 2024. EBITDA loss for the year narrowed to -$180K from -$280K in 2024, which represents meaningful progress.
-
-**The Retail Partnership**
-
-In late Q4 we finalized a national fulfillment agreement with a major retail operator (we'll announce the name when the partnership goes live in Q2 2026). This is a multi-year, volume-committed arrangement. Based on projected initial order volumes, it represents approximately 30–40% revenue upside from our current run rate.
-
-**Path to Profitability**
-
-We expect to reach EBITDA breakeven in Q3 2026. The math is straightforward: the retail partnership drives meaningful volume without proportional cost increases, because our supply chain infrastructure is already built. Gross margin should expand 3–5 points as we scale.
-
-**Headcount**
-
-We are at 9 full-time employees. We do not plan to add headcount in H1 2026. Every hire we make is an owner — that discipline keeps the team tight and the incentives aligned.
-
-Thank you for your patience and continued confidence.
-
-— Merchant Boxes Management`,
-      },
-    ] satisfies CompanyLetter[],
   },
   {
     id: "certd",
@@ -251,108 +95,22 @@ Thank you for your patience and continued confidence.
     tagline: "Modern same-day delivery infrastructure for local commerce",
     description:
       "Pigeon Service (fka CERTD) builds last-mile delivery infrastructure for local businesses, enabling same-day and scheduled delivery without the complexity of managing a fleet.",
-    invested: 900_000,
-    currentValue: 1_530_000,
-    ownership: 31.0,
+    invested: 247_988,
+    currentValue: 174_027,   // 4,350,663 shares × est. $0.04/share
+    ownership: 14.3,         // 4,350,663 ÷ 30,423,657
     stage: "Seed",
     founded: 2022,
-    employees: 7,
-    revenue: 620_000,
-    revenueGrowth: 88,
+    employees: 0,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 4_935_000,
+    impliedValuation: 1_216_946,  // est. $0.04/share × 30,423,657 total shares
     totalShares: 30_423_657,
     website: "https://pigeonservice.com",
     logoUrl: "https://logo.clearbit.com/pigeonservice.com",
     accentColor: "#10B981",
-    ebitda: -850_000,
-    votingOwnership: 35.2,
     shareTransactions: [
-      { date: "Mar 2022", type: "Common",    shares: 4_350_663, pricePerShare: 0.057, amount: 247_988, certificateNumber: "CS-03" },
-      { date: "Nov 2023", type: "Preferred", shares: 2_800_000, pricePerShare: 0.25,  amount: 700_000, certificateNumber: "PS-03",
-        preferredType: "Non-Participating", liquidationMultiple: 1.5, conversionRatio: 1.0 },
+      { date: "Mar 2022", type: "Common", shares: 4_350_663, pricePerShare: 0.057, amount: 247_988, certificateNumber: "CS-03" },
     ] satisfies ShareTransaction[],
-    debtPositions: [
-      { id: "certd-cn-1", date: "Jun 2022", instrument: "Convertible Note", principal: 150_000,
-        interestRate: 8, maturityDate: "Jun 2024", valuationCap: 4_000_000,
-        status: "Extended", currentValue: 181_200,
-        notes: "Maturity extended to Jun 2026 pending Series A. Interest accruing at 8%." },
-    ] satisfies DebtPosition[],
-    valuationRefs: [
-      { label: "409A",        date: "Mar 2025", low: 1_200_000, high: 2_800_000, color: "#64748B", note: "Most recent 409A range" },
-      { label: "Last Round",  date: "Nov 2023", low: 4_935_000, high: 4_935_000, color: "#10B981", note: "Seed @ $4.935M post-money" },
-      { label: "Rev Multiple",               low: 2_480_000, high: 6_200_000, color: "#8B5CF6", note: "4–10× on $620K ARR" },
-    ] satisfies ValuationRef[],
-    incomeStatement: {
-      period: "FY 2025",
-      revenue: 620_000,
-      costOfRevenue: 180_000,
-      grossProfit: 440_000,
-      operatingExpenses: 1_290_000,
-      ebitda: -850_000,
-      depreciation: 70_000,
-      netIncome: -920_000,
-    } satisfies IncomeStatement,
-    balanceSheet: {
-      asOf: "March 31, 2026",
-      cash: 1_800_000,
-      accountsReceivable: 85_000,
-      totalAssets: 2_100_000,
-      totalLiabilities: 380_000,
-      netEquity: 1_720_000,
-      monthlyBurn: 71_000,
-      runwayMonths: 25,
-    } satisfies BalanceSheet,
-    financingHistory: [
-      { date: "Mar 2022", type: "Pre-Seed", amountRaised: 300_000, postMoneyValuation: 1_500_000, investors: ["nth Venture", "Founder Grants"] },
-      { date: "Nov 2023", type: "Seed",     amountRaised: 900_000, postMoneyValuation: 3_200_000, investors: ["Co-Owner Fund, LP"] },
-    ] satisfies FinancingRound[],
-    news: [
-      { source: "nth Venture", date: "Apr 8, 2026", headline: "Certd Accreditation Partnership Announcement Coming Q2 2026", snippet: "Per Q1 2026 LP letter: Certd's accreditation partnership announcement expected in June — management has previewed the agreement with investors." },
-      { source: "EdTech Review", date: "Mar 3, 2026", headline: "Digital Credentialing Market Expected to Reach $4.8B by 2028", snippet: "Demand for verified, tamper-proof digital credentials is surging as employers increasingly require proof-of-skill beyond traditional degrees.", url: "https://www.edtechreview.in" },
-      { source: "LinkedIn", date: "Jan 21, 2026", headline: "Certd Pilots Blockchain Credentials with Three Workforce Boards", snippet: "We're live with pilot programs across three regional workforce development boards, validating our credential infrastructure in real hiring workflows." },
-    ] satisfies NewsItem[],
-    financialHistory: [
-      { period: "FY 2024", periodType: "annual", revenue: 340_000, costOfRevenue: 100_000, grossProfit: 240_000, operatingExpenses: 1_160_000, ebitda: -920_000, depreciation: 70_000, netIncome: -990_000, cash: 2_200_000, accountsReceivable: 42_000 },
-      { period: "Q1 2025", periodType: "quarterly", startDate: "2025-01-01", endDate: "2025-03-31", revenue: 120_000, costOfRevenue: 35_000, grossProfit: 85_000, operatingExpenses: 325_000, ebitda: -240_000, depreciation: 18_000, netIncome: -258_000 },
-      { period: "Q2 2025", periodType: "quarterly", startDate: "2025-04-01", endDate: "2025-06-30", revenue: 140_000, costOfRevenue: 41_000, grossProfit: 99_000, operatingExpenses: 319_000, ebitda: -220_000, depreciation: 17_000, netIncome: -237_000 },
-      { period: "Q3 2025", periodType: "quarterly", startDate: "2025-07-01", endDate: "2025-09-30", revenue: 160_000, costOfRevenue: 46_000, grossProfit: 114_000, operatingExpenses: 314_000, ebitda: -200_000, depreciation: 17_000, netIncome: -216_000 },
-      { period: "Q4 2025", periodType: "quarterly", startDate: "2025-10-01", endDate: "2025-12-31", revenue: 200_000, costOfRevenue: 58_000, grossProfit: 142_000, operatingExpenses: 332_000, ebitda: -190_000, depreciation: 18_000, netIncome: -209_000 },
-    ] satisfies FinancialPeriod[],
-    annualMeetingDate: "March 26, 2026",
-    annualMeetingUrl: "https://www.loom.com",
-    shareholderLetters: [
-      {
-        id: "certd-q4-2025",
-        date: "February 3, 2026",
-        period: "Q4 2025",
-        title: "Q4 2025 Shareholder Update — Accreditation Partnership Progress",
-        author: "Certd Management",
-        excerpt: "Q4 revenue grew 25% quarter over quarter and we are in final stages of an accreditation partnership that will significantly accelerate our go-to-market.",
-        body: `Dear Shareholders,
-
-Q4 2025 revenue was $200K, our best quarter to date and a 25% sequential increase from Q3. Full-year 2025 revenue of $620K represents 82% growth over 2024. Our EBITDA burn is narrowing — Q4 EBITDA was -$190K versus -$240K in Q1. We are burning less to grow more.
-
-**Accreditation Partnership**
-
-We are in final stages of executing an accreditation partnership with a national trade association. This is the key unlock for our marketplace model: association-endorsed credentials carry significantly higher employer acceptance rates than self-issued ones. We expect to announce this publicly in Q2 2026.
-
-When this is live, our go-to-market changes materially. We can now approach association members (thousands of credentialing providers) with an endorsed credential product. This is our primary growth driver for 2026 and 2027.
-
-**Workforce Board Pilots**
-
-We completed our first three workforce board pilots in Q4. Results were strong: 94% of credentials issued in the pilots have been accepted by at least one employer. We expect to convert two of the three pilots to paying contracts in Q1 2026.
-
-**Runway**
-
-With $1.8M in cash as of March 31, we have approximately 25 months of runway at current burn. We do not plan to raise until the accreditation partnership is live and we can demonstrate accelerating adoption.
-
-Thank you for your patience — this is a complex market to move in, and we are moving carefully and deliberately.
-
-— Certd Management`,
-      },
-    ] satisfies CompanyLetter[],
   },
   {
     id: "audily",
@@ -362,114 +120,33 @@ Thank you for your patience — this is a complex market to move in, and we are 
     tagline: "Audio production for ambitious brands",
     description:
       "Full-service podcast and audio production studio. Audily handles strategy, recording, editing, and distribution for B2B brands that want to own their category conversation.",
-    invested: 600_000,
-    currentValue: 1_080_000,
-    ownership: 28.0,
+    invested: 966_886,    // CS-04 $826,886 + Series A Pref $115,000 + note $25,000
+    currentValue: 496_132,   // 16,537,717 shares × est. $0.03/share
+    ownership: 31.8,         // 16,537,717 ÷ 52,004,140
     stage: "Seed",
     founded: 2021,
-    employees: 6,
-    revenue: 480_000,
-    revenueGrowth: 52,
+    employees: 0,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 3_857_000,
-    totalShares: 52_004_140, // 16,537,717 Co-Owner shares ÷ 31.8%
+    impliedValuation: 1_560_124,  // est. $0.03/share × 52,004,140 total shares
+    totalShares: 52_004_140,
     linkedInUrl: "https://www.linkedin.com/company/audily",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
-    ebitda: -320_000,
-    votingOwnership: 32.4,
+    votingOwnership: 31.20,
     shareTransactions: [
-      { date: "Sep 2021", type: "Common",    shares: 16_537_717, pricePerShare: 0.05,  amount: 826_886, certificateNumber: "CS-04" },
-      { date: "Jul 2023", type: "Preferred", shares: 2_000_000, pricePerShare: 0.20,  amount: 400_000, certificateNumber: "PS-04",
-        preferredType: "Non-Participating", liquidationMultiple: 1.0, conversionRatio: 1.0 },
+      { date: "Sep 2021", type: "Common", shares: 16_537_717, pricePerShare: 0.05, amount: 826_886, certificateNumber: "CS-04" },
     ] satisfies ShareTransaction[],
     debtPositions: [
-      { id: "audily-safe-1", date: "Oct 2022", instrument: "SAFE", principal: 100_000,
-        valuationCap: 3_000_000, discountRate: 20,
-        status: "Accruing", currentValue: 100_000,
-        notes: "Post-money SAFE, 20% discount to next round, $3M valuation cap." },
       { id: "audily-pref-a", date: "Dec 2024", instrument: "Preferred", principal: 115_000,
         interestRate: 13.4,
         status: "Accruing", currentValue: 134_700,
         notes: "1,150 Series A Preferred shares at $100 face. 13.4% cumulative yield beginning 12/31/24. Converts to Class A Common at 1:1,000 per preferred share (1,150,000 common shares if fully converted)." },
+      { id: "audily-note-1", date: "UNK", instrument: "Term Loan", principal: 25_000,
+        interestRate: 20,
+        status: "Current", currentValue: 25_000,
+        notes: "1-year amortizing note at 20% annual rate. Monthly payment ~$2,309. 12 equal monthly installments." },
     ] satisfies DebtPosition[],
-    valuationRefs: [
-      { label: "409A",        date: "Jan 2025", low: 600_000,   high: 1_800_000, color: "#64748B", note: "Most recent 409A range" },
-      { label: "Last Round",  date: "Jul 2023", low: 3_857_000, high: 3_857_000, color: "#8B5CF6", note: "Seed @ $3.857M post-money" },
-      { label: "Rev Multiple",               low: 960_000,   high: 2_400_000, color: "#10B981", note: "2–5× on $480K ARR" },
-    ] satisfies ValuationRef[],
-    incomeStatement: {
-      period: "FY 2025",
-      revenue: 480_000,
-      costOfRevenue: 192_000,
-      grossProfit: 288_000,
-      operatingExpenses: 608_000,
-      ebitda: -320_000,
-      depreciation: 40_000,
-      netIncome: -360_000,
-    } satisfies IncomeStatement,
-    balanceSheet: {
-      asOf: "March 31, 2026",
-      cash: 1_200_000,
-      accountsReceivable: 95_000,
-      totalAssets: 1_450_000,
-      totalLiabilities: 220_000,
-      netEquity: 1_230_000,
-      monthlyBurn: 27_000,
-      runwayMonths: 45,
-    } satisfies BalanceSheet,
-    financingHistory: [
-      { date: "Sep 2021", type: "Pre-Seed", amountRaised: 250_000, postMoneyValuation: 1_250_000, investors: ["nth Venture"] },
-      { date: "Jul 2023", type: "Seed",     amountRaised: 600_000, postMoneyValuation: 2_500_000, investors: ["Co-Owner Fund, LP"] },
-    ] satisfies FinancingRound[],
-    news: [
-      { source: "LinkedIn", date: "Mar 31, 2026", headline: "Audily Signs Five New B2B Brand Clients in Q1", snippet: "Closed Q1 with five new brand partnerships across fintech, SaaS, and professional services — our strongest acquisition quarter to date." },
-      { source: "Podcast Magazine", date: "Jan 20, 2026", headline: "B2B Podcast Production Market Grows 34% in 2025", snippet: "Corporate audio content is having a moment: B2B brands are doubling down on podcasts as owned-media channels in the post-social era.", url: "https://www.podcastmagazine.com" },
-      { source: "LinkedIn", date: "Nov 12, 2025", headline: "Audily Named in 'Top 20 Audio Production Studios for Business'", snippet: "Honored to be recognized alongside studios 10× our size. Our unfair advantage is the depth of content strategy we bring alongside production." },
-    ] satisfies NewsItem[],
-    financialHistory: [
-      { period: "FY 2024", periodType: "annual", revenue: 315_000, costOfRevenue: 126_000, grossProfit: 189_000, operatingExpenses: 589_000, ebitda: -400_000, depreciation: 40_000, netIncome: -440_000, cash: 1_400_000, accountsReceivable: 58_000 },
-      { period: "Q1 2025", periodType: "quarterly", startDate: "2025-01-01", endDate: "2025-03-31", revenue: 90_000, costOfRevenue: 36_000, grossProfit: 54_000, operatingExpenses: 149_000, ebitda: -95_000, depreciation: 10_000, netIncome: -105_000 },
-      { period: "Q2 2025", periodType: "quarterly", startDate: "2025-04-01", endDate: "2025-06-30", revenue: 105_000, costOfRevenue: 42_000, grossProfit: 63_000, operatingExpenses: 148_000, ebitda: -85_000, depreciation: 10_000, netIncome: -94_000 },
-      { period: "Q3 2025", periodType: "quarterly", startDate: "2025-07-01", endDate: "2025-09-30", revenue: 120_000, costOfRevenue: 48_000, grossProfit: 72_000, operatingExpenses: 147_000, ebitda: -75_000, depreciation: 10_000, netIncome: -83_000 },
-      { period: "Q4 2025", periodType: "quarterly", startDate: "2025-10-01", endDate: "2025-12-31", revenue: 165_000, costOfRevenue: 66_000, grossProfit: 99_000, operatingExpenses: 164_000, ebitda: -65_000, depreciation: 10_000, netIncome: -73_000 },
-    ] satisfies FinancialPeriod[],
-    annualMeetingDate: "March 5, 2026",
-    annualMeetingUrl: "https://www.loom.com",
-    shareholderLetters: [
-      {
-        id: "audily-q4-2025",
-        date: "January 15, 2026",
-        period: "Q4 2025",
-        title: "Q4 2025 Shareholder Update — Strongest Quarter, Clearest Signal",
-        author: "Audily Management",
-        excerpt: "Q4 revenue of $165K was our best quarter ever, driven by five new brand client wins. We closed 2025 with $480K in revenue, up 52% from 2024.",
-        body: `Dear Shareholders,
-
-Q4 2025 revenue was $165K — our strongest quarter since founding. Full-year 2025 revenue was $480K, up 52% from $315K in 2024. EBITDA loss for the year was -$320K, a meaningful improvement from -$400K in 2024.
-
-**What's Working**
-
-Our conversion motion is clicking. We shortened the sales cycle by productizing our offering — brands now choose from three tiers (Launch, Scale, Enterprise) rather than negotiating custom scopes. Average deal size increased 40% while sales cycle dropped from 8 weeks to 5.
-
-**Client Profile**
-
-We now serve 19 active B2B brand clients across fintech, SaaS, professional services, and healthcare. Average contract value is approximately $25K/year. Our churn in 2025 was zero — every client that signed with us in 2024 renewed.
-
-**2026 Priorities**
-
-1. Reach $800K ARR by end of 2026 (vs. $480K in 2025)
-2. Hire one senior producer to relieve capacity constraints
-3. Pilot a self-serve content repurposing add-on that would increase per-client ARPU without adding headcount
-
-**A Note on Ownership**
-
-All six Audily employees hold meaningful equity. When I tell you our churn is zero, I think part of the reason is that our team shows up differently for clients because they're owners. That's not accidental — it's the point.
-
-— Audily Management`,
-      },
-    ] satisfies CompanyLetter[],
   },
   {
     id: "sbr2th",
@@ -479,103 +156,28 @@ All six Audily employees hold meaningful equity. When I tell you our churn is ze
     tagline: "Niche tech talent for high-growth teams",
     description:
       "Specialized recruiting firm placing senior engineers, product managers, and data professionals at venture-backed companies. Known for speed and signal-to-noise.",
-    invested: 1_100_000,
-    currentValue: 1_870_000,
-    ownership: 22.0,
+    invested: 394_377,    // CS-05 $369,377 + note $25,000
+    currentValue: 277_033,   // 4,617,214 shares × est. $0.06/share
+    ownership: 15.0,         // 4,617,214 ÷ 30,781,427
     stage: "Growth",
     founded: 2022,
-    employees: 11,
-    revenue: 2_900_000,
-    revenueGrowth: 29,
+    employees: 0,
     status: "active",
-    secondaryAvailable: true,
-    impliedValuation: 8_500_000,
-    totalShares: 30_781_427, // 4,617,214 Co-Owner shares ÷ 15.0%
+    secondaryAvailable: false,
+    impliedValuation: 1_846_886,  // est. $0.06/share × 30,781,427 total shares
+    totalShares: 30_781_427,
     linkedInUrl: "https://www.linkedin.com/company/sbr2th-recruiting",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
-    ebitda: 480_000,
-    votingOwnership: 25.6,
     shareTransactions: [
-      { date: "Apr 2022", type: "Common",    shares: 4_617_214, pricePerShare: 0.133, amount: 614_089, certificateNumber: "CS-05" },
-      { date: "Jan 2024", type: "Preferred", shares: 2_333_333, pricePerShare: 0.30,  amount: 700_000, certificateNumber: "PS-05",
-        preferredType: "Participating", liquidationMultiple: 1.0, conversionRatio: 1.0, dividendRate: 6 },
+      { date: "Apr 2022", type: "Common", shares: 4_617_214, pricePerShare: 0.08, amount: 369_377, certificateNumber: "CS-05" },
     ] satisfies ShareTransaction[],
-    valuationRefs: [
-      { label: "409A",            date: "Feb 2025", low: 3_000_000, high: 6_000_000, color: "#64748B", note: "Most recent 409A range" },
-      { label: "Last Round",      date: "Jan 2024", low: 8_500_000, high: 8_500_000, color: "#EC4899", note: "Growth @ $8.5M post-money" },
-      { label: "Rev Multiple",               low: 2_320_000, high: 7_250_000, color: "#10B981", note: "0.8–2.5× on $2.9M ARR" },
-      { label: "EBITDA Multiple",            low: 2_400_000, high: 4_800_000, color: "#F59E0B", note: "5–10× on $480K EBITDA" },
-    ] satisfies ValuationRef[],
-    incomeStatement: {
-      period: "FY 2025",
-      revenue: 2_900_000,
-      costOfRevenue: 1_740_000,
-      grossProfit: 1_160_000,
-      operatingExpenses: 680_000,
-      ebitda: 480_000,
-      depreciation: 90_000,
-      netIncome: 390_000,
-    } satisfies IncomeStatement,
-    balanceSheet: {
-      asOf: "March 31, 2026",
-      cash: 1_600_000,
-      accountsReceivable: 580_000,
-      totalAssets: 2_800_000,
-      totalLiabilities: 620_000,
-      netEquity: 2_180_000,
-    } satisfies BalanceSheet,
-    financingHistory: [
-      { date: "Apr 2022", type: "Pre-Seed", amountRaised: 400_000, postMoneyValuation: 2_000_000, investors: ["nth Venture", "Operator Angels"] },
-      { date: "Jan 2024", type: "Growth",   amountRaised: 1_100_000, postMoneyValuation: 5_500_000, investors: ["Co-Owner Fund, LP"], notes: "Growth round to fund AI & data recruiting practice expansion" },
-    ] satisfies FinancingRound[],
-    news: [
-      { source: "LinkedIn", date: "Apr 2, 2026", headline: "SBR2TH Places Company-Record 47 Senior Engineers in Q1 2026", snippet: "47 placements across 23 venture-backed companies this quarter. Our fastest Q1 ever. The AI hiring cycle is back and we're riding it hard." },
-      { source: "TechCrunch", date: "Mar 11, 2026", headline: "Tech Hiring Rebounds: Senior Engineering Demand Up 28% YoY", snippet: "After two years of contraction, the senior engineering job market has recovered sharply, with demand concentrated in AI/ML, data infrastructure, and security.", url: "https://techcrunch.com" },
-      { source: "LinkedIn", date: "Feb 3, 2026", headline: "SBR2TH Launches AI & Data Recruiting Practice", snippet: "Announcing our dedicated AI and data practice — specialized search for ML engineers, data platform leads, and AI product managers at venture-backed companies." },
-    ] satisfies NewsItem[],
-    financialHistory: [
-      { period: "FY 2024", periodType: "annual", revenue: 2_250_000, costOfRevenue: 1_350_000, grossProfit: 900_000, operatingExpenses: 600_000, ebitda: 300_000, depreciation: 55_000, netIncome: 245_000, cash: 1_100_000, accountsReceivable: 430_000 },
-      { period: "Q1 2025", periodType: "quarterly", startDate: "2025-01-01", endDate: "2025-03-31", revenue: 600_000, costOfRevenue: 360_000, grossProfit: 240_000, operatingExpenses: 160_000, ebitda: 80_000, depreciation: 20_000, netIncome: 65_000 },
-      { period: "Q2 2025", periodType: "quarterly", startDate: "2025-04-01", endDate: "2025-06-30", revenue: 700_000, costOfRevenue: 420_000, grossProfit: 280_000, operatingExpenses: 170_000, ebitda: 110_000, depreciation: 22_000, netIncome: 90_000 },
-      { period: "Q3 2025", periodType: "quarterly", startDate: "2025-07-01", endDate: "2025-09-30", revenue: 760_000, costOfRevenue: 456_000, grossProfit: 304_000, operatingExpenses: 174_000, ebitda: 130_000, depreciation: 23_000, netIncome: 106_000 },
-      { period: "Q4 2025", periodType: "quarterly", startDate: "2025-10-01", endDate: "2025-12-31", revenue: 840_000, costOfRevenue: 504_000, grossProfit: 336_000, operatingExpenses: 176_000, ebitda: 160_000, depreciation: 25_000, netIncome: 130_000 },
-    ] satisfies FinancialPeriod[],
-    annualMeetingDate: "February 25, 2026",
-    annualMeetingUrl: "https://www.loom.com",
-    shareholderLetters: [
-      {
-        id: "sbr2th-q4-2025",
-        date: "January 22, 2026",
-        period: "Q4 2025",
-        title: "Q4 2025 Shareholder Update — Record Quarter, Profitable Growth",
-        author: "SBR2TH Management",
-        excerpt: "Q4 2025 was our best quarter ever. $840K in revenue, $160K EBITDA, and 11 full-time employees — all owners. The AI hiring cycle is real and we are positioned for it.",
-        body: `Dear Shareholders,
-
-Q4 2025 revenue was $840K — a company record and a 10.5% sequential increase from Q3. Full-year 2025 revenue was $2.9M, up 29% from $2.25M in 2024. EBITDA for the year was $480K, up 60% from $300K in 2024. We are a profitable growth company.
-
-**AI & Data Practice**
-
-We soft-launched our AI & Data recruiting practice in November. In Q4 alone we placed 6 ML engineers and 2 data platform leads. The pipeline for this practice is the strongest we've seen at this stage of any specialty. We expect AI & Data to represent 25–30% of revenue in 2026.
-
-**Team & Ownership**
-
-We are at 11 full-time employees. All 11 hold meaningful equity stakes. We added two recruiters in Q4 — both chose to take lower base salaries in exchange for larger equity grants. That's the SBR2TH model working exactly as designed.
-
-**Headcount Plan for 2026**
-
-We plan to add 3–4 recruiters in 2026 as we scale the AI & Data practice. Each hire will be an owner. We are targeting $4.2M in revenue for 2026 and EBITDA margins above 18%.
-
-**Q1 2026 Early Read**
-
-January placements are already tracking ahead of Q1 2025. The AI hiring rebound is accelerating. We are bullish.
-
-Thank you for your continued support and alignment.
-
-— SBR2TH Management`,
-      },
-    ] satisfies CompanyLetter[],
+    debtPositions: [
+      { id: "sbr2th-note-1", date: "UNK", instrument: "Term Loan", principal: 25_000,
+        interestRate: 20,
+        status: "Current", currentValue: 25_000,
+        notes: "1-year amortizing note at 20% annual rate. Monthly payment ~$2,309. 12 equal monthly installments." },
+    ] satisfies DebtPosition[],
   },
   {
     id: "galileo",
@@ -585,31 +187,22 @@ Thank you for your continued support and alignment.
     tagline: "Intelligent compute orchestration for AI workloads",
     description:
       "Galileo Computing (fka PRreact) provides infrastructure orchestration for AI/ML teams — dynamically routing workloads across GPU clusters to minimize cost and latency. Trusted by ML teams at Series A–C companies.",
-    invested: 750_000,
-    currentValue: 1_350_000,
-    ownership: 18.5,
+    invested: 0,
+    currentValue: 0,
+    ownership: 0,
     stage: "Seed",
     founded: 2023,
-    employees: 9,
-    revenue: 540_000,
-    revenueGrowth: 120,
+    employees: 0,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 7_300_000,
+    impliedValuation: 1_400_000,  // est. $0.05/share × 28,000,000 total shares (TBD)
     totalShares: 28_000_000,
     website: "https://galileocomputing.com",
     logoUrl: "https://logo.clearbit.com/galileocomputing.com",
     accentColor: "#6366F1",
-    ebitda: -620_000,
-    votingOwnership: 21.2,
     shareTransactions: [
-      // Share counts TBD — not yet confirmed in fund cap table records
-
+      // Share count not yet confirmed in fund cap table records
     ] satisfies ShareTransaction[],
-    valuationRefs: [
-      { label: "Last Round",  date: "Oct 2024", low: 7_300_000, high: 7_300_000, color: "#6366F1", note: "Seed @ $7.3M post-money" },
-      { label: "Rev Multiple",               low: 2_700_000, high: 8_100_000, color: "#10B981", note: "5–15× on $540K ARR" },
-    ] satisfies ValuationRef[],
   },
   {
     id: "hep-global",
@@ -634,25 +227,8 @@ Thank you for your continued support and alignment.
   },
 ];
 
+// NAV history — no verified data yet; populate from fund records
 export const navHistory: QuarterlyNav[] = [
-  { quarter: "Q4 '21", nav: 1_200_000,  called: 1_500_000,  distributions: 0 },
-  { quarter: "Q1 '22", nav: 2_800_000,  called: 3_000_000,  distributions: 0 },
-  { quarter: "Q2 '22", nav: 4_100_000,  called: 4_500_000,  distributions: 0 },
-  { quarter: "Q3 '22", nav: 5_400_000,  called: 5_800_000,  distributions: 0 },
-  { quarter: "Q4 '22", nav: 6_200_000,  called: 6_500_000,  distributions: 0 },
-  { quarter: "Q1 '23", nav: 6_900_000,  called: 7_000_000,  distributions: 0 },
-  { quarter: "Q2 '23", nav: 7_800_000,  called: 7_500_000,  distributions: 0 },
-  { quarter: "Q3 '23", nav: 8_700_000,  called: 7_800_000,  distributions: 0 },
-  { quarter: "Q4 '23", nav: 9_600_000,  called: 8_000_000,  distributions: 200_000 },
-  { quarter: "Q1 '24", nav: 10_200_000, called: 8_200_000,  distributions: 350_000 },
-  { quarter: "Q2 '24", nav: 10_900_000, called: 8_400_000,  distributions: 350_000 },
-  { quarter: "Q3 '24", nav: 11_800_000, called: 8_600_000,  distributions: 350_000 },
-  { quarter: "Q4 '24", nav: 12_400_000, called: 8_600_000,  distributions: 550_000 },
-  { quarter: "Q1 '25", nav: 12_700_000, called: 8_750_000,  distributions: 550_000 },
-  { quarter: "Q2 '25", nav: 13_100_000, called: 8_750_000,  distributions: 550_000 },
-  { quarter: "Q3 '25", nav: 13_500_000, called: 8_750_000,  distributions: 750_000 },
-  { quarter: "Q4 '25", nav: 13_700_000, called: 8_750_000,  distributions: 750_000 },
-  { quarter: "Q1 '26", nav: 13_920_000, called: 8_750_000,  distributions: 780_000 },
 ];
 
 export const dealPipeline: DealOpportunity[] = []; // legacy — use privateDealPipeline

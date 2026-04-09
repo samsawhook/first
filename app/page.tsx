@@ -296,13 +296,13 @@ export default function Dashboard() {
               // ── NAV time chart ─────────────────────────────────────────────────
               const W = 360; const H = 130; const PAD = { t: 10, r: 10, b: 28, l: 44 };
               const chartW = W - PAD.l - PAD.r; const chartH = H - PAD.t - PAD.b;
-              const maxY = Math.max(...navHistory.map(d => d.nav)) * 1.08;
-              const xS = (i: number) => PAD.l + (i / (navHistory.length - 1)) * chartW;
+              const hasNavHistory = navHistory.length >= 2;
+              const maxY = hasNavHistory ? Math.max(...navHistory.map(d => d.nav)) * 1.08 : 1;
+              const xS = (i: number) => PAD.l + (i / Math.max(navHistory.length - 1, 1)) * chartW;
               const yS = (v: number) => PAD.t + chartH - (v / maxY) * chartH;
               const navLine  = navHistory.map((d, i) => `${i === 0 ? "M" : "L"}${xS(i).toFixed(1)},${yS(d.nav).toFixed(1)}`).join(" ");
-              const calledLine = navHistory.map((d, i) => `${i === 0 ? "M" : "L"}${xS(i).toFixed(1)},${yS(d.called).toFixed(1)}`).join(" ");
-              const navFill = navLine + ` L${xS(navHistory.length - 1)},${(PAD.t + chartH).toFixed(1)} L${xS(0)},${(PAD.t + chartH).toFixed(1)} Z`;
-              const yTicks = [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY];
+              const navFill = hasNavHistory ? navLine + ` L${xS(navHistory.length - 1)},${(PAD.t + chartH).toFixed(1)} L${xS(0)},${(PAD.t + chartH).toFixed(1)} Z` : "";
+              const yTicks = hasNavHistory ? [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY] : [];
               const xLabels = navHistory.filter((_, i) => i % 4 === 0);
 
               // ── Allocation by security type ────────────────────────────────────
@@ -384,28 +384,29 @@ export default function Dashboard() {
                   {/* ② Value over time */}
                   <div className="p-5">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Value Over Time</p>
-                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
-                      {/* Grid lines */}
-                      {yTicks.map((v, i) => (
-                        <g key={i}>
-                          <line x1={PAD.l} y1={yS(v)} x2={W - PAD.r} y2={yS(v)} stroke="#1E2D3D" strokeWidth="1" />
-                          <text x={PAD.l - 4} y={yS(v) + 3} textAnchor="end" style={{ fontSize: 8, fill: "#475569" }}>
-                            {v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(0)}M` : v > 0 ? `$${(v / 1000).toFixed(0)}K` : "$0"}
-                          </text>
-                        </g>
-                      ))}
-                      {/* X labels */}
-                      {xLabels.map((d, i) => {
-                        const idx = navHistory.indexOf(d);
-                        return <text key={i} x={xS(idx)} y={H - 4} textAnchor="middle" style={{ fontSize: 8, fill: "#475569" }}>{d.quarter}</text>;
-                      })}
-                      {/* Value fill */}
-                      <path d={navFill} fill="#10B981" opacity="0.07" />
-                      {/* Value line */}
-                      <path d={navLine} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
-                      {/* Current dot */}
-                      <circle cx={xS(navHistory.length - 1)} cy={yS(navHistory[navHistory.length - 1].nav)} r="3" fill="#10B981" />
-                    </svg>
+                    {!hasNavHistory ? (
+                      <div className="flex items-center justify-center h-[102px] border border-dashed border-[#1E2D3D] rounded-lg">
+                        <p className="text-[10px] text-slate-600 italic">Historical data pending</p>
+                      </div>
+                    ) : (
+                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+                        {yTicks.map((v, i) => (
+                          <g key={i}>
+                            <line x1={PAD.l} y1={yS(v)} x2={W - PAD.r} y2={yS(v)} stroke="#1E2D3D" strokeWidth="1" />
+                            <text x={PAD.l - 4} y={yS(v) + 3} textAnchor="end" style={{ fontSize: 8, fill: "#475569" }}>
+                              {v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(0)}M` : v > 0 ? `$${(v / 1000).toFixed(0)}K` : "$0"}
+                            </text>
+                          </g>
+                        ))}
+                        {xLabels.map((d, i) => {
+                          const idx = navHistory.indexOf(d);
+                          return <text key={i} x={xS(idx)} y={H - 4} textAnchor="middle" style={{ fontSize: 8, fill: "#475569" }}>{d.quarter}</text>;
+                        })}
+                        <path d={navFill} fill="#10B981" opacity="0.07" />
+                        <path d={navLine} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
+                        <circle cx={xS(navHistory.length - 1)} cy={yS(navHistory[navHistory.length - 1].nav)} r="3" fill="#10B981" />
+                      </svg>
+                    )}
                   </div>
 
                   {/* ③ Allocation by security type */}
