@@ -42,12 +42,16 @@ const fmt = (n: number) =>
 function CompaniesDropdown({
   activeCompanyId,
   onSelect,
+  openAbove = false,
+  variant = "topnav",
 }: {
   activeCompanyId: string | null;
   onSelect: (id: string) => void;
+  openAbove?: boolean;
+  variant?: "topnav" | "bottomnav";
 }) {
   const [open, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, bottom: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -57,10 +61,14 @@ function CompaniesDropdown({
   const openMenu = useCallback(() => {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setMenuPos({ top: r.bottom + 4, left: r.left });
+      if (openAbove) {
+        setMenuPos({ top: 0, left: Math.max(4, Math.min(r.left, window.innerWidth - 244)), bottom: window.innerHeight - r.top + 4 });
+      } else {
+        setMenuPos({ top: r.bottom + 4, left: r.left, bottom: 0 });
+      }
     }
     setOpen(true);
-  }, []);
+  }, [openAbove]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,7 +88,9 @@ function CompaniesDropdown({
   const menu = (
     <div
       ref={menuRef}
-      style={{ position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
+      style={openAbove
+        ? { position: "fixed", bottom: menuPos.bottom, left: menuPos.left, zIndex: 9999 }
+        : { position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
       className="w-60 bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl overflow-hidden"
     >
       <div className="p-1">
@@ -122,20 +132,40 @@ function CompaniesDropdown({
     </div>
   );
 
+  if (variant === "bottomnav") {
+    return (
+      <>
+        <button
+          ref={btnRef}
+          onClick={() => (open ? setOpen(false) : openMenu())}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors ${
+            activeCompanyId !== null ? "text-emerald-400" : "text-slate-500"
+          }`}
+        >
+          <Building2 size={15} />
+          <span className="text-[10px] font-medium">
+            {activeCompany ? activeCompany.name.split(" ")[0] : "Companies"}
+          </span>
+        </button>
+        {mounted && open && createPortal(menu, document.body)}
+      </>
+    );
+  }
+
   return (
     <>
       <button
         ref={btnRef}
         onClick={() => (open ? setOpen(false) : openMenu())}
-        className={`flex items-center gap-2 px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+        className={`flex items-center gap-2 px-3 lg:px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
           activeCompanyId !== null
             ? "border-emerald-500 text-emerald-400"
             : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
         }`}
       >
         <Building2 size={15} />
-        {activeCompany ? activeCompany.name : "Companies"}
-        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        <span className="hidden lg:inline">{activeCompany ? activeCompany.name : "Companies"}</span>
+        <ChevronDown size={13} className={`hidden lg:block transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {mounted && open && createPortal(menu, document.body)}
     </>
@@ -208,7 +238,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-stretch h-14">
             {/* Logo */}
-            <div className="flex items-center gap-3 shrink-0 pr-4 border-r border-[#1E2D3D]">
+            <div className="flex items-center gap-2 shrink-0 pr-4 border-r border-[#1E2D3D]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
@@ -216,23 +246,23 @@ export default function Dashboard() {
                 className="h-7 w-auto"
                 style={{ filter: "brightness(0) invert(1)" }}
               />
-              <span className="text-xs text-slate-500 hidden sm:block">Investor Portal</span>
+              <span className="text-xs text-slate-500 hidden lg:block">Investor Portal</span>
             </div>
 
-            {/* Nav tabs */}
-            <div className="flex flex-1 items-stretch overflow-x-auto no-scrollbar">
+            {/* Nav tabs — hidden on mobile, icon-only on sm–lg, full on lg+ */}
+            <div className="hidden sm:flex flex-1 items-stretch">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabClick(tab.id)}
-                  className={`flex items-center gap-2 px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`flex items-center gap-2 px-3 lg:px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     activeCompanyId === null && activeTab === tab.id
                       ? "border-emerald-500 text-emerald-400"
                       : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
                   }`}
                 >
                   {tab.icon}
-                  {tab.label}
+                  <span className="hidden lg:inline">{tab.label}</span>
                 </button>
               ))}
               <CompaniesDropdown
@@ -241,9 +271,9 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Account + confidential */}
-            <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-[#1E2D3D]">
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-600 border border-[#1E2D3D] rounded-lg px-2 py-1.5">
+            {/* Account + confidential — pushed right on mobile */}
+            <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-[#1E2D3D] ml-auto sm:ml-0">
+              <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-600 border border-[#1E2D3D] rounded-lg px-2 py-1.5">
                 <Lock size={10} />
                 <span>Confidential</span>
               </div>
@@ -262,8 +292,35 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {/* Mobile bottom nav */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0D1421]/95 backdrop-blur-md border-t border-[#1E2D3D]">
+        <div className="flex items-stretch h-16">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors ${
+                activeCompanyId === null && activeTab === tab.id
+                  ? "text-emerald-400"
+                  : "text-slate-500"
+              }`}
+            >
+              {tab.icon}
+              <span className="text-[10px] font-medium">{tab.label}</span>
+            </button>
+          ))}
+          {/* Companies item */}
+          <CompaniesDropdown
+            activeCompanyId={activeCompanyId}
+            onSelect={(id) => setActiveCompanyId(id)}
+            openAbove
+            variant="bottomnav"
+          />
+        </div>
+      </nav>
+
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 sm:pb-8">
         {/* Company detail page */}
         {activeCompany && (
           <CompanyPage company={activeCompany} />
