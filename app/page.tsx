@@ -248,12 +248,12 @@ export default function Dashboard() {
                 <span>Confidential</span>
               </div>
               <div className="flex items-center gap-2 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2.5 py-1.5">
-                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-[9px] font-bold text-emerald-400">NW</span>
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                  <span className="text-[9px] font-bold text-indigo-400">CF</span>
                 </div>
                 <div className="hidden sm:block leading-tight">
-                  <p className="text-xs font-medium text-slate-200">Neil Wolfson</p>
-                  <p className="text-[9px] text-slate-500">Accredited Investor</p>
+                  <p className="text-xs font-medium text-slate-200">Co-Owner Fund, LP</p>
+                  <p className="text-[9px] text-slate-500">Fund View</p>
                 </div>
                 <User size={12} className="sm:hidden text-slate-400" />
               </div>
