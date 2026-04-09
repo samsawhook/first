@@ -419,8 +419,9 @@ export const portfolio: PortfolioCompany[] = [
     description:
       "Specialized recruiting firm placing senior engineers, product managers, and data professionals at venture-backed companies. Known for speed and signal-to-noise.",
     invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
-    currentValue: 277_033,   // 4,617,214 shares × est. $0.06/share
-    ownership: 15.0,         // 4,617,214 ÷ 30,781,427
+    currentValue: 105_273,   // 4,617,214 shares × est. $0.022808/share (impliedVal ÷ 81M adj FD)
+    ownership: 5.7,          // 4,617,214 ÷ 81,000,000 adj FD (Pulley 4/9/26)
+    votingOwnership: 14.9,   // 4,617,214 ÷ 31,000,000 common (RSUs non-voting until settled)
     stage: "Growth",
     founded: 2022,
     employees: 0,
@@ -429,9 +430,20 @@ export const portfolio: PortfolioCompany[] = [
     ebitda: -39_201,         // FY 2025 net operating loss
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_846_886,  // est. $0.06/share × 30,781,427 total shares
-    totalShares: 30_781_427,
+    impliedValuation: 1_846_886,  // est. $0.06/share on 30.8M common basis (pre-Pulley)
+    totalShares: 81_000_000,      // Pulley 4/9/26 adj FD: 31M common + 27.6M RSUs + 22.4M pool
     financialsAsOf: "4/9/26",
+    capTable: {
+      asOf: "April 9, 2026",
+      source: "Pulley",
+      authorizedCommon: 100_000_000,
+      adjustedFullyDiluted: 81_000_000,
+      classes: [
+        { label: "Common Stock",     shares: 31_000_000, color: "#EC4899" },
+        { label: "RSUs Outstanding", shares: 27_612_707, color: "#F59E0B", note: "2022 Incentive Award Plan" },
+        { label: "Unissued Pool",    shares: 22_387_293, color: "#1E2D3D", note: "Available for grant", isPool: true },
+      ],
+    } satisfies CapTableSummary,
     linkedInUrl: "https://www.linkedin.com/company/sbr2th-recruiting",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
