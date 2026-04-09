@@ -40,26 +40,38 @@ export const fund: FundMetrics = {
 export const portfolio: PortfolioCompany[] = [
   {
     id: "falconer",
-    name: "Falconer",
+    name: "Falconer Inc.",
     initials: "FA",
     sector: "Financial Services",
     tagline: "Full-journey investment advisory boutique",
     description:
       "Boutique investment advisory firm helping founders and families navigate liquidity events, estate planning, and capital allocation with radical alignment.",
     invested: 0,             // actual cost basis unknown
-    currentValue: 561_919,   // 7,023,990 shares × est. $0.08/share
-    ownership: 17.8,         // 7,023,990 ÷ 39,460,619
+    currentValue: 246_542,   // 7,023,990 / 90,000,000 × $3,156,849 implied
+    ownership: 7.8,          // 7,023,990 ÷ 90,000,000 adj FD (Pulley 4/9/26)
+    votingOwnership: 17.6,   // 7,023,990 ÷ 40,000,000 common (RSUs non-voting until settled)
     stage: "Growth",
     founded: 2022,
     employees: 0,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 3_156_849,  // est. $0.08/share × 39,460,619 total shares
-    totalShares: 39_460_619,
+    impliedValuation: 3_156_849,  // est. prior basis; no new appraisal
+    totalShares: 90_000_000,      // Pulley 4/9/26 adj FD: 40M common + 31.725M RSUs + 18.275M pool
     website: "https://falconer.io",
     linkedInUrl: "https://www.linkedin.com/company/falconerco",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
+    capTable: {
+      asOf: "April 9, 2026",
+      source: "Pulley",
+      authorizedCommon: 100_000_000,
+      adjustedFullyDiluted: 90_000_000,
+      classes: [
+        { label: "Common Stock",     shares: 40_000_000, color: "#3B82F6" },
+        { label: "RSUs Outstanding", shares: 31_725_000, color: "#F59E0B", note: "2023 Incentive Award Plan" },
+        { label: "Unissued Pool",    shares: 18_275_000, color: "#1E2D3D", note: "Available for grant", isPool: true },
+      ],
+    } satisfies CapTableSummary,
     shareTransactions: [
       { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 0, certificateNumber: "CS-01" },
     ] satisfies ShareTransaction[],
