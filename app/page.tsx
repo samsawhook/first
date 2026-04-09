@@ -328,18 +328,18 @@ export default function Dashboard() {
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
+                <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
                   {[
                     { label: "Portfolio Value", value: fmt(portfolio.filter(c => c.status === "active").reduce((s, c) => s + effectiveCurrVal(c), 0)), accent: "#10B981" },
                     { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
                     { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
                     { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
                     { label: "IRR",   value: `${fund.irr}%`,   accent: null },
-                    { label: "Active Companies", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
+                    { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                   ].map(({ label, value, accent }) => (
-                    <div key={label} className="px-4 py-3.5 border-r border-[#1E2D3D] last:border-r-0">
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">{label}</p>
-                      <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: accent ?? "#e2e8f0" }}>{value}</p>
+                    <div key={label} className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D] last:border-r-0">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{label}</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: accent ?? "#e2e8f0" }}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -474,22 +474,43 @@ export default function Dashboard() {
               }) => (
                 <button
                   onClick={() => toggleTable(tableKey)}
-                  className="w-full flex items-stretch hover:bg-[#111D2E]/60 transition-colors"
+                  className="w-full hover:bg-[#111D2E]/60 transition-colors"
                 >
-                  <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: accent }} />
-                    <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">{label}</span>
-                  </div>
-                  <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
-                    {stats.map(s => (
-                      <div key={s.label} className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
-                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium whitespace-nowrap">{s.label}</p>
-                        <p className="text-sm font-bold mt-0.5 tabular-nums whitespace-nowrap" style={{ color: s.color ?? "#e2e8f0" }}>{s.value}</p>
+                  {/* Mobile: stacked label + grid of stats */}
+                  <div className="sm:hidden">
+                    <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+                        <span className="text-sm font-semibold text-slate-200">{label}</span>
                       </div>
-                    ))}
+                      <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
+                    </div>
+                    <div className="grid grid-cols-4 border-t border-[#1E2D3D] divide-x divide-[#1E2D3D]">
+                      {stats.map(s => (
+                        <div key={s.label} className="flex flex-col justify-center px-2 py-2.5 min-w-0">
+                          <p className="text-[8px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{s.label}</p>
+                          <p className="text-xs font-bold mt-0.5 tabular-nums" style={{ color: s.color ?? "#e2e8f0" }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center px-4 shrink-0 border-l border-[#1E2D3D]">
-                    <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
+                  {/* Desktop: original horizontal layout */}
+                  <div className="hidden sm:flex items-stretch">
+                    <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: accent }} />
+                      <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">{label}</span>
+                    </div>
+                    <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                      {stats.map(s => (
+                        <div key={s.label} className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium whitespace-nowrap">{s.label}</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums whitespace-nowrap" style={{ color: s.color ?? "#e2e8f0" }}>{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center px-4 shrink-0 border-l border-[#1E2D3D]">
+                      <ChevronDown size={14} className={`text-slate-500 transition-transform duration-200 ${openInstrumentTables.has(tableKey) ? "rotate-180" : ""}`} />
+                    </div>
                   </div>
                 </button>
               );
