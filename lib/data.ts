@@ -159,6 +159,36 @@ export const portfolio: PortfolioCompany[] = [
     shareTransactions: [
       { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 0, certificateNumber: "CS-01" },
     ] satisfies ShareTransaction[],
+    news: [
+      {
+        source: "Hollywood Reporter",
+        date: "Nov 2023",
+        headline: "Rococo Punch Podcast Network Acquired by Audily",
+        snippet: "Audily, a branded podcast production company, acquires Rococo Punch podcast network. Falconer served as M&A advisor on the transaction.",
+        url: "https://www.hollywoodreporter.com/business/digital/rococo-punch-podcast-audily-1235498215/",
+      },
+      {
+        source: "Bloomberg",
+        date: "Mar 7, 2024",
+        headline: "More Buyers Eye Independent Podcast Companies",
+        snippet: "Wondery and Campside Media sign a multi-project deal as the troubled podcasting industry sees signs of recovery. The piece cites the Rococo Punch roll-up into Audily — advised by Falconer — as one of a new wave of indie podcast acquisitions.",
+        url: "https://www.bloomberg.com/news/newsletters/2024-03-07/more-buyers-eye-independent-podcast-companies",
+      },
+      {
+        source: "Yahoo Finance",
+        date: "2024",
+        headline: "Built for Entrepreneurs, Pigeon Announces Public Launch",
+        snippet: "Pigeon Service, Falconer's corporate administration spinout, announces its public launch offering bookkeeping, cap table management, and fractional back-office services for startups.",
+        url: "https://uk.finance.yahoo.com/news/built-entrepreneurs-pigeon-announces-public-130000927.html",
+      },
+      {
+        source: "IMDb",
+        date: "2024",
+        headline: "Falconer Featured in Entertainment Industry Coverage",
+        snippet: "Falconer's investment advisory and M&A work in the entertainment industry.",
+        url: "https://www.imdb.com/news/ni64453211/",
+      },
+    ] satisfies NewsItem[],
   },
   {
     id: "merchant-boxes",
