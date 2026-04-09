@@ -382,7 +382,7 @@ export const portfolio: PortfolioCompany[] = [
     financialsAsOf: "4/8/26",
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
-    logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
+    logoUrl: "/logos/audily.png",
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,   // 16,537,717 ÷ 53,000,000 common (non-voting RSUs excluded)
     capTable: {
