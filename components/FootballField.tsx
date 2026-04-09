@@ -310,6 +310,17 @@ export default function FootballField({
         {ebitdaMultiple !== null && (
           <MetricCell label="EBITDA Multiple" value={`${ebitdaMultiple.toFixed(1)}×`} color="#F59E0B" />
         )}
+        {ebitda && ebitda > 0 && (
+          <MetricCell
+            label="Implied Growth (PEG=1)"
+            value={`${(equityValue / ebitda).toFixed(0)}%`}
+            color={
+              company.revenueGrowth != null && (equityValue / ebitda) <= company.revenueGrowth
+                ? "#10B981"
+                : "#F59E0B"
+            }
+          />
+        )}
         {valuePerEmployee !== null && (
           <MetricCell label="Value / Employee" value={fmtM(valuePerEmployee)} color="#94A3B8" />
         )}
