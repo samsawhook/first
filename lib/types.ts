@@ -171,6 +171,7 @@ export interface PortfolioCompany {
   website?: string;
   linkedInUrl?: string;
   logoUrl?: string;
+  dataRoomUrl?: string;
   accentColor: string;
   valuationRefs?: ValuationRef[];
   ebitda?: number;               // trailing EBITDA ($); negative = loss

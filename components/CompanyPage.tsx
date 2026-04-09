@@ -1,6 +1,10 @@
 "use client";
 import { useState, useMemo } from "react";
-import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp } from "lucide-react";
+import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle } from "lucide-react";
+
+// ── Data source ───────────────────────────────────────────────────────────────
+// Update this date whenever a new QuickBooks export is imported.
+const QB_EXPORT_DATE = "4/8/26";
 import FootballField from "@/components/FootballField";
 import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter, BalanceSheetSnapshot } from "@/lib/types";
 
@@ -63,8 +67,6 @@ function KpiChip({ label, value, sub, color }: { label: string; value: string; s
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
 function HeroSection({ company }: { company: PortfolioCompany }) {
-  const moic = (company.currentValue / company.invested).toFixed(2);
-  const moicColor = parseFloat(moic) >= 2 ? "#10B981" : parseFloat(moic) >= 1 ? "#F59E0B" : "#EF4444";
   const gm = company.incomeStatement
     ? pct(company.incomeStatement.grossProfit, company.incomeStatement.revenue)
     : null;
@@ -118,6 +120,15 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
                   </a>
                 </>
               )}
+              {company.dataRoomUrl && (
+                <>
+                  <span className="text-[#1E2D3D]">·</span>
+                  <a href={company.dataRoomUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors">
+                    <Database size={10} /> Data Room
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -130,10 +141,6 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
             <KpiChip label="EBITDA" value={fmtM(company.ebitda)} sub={company.ebitda >= 0 ? "Profitable" : "Pre-profit"} color={company.ebitda >= 0 ? "#10B981" : "#F59E0B"} />
           )}
           {gm && <KpiChip label="Gross Margin" value={gm} />}
-          <KpiChip label="Invested" value={fmtM(company.invested)} />
-          <KpiChip label="Current Value" value={fmtM(company.currentValue)} color={company.accentColor} />
-          <KpiChip label="MOIC" value={`${moic}×`} color={moicColor} />
-          <KpiChip label="Ownership" value={`${company.ownership}%`} />
           {company.balanceSheet?.cash && (
             <KpiChip label="Cash on Hand" value={fmtM(company.balanceSheet.cash)}
               sub={company.balanceSheet.runwayMonths ? `${company.balanceSheet.runwayMonths}mo runway` : "Profitable"}
@@ -369,7 +376,7 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
           <SectionHeader title="Revenue & EBITDA History" />
           <PLHistoryChart history={hist} accentColor={company.accentColor} />
           <p className="text-[10px] text-slate-600 mt-2">
-            QuickBooks import ready — map Total Income → revenue, COGS → costOfRevenue, Net Operating Income → ebitda per period.
+            Source: Modified Cash Export · QuickBooks · as of {QB_EXPORT_DATE}
           </p>
         </div>
       )}
@@ -379,7 +386,7 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
           <SectionHeader title="Capital Structure History" />
           <BalanceSheetHistoryChart history={company.balanceSheetHistory} accentColor={company.accentColor} />
           <p className="text-[10px] text-slate-600 mt-2">
-            Quarterly snapshots · cash basis · Assets = Liabilities + Equity
+            Quarterly snapshots · cash basis · Source: QuickBooks as of {QB_EXPORT_DATE}
           </p>
         </div>
       )}
@@ -686,6 +693,15 @@ function NewsCard({ item }: { item: NewsItem }) {
 export default function CompanyPage({ company }: { company: PortfolioCompany }) {
   return (
     <div className="space-y-5">
+      {/* Beta / data disclaimer */}
+      <div className="flex items-start gap-3 bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-3">
+        <AlertCircle size={14} className="text-amber-500/70 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          <span className="text-amber-400/80 font-medium">Beta</span> — This dashboard is a work in progress. Financial data is sourced from QuickBooks (Modified Cash Export as of {QB_EXPORT_DATE}) and may not reflect final audited figures. Cap table data (ownership, shares, valuations) is for reference only —{" "}
+          <a href="https://pulley.com" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">Pulley</a>{" "}
+          is the authoritative source of truth for the cap table. Implied valuations are estimates and do not constitute a formal appraisal.
+        </p>
+      </div>
       <HeroSection company={company} />
       <FinancialsSection company={company} />
       {company.financingHistory?.length && (

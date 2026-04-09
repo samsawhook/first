@@ -55,7 +55,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: false,
     impliedValuation: 3_156_849,  // est. $0.08/share × 39,460,619 total shares
     totalShares: 39_460_619,
-    website: "https://falconer.com",
+    website: "https://falconer.io",
     linkedInUrl: "https://www.linkedin.com/company/falconerco",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
@@ -84,6 +84,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: false,
     impliedValuation: 1_991_014,  // est. $0.05/share × 39,820,287 total shares
     totalShares: 39_820_287,
+    website: "https://www.merchantboxes.com",
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
@@ -214,7 +215,7 @@ export const portfolio: PortfolioCompany[] = [
     ownership: 31.8,         // 16,537,717 ÷ 52,004,140
     stage: "Seed",
     founded: 2021,
-    employees: 0,
+    employees: 8,
     revenue: 1_005_661,      // FY 2025 per monthly P&L
     revenueGrowth: -12.8,    // 2024→2025 ($1.153M → $1.006M)
     ebitda: -1_740,          // FY 2025 net operating income (essentially breakeven)
@@ -222,6 +223,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. $0.03/share × 52,004,140 total shares
     totalShares: 52_004_140,
+    website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
