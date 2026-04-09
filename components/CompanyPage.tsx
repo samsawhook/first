@@ -123,7 +123,7 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-4 border-t border-[#1E2D3D]">
           {company.revenue && (
-            <KpiChip label="Revenue" value={fmtM(company.revenue)} sub={company.revenueGrowth ? `+${company.revenueGrowth}% YoY` : undefined} color="#10B981" />
+            <KpiChip label="Revenue" value={fmtM(company.revenue)} sub={company.revenueGrowth != null ? `${company.revenueGrowth > 0 ? "+" : ""}${company.revenueGrowth}% YoY` : undefined} color="#10B981" />
           )}
           {company.ebitda !== undefined && (
             <KpiChip label="EBITDA" value={fmtM(company.ebitda)} sub={company.ebitda >= 0 ? "Profitable" : "Pre-profit"} color={company.ebitda >= 0 ? "#10B981" : "#F59E0B"} />
@@ -131,7 +131,7 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
           {gm && <KpiChip label="Gross Margin" value={gm} />}
           {company.balanceSheet?.cash && (
             <KpiChip label="Cash on Hand" value={fmtM(company.balanceSheet.cash)}
-              sub={company.balanceSheet.runwayMonths ? `${company.balanceSheet.runwayMonths}mo runway` : "Profitable"}
+              sub={company.balanceSheet.runwayMonths ? `${company.balanceSheet.runwayMonths}mo runway` : undefined}
               color="#06B6D4" />
           )}
           {company.impliedValuation && (

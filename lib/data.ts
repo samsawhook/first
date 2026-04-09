@@ -419,18 +419,18 @@ export const portfolio: PortfolioCompany[] = [
     description:
       "Specialized recruiting firm placing senior engineers, product managers, and data professionals at venture-backed companies. Known for speed and signal-to-noise.",
     invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
-    currentValue: 105_273,   // 4,617,214 shares × est. $0.022808/share (impliedVal ÷ 81M adj FD)
+    currentValue: 138_516,   // 4,617,214 shares × $0.03/share (2024 409A per-share)
     ownership: 5.7,          // 4,617,214 ÷ 81,000,000 adj FD (Pulley 4/9/26)
     votingOwnership: 14.9,   // 4,617,214 ÷ 31,000,000 common (RSUs non-voting until settled)
     stage: "Growth",
     founded: 2022,
-    employees: 0,
+    employees: 5,
     revenue: 385_748,        // FY 2025
     revenueGrowth: -22.5,    // FY 2024 ($497.5K) → FY 2025 ($385.7K)
     ebitda: -39_201,         // FY 2025 net operating loss
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_846_886,  // est. $0.06/share on 30.8M common basis (pre-Pulley)
+    impliedValuation: 2_263_047,  // 2024 409A equity value
     totalShares: 81_000_000,      // Pulley 4/9/26 adj FD: 31M common + 27.6M RSUs + 22.4M pool
     financialsAsOf: "4/9/26",
     capTable: {
@@ -444,6 +444,18 @@ export const portfolio: PortfolioCompany[] = [
         { label: "Unissued Pool",    shares: 22_387_293, color: "#1E2D3D", note: "Available for grant", isPool: true },
       ],
     } satisfies CapTableSummary,
+    valuationRefs: [
+      { label: "409A (2024)", low: 2_263_047, high: 2_263_047,
+        color: "#64748B", note: "$0.03/sh · 2024 appraisal · equity value" },
+      { label: "Revenue Multiple (1–4×)", low: 385_748, high: 1_543_000,
+        color: "#10B981", note: "1–4× FY 2025 revenue of $386K · AI-generated estimate" },
+      { label: "Revenue Multiple (1–4×) on FY24", low: 497_500, high: 1_990_000,
+        color: "#8B5CF6", note: "1–4× FY 2024 revenue of $498K (peak year) · AI-generated estimate" },
+    ] satisfies ValuationRef[],
+    news: [
+      { source: "sbr2th.com", date: "2024", headline: "56% of talent acquisition executives prioritize niche hard-to-fill hires", snippet: "SBR2TH survey of 50+ CHROs and TA leaders found 56% prioritize niche hard-to-fill technical roles, yet 78% report low to moderate internal technical recruiting expertise — the gap SBR2TH's model is built to close.", url: "https://www.sbr2th.com" },
+      { source: "sbr2th.com", date: "2023", headline: "Introducing Retingent: retained search fill rates at contingent speed", snippet: "SBR2TH launched Retingent, a hybrid recruiting model combining the placement certainty of retained search with the speed and flexibility of contingency recruiting for hard-to-fill technical roles.", url: "https://www.sbr2th.com" },
+    ] satisfies NewsItem[],
     linkedInUrl: "https://www.linkedin.com/company/sbr2th-recruiting",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
