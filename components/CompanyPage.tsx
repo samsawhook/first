@@ -533,36 +533,65 @@ function CapTableSection({ company }: { company: PortfolioCompany }) {
   const ct = company.capTable;
   if (!ct) return null;
 
-  const issued = ct.classes.filter(c => !c.isPool);
-  const pool   = ct.classes.find(c => c.isPool);
-  const totalFD   = issued.reduce((s, c) => s + c.shares, 0);
-  const totalIncPool = totalFD + (pool?.shares ?? 0);
+  const pool        = ct.classes.find(c => c.isPool);
+  const contingent  = ct.classes.find(c => c.isContingent);
+  const core        = ct.classes.filter(c => !c.isPool && !c.isContingent);
 
-  // SVG donut
+  // Adjusted FD (provided or computed): core + pool + contingent
+  const adjustedFD = ct.adjustedFullyDiluted
+    ?? ct.classes.reduce((s, c) => s + c.shares, 0);
+
+  // % denominator for core classes = adjustedFD (so the donut slices are proportional)
+  const fdForPct = adjustedFD;
+
+  // SVG donut — draw all classes proportionally against adjustedFD
   const cx = 80, cy = 80, R = 62, r = 44;
   let angle = -Math.PI / 2;
   const arcs = ct.classes.map(cls => {
-    const total = cls.isPool ? totalIncPool : totalFD;
-    // pools are shown proportionally against totalIncPool
-    const sweep = (cls.shares / totalIncPool) * 2 * Math.PI;
+    const sweep = (cls.shares / fdForPct) * 2 * Math.PI;
     const x1 = cx + R * Math.cos(angle), y1 = cy + R * Math.sin(angle);
     angle += sweep;
     const x2 = cx + R * Math.cos(angle), y2 = cy + R * Math.sin(angle);
     const ix1 = cx + r * Math.cos(angle - sweep), iy1 = cy + r * Math.sin(angle - sweep);
     const ix2 = cx + r * Math.cos(angle), iy2 = cy + r * Math.sin(angle);
     const large = sweep > Math.PI ? 1 : 0;
-    const pct = ((cls.shares / totalIncPool) * 100).toFixed(1);
-    return { ...cls, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z`, pct };
+    return { ...cls, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
   });
 
-  const fmtShares = (n: number) =>
-    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : `${(n / 1_000).toFixed(0)}K`;
+  const fmtN = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : n.toString();
+
+  const authorized = ct.authorizedCommon;
+  const authUsed = authorized ? Math.min((53_000_000 / authorized) * 100, 100) : null; // rough visual
 
   return (
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
       <SectionHeader title="Equity Ownership Structure" />
-      <div className="flex flex-col sm:flex-row gap-6 items-start">
 
+      {/* Authorized vs FD summary bar */}
+      {authorized && (
+        <div className="mb-5 space-y-2">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">Authorized Common</span>
+            <span className="tabular-nums text-slate-300 font-medium">{fmtN(authorized)}</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500">Fully Diluted (adjusted)</span>
+            <span className="tabular-nums font-semibold text-amber-400">{fmtN(adjustedFD)}</span>
+          </div>
+          {/* Stacked bar: authorized / overage */}
+          <div className="h-2 rounded-full bg-[#111D2E] overflow-hidden flex">
+            <div className="h-full bg-slate-600/60 rounded-l-full" style={{ width: `${(authorized / adjustedFD) * 100}%` }} />
+            <div className="h-full bg-red-500/50 rounded-r-full flex-1" />
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-600">
+            <span>Authorized: {fmtN(authorized)}</span>
+            <span className="text-red-400/70">+{fmtN(adjustedFD - authorized)} over authorized</span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-6 items-start">
         {/* Donut */}
         <div className="shrink-0 self-center sm:self-auto">
           <svg viewBox="0 0 160 160" className="w-36 h-36 sm:w-44 sm:h-44">
@@ -571,18 +600,16 @@ function CapTableSection({ company }: { company: PortfolioCompany }) {
                 key={i}
                 d={arc.path}
                 fill={arc.color}
-                opacity={arc.isPool ? 0.25 : 0.85}
-                className="transition-opacity hover:opacity-100"
+                opacity={arc.isPool ? 0.2 : arc.isContingent ? 0.45 : 0.85}
               />
             ))}
-            {/* Center label */}
             <text x={cx} y={cy - 6} textAnchor="middle" fontSize="11" fontWeight="600"
               fill="#F1F5F9" fontFamily="Poppins,sans-serif">
-              {fmtShares(totalFD)}
+              {fmtN(adjustedFD)}
             </text>
             <text x={cx} y={cy + 9} textAnchor="middle" fontSize="8"
               fill="#64748B" fontFamily="Poppins,sans-serif">
-              fully diluted
+              adj. FD
             </text>
           </svg>
         </div>
@@ -594,43 +621,55 @@ function CapTableSection({ company }: { company: PortfolioCompany }) {
               <tr className="text-[10px] text-slate-600 uppercase tracking-wide border-b border-[#1E2D3D]">
                 <th className="pb-2 text-left font-medium">Class</th>
                 <th className="pb-2 text-right font-medium">Shares</th>
-                <th className="pb-2 text-right font-medium">% FD</th>
+                <th className="pb-2 text-right font-medium">% Adj FD</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#111D2E]">
               {ct.classes.map((cls, i) => {
-                const fdPct = ((cls.shares / totalFD) * 100);
-                const inclPct = ((cls.shares / totalIncPool) * 100);
+                const pct = ((cls.shares / adjustedFD) * 100).toFixed(1);
+                const dimmed = cls.isPool || cls.isContingent;
                 return (
-                  <tr key={i} className={cls.isPool ? "opacity-40" : ""}>
+                  <tr key={i} className={dimmed ? "opacity-50" : ""}>
                     <td className="py-2 pr-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: cls.color, opacity: cls.isPool ? 0.5 : 1 }} />
-                        <div>
-                          <span className="text-slate-300">{cls.label}</span>
-                          {cls.note && <span className="text-slate-600 ml-1.5 text-[10px]">· {cls.note}</span>}
+                        <div className="w-2.5 h-2.5 rounded-sm shrink-0"
+                          style={{ background: cls.color, opacity: dimmed ? 0.5 : 1 }} />
+                        <div className="min-w-0">
+                          <span className={cls.isContingent ? "text-red-400/80" : "text-slate-300"}>
+                            {cls.label}
+                          </span>
+                          {cls.isContingent && (
+                            <span className="ml-1.5 text-[9px] text-red-500/60 uppercase tracking-wide">contingent</span>
+                          )}
+                          {cls.note && !cls.isContingent && (
+                            <span className="text-slate-600 ml-1.5 text-[10px]">· {cls.note}</span>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className="py-2 text-right tabular-nums text-slate-400">{fmtShares(cls.shares)}</td>
+                    <td className="py-2 text-right tabular-nums text-slate-400">{fmtN(cls.shares)}</td>
                     <td className="py-2 text-right tabular-nums">
-                      {cls.isPool
-                        ? <span className="text-slate-600">{inclPct.toFixed(1)}%</span>
-                        : <span className="text-slate-200 font-medium">{fdPct.toFixed(1)}%</span>
-                      }
+                      <span className={cls.isContingent ? "text-red-400/70" : cls.isPool ? "text-slate-600" : "text-slate-200 font-medium"}>
+                        {pct}%
+                      </span>
                     </td>
                   </tr>
                 );
               })}
               <tr className="border-t border-[#1E2D3D]">
-                <td className="pt-2.5 text-slate-500 font-medium">Total Fully Diluted</td>
-                <td className="pt-2.5 text-right tabular-nums text-slate-300 font-medium">{fmtShares(totalFD)}</td>
+                <td className="pt-2.5 text-slate-400 font-medium">Adj. Fully Diluted</td>
+                <td className="pt-2.5 text-right tabular-nums text-amber-400 font-semibold">{fmtN(adjustedFD)}</td>
                 <td className="pt-2.5 text-right text-slate-400">100%</td>
               </tr>
             </tbody>
           </table>
-          <p className="text-[10px] text-slate-600 mt-3">
-            Source: {ct.source ?? "Pulley"} · as of {ct.asOf} · pool ({fmtShares(pool?.shares ?? 0)}) excluded from % FD
+          {contingent && (
+            <p className="text-[10px] text-red-400/60 mt-3 leading-relaxed">
+              * Contingent options ({fmtN(contingent.shares)}) exceed authorized share count. Exercise is subject to availability of duly authorized shares.
+            </p>
+          )}
+          <p className="text-[10px] text-slate-600 mt-2">
+            Source: {ct.source ?? "Pulley"} · as of {ct.asOf}
           </p>
         </div>
       </div>

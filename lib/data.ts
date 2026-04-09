@@ -227,7 +227,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. $0.015/share × 102,105,334 fully diluted
-    totalShares: 102_105_334,     // Pulley 4/9/26: 53M common + 5,338 pref + 49.1M RSUs
+    totalShares: 132_188_837,     // Pulley 4/9/26 adjusted FD (incl. contingent options)
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
@@ -236,12 +236,15 @@ export const portfolio: PortfolioCompany[] = [
     capTable: {
       asOf: "April 9, 2026",
       source: "Pulley",
+      authorizedCommon: 125_000_000,
+      adjustedFullyDiluted: 132_188_837,
       classes: [
         { label: "Co-Owner Fund",       shares: 16_537_717, color: "#10B981", note: "Common · CS-01" },
         { label: "Other Common",        shares: 36_462_283, color: "#8B5CF6", note: "Founders, employees, converted SAFEs" },
         { label: "Preferred Series A",  shares: 5_338,      color: "#3B82F6", note: "$490K capital contribution" },
         { label: "RSUs Outstanding",    shares: 49_099_996, color: "#F59E0B", note: "2025 Incentive Award Plan" },
         { label: "Unissued Pool",       shares: 10_900_004, color: "#1E2D3D", note: "Available for grant", isPool: true },
+        { label: "Contingent Options",  shares: 19_183_499, color: "#EF4444", note: "Exceed authorized; contingent on future share authorization", isContingent: true },
       ],
     } satisfies CapTableSummary,
     valuationRefs: [

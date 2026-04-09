@@ -126,12 +126,15 @@ export interface CapTableClass {
   shares: number;
   color: string;
   note?: string;
-  isPool?: boolean;      // unissued / available pool
+  isPool?: boolean;        // unissued / available pool
+  isContingent?: boolean;  // options exceeding authorized; contingent on future authorization
 }
 
 export interface CapTableSummary {
   asOf: string;
-  source?: string;       // e.g. "Pulley"
+  source?: string;            // e.g. "Pulley"
+  authorizedCommon?: number;  // total authorized common shares
+  adjustedFullyDiluted?: number; // FD including contingent instruments
   classes: CapTableClass[];
 }
 
