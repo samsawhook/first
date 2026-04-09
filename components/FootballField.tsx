@@ -54,7 +54,7 @@ export default function FootballField({
   const refs = company.customPricePerShare && company.totalShares
     ? [
         {
-          label: "Fund Est.",
+          label: "Default Estimate",
           low:  company.customPricePerShare * company.totalShares,
           high: company.customPricePerShare * company.totalShares,
           color: "#10B981",

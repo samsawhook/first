@@ -406,8 +406,7 @@ export const portfolio: PortfolioCompany[] = [
     valuationRefs: [
       { label: "409A (2022)", low: 2_080_166, high: 2_080_166,
         color: "#64748B", note: "$0.04/sh × 52,004,140 shares" },
-      { label: "Recent Transaction", low: 520_041, high: 520_041,
-        color: "#10B981", note: "$0.01/sh × 52,004,140 shares" },
+
       { label: "2.2× Revenue", low: 2_536_600, high: 2_536_600,
         color: "#F59E0B", note: "Industry M&A reference on $1.153M FY 2024 revenue",
         isEnterpriseValue: true },
