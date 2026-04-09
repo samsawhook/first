@@ -606,10 +606,6 @@ export default function Dashboard() {
                 {/* ══ 1. EQUITY (Common Stock) ══════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const parseDate = (s: string) => {
-                      const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
-                      const [m, y] = s.split(" "); return new Date(parseInt(y), mo[m]);
-                    };
                     const totalCost = companiesWithCommon.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Common").reduce((a, t) => a + t.amount, 0), 0);
                     const estValue  = companiesWithCommon.reduce((s, c) => {
                       const txns = (c.shareTransactions ?? []).filter(t => t.type === "Common");
@@ -618,16 +614,6 @@ export default function Dashboard() {
                       return s + (pps !== null ? sh * pps : 0);
                     }, 0);
                     const moic = totalCost > 0 && estValue > 0 ? estValue / totalCost : null;
-                    // Annualized ROI — cost-weighted avg hold period
-                    const { weightedYears, totalW } = companiesWithCommon.reduce<{ weightedYears: number; totalW: number }>((acc, c) => {
-                      for (const t of (c.shareTransactions ?? []).filter(tx => tx.type === "Common")) {
-                        const yrs = (Date.now() - parseDate(t.date).getTime()) / (365.25 * 86400_000);
-                        acc.weightedYears += t.amount * yrs; acc.totalW += t.amount;
-                      }
-                      return acc;
-                    }, { weightedYears: 0, totalW: 0 });
-                    const avgYrs = totalW > 0 ? weightedYears / totalW : null;
-                    const annRoi = moic !== null && avgYrs !== null && avgYrs > 0 ? (Math.pow(moic, 1 / avgYrs) - 1) * 100 : null;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
@@ -635,7 +621,6 @@ export default function Dashboard() {
                             { label: "Cost Basis",     value: totalCost > 0 ? fmt(totalCost) : "—" },
                             { label: "Est. Value",     value: fmt(estValue), color: "#10B981" },
                             { label: "MOIC",           value: moic !== null ? `${moic.toFixed(2)}×` : "—", color: moic && moic >= 1 ? "#10B981" : undefined },
-                            { label: "Ann. ROI",       value: annRoi !== null ? `${annRoi.toFixed(1)}%` : "—", color: "#10B981" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("common") && (
@@ -644,7 +629,7 @@ export default function Dashboard() {
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
                                   <TH></TH><TH wide>Company</TH><TH>Shares</TH><TH>Cost Basis</TH>
-                                  <TH>Share Price</TH><TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH>
+                                  <TH>Share Price</TH><TH>Est. Value</TH><TH>MOIC</TH>
                                   <TH>% FD</TH><TH>Voting %</TH><TH></TH>
                                 </tr>
                               </thead>
@@ -656,14 +641,6 @@ export default function Dashboard() {
                                   const valPerSh = c.totalShares ? effectiveImplied(c) / c.totalShares : null;
                                   const currVal = valPerSh !== null ? sh * valPerSh : null;
                                   const cMoic = cost > 0 && currVal !== null ? currVal / cost : null;
-                                  // Per-company annualized ROI
-                                  const { wY, wD } = txns.reduce<{ wY: number; wD: number }>((a, t) => {
-                                    const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
-                                    const [mn, yr] = t.date.split(" ");
-                                    const yrs = (Date.now() - new Date(parseInt(yr), mo[mn]).getTime()) / (365.25 * 86400_000);
-                                    a.wY += t.amount * yrs; a.wD += t.amount; return a;
-                                  }, { wY: 0, wD: 0 });
-                                  const cAnnRoi = cMoic !== null && wD > 0 && wY / wD > 0 ? (Math.pow(cMoic, wD / wY) - 1) * 100 : null;
                                   const rowKey = `common-${c.id}`;
                                   const isOpen = expandedRows.has(rowKey);
                                   return (
@@ -722,9 +699,6 @@ export default function Dashboard() {
                                         <TD className={`tabular-nums font-medium ${cMoic !== null && cMoic >= 1 ? "text-emerald-400" : "text-slate-600"}`}>
                                           {cMoic !== null ? `${cMoic.toFixed(2)}×` : "—"}
                                         </TD>
-                                        <TD className="text-emerald-400 tabular-nums">
-                                          {cAnnRoi !== null ? `${cAnnRoi.toFixed(1)}%` : "—"}
-                                        </TD>
                                         <TD className="tabular-nums text-slate-400">
                                           {c.totalShares && sh > 0 ? `${((sh / c.totalShares) * 100).toFixed(1)}%` : "—"}
                                         </TD>
@@ -775,7 +749,6 @@ export default function Dashboard() {
                                   <td />
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(estValue)}</td>
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{moic !== null ? `${moic.toFixed(2)}×` : "—"}</td>
-                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{annRoi !== null ? `${annRoi.toFixed(1)}%` : "—"}</td>
                                   <td className="py-2 px-3">
                                     {Object.keys(userValuations).some(id => companiesWithCommon.some(c => c.id === id)) && (
                                       <button
@@ -1389,15 +1362,6 @@ export default function Dashboard() {
           const cost = txns.reduce((s, t) => s + t.amount, 0);
           const estVal = mc.totalShares ? sh * (pendingVal / mc.totalShares) : null;
           const moicLive = cost > 0 && estVal !== null ? estVal / cost : null;
-          const parseDate = (s: string) => {
-            const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
-            const [m, y] = s.split(" "); return new Date(parseInt(y), mo[m]);
-          };
-          const { wY, wD } = txns.reduce<{ wY: number; wD: number }>((a, t) => {
-            const yrs = (Date.now() - parseDate(t.date).getTime()) / (365.25 * 86400_000);
-            a.wY += t.amount * yrs; a.wD += t.amount; return a;
-          }, { wY: 0, wD: 0 });
-          const annRoiLive = moicLive !== null && wD > 0 && wY > 0 ? (Math.pow(moicLive, wD / wY) - 1) * 100 : null;
           const prevVal = userValuations[mc.id] ?? mc.impliedValuation;
           const hasCustom = userValuations[mc.id] !== undefined;
           const delta = pendingVal - prevVal;
@@ -1452,7 +1416,6 @@ export default function Dashboard() {
                     {[
                       { label: "Est. Value (common)", value: estVal !== null ? fmt(estVal) : "—", color: mc.accentColor },
                       { label: "MOIC", value: moicLive !== null ? `${moicLive.toFixed(2)}×` : "—", color: moicLive !== null && moicLive >= 1 ? "#10B981" : "#F87171" },
-                      { label: "Ann. ROI", value: annRoiLive !== null ? `${annRoiLive.toFixed(1)}%` : "—", color: "#10B981" },
                       { label: "vs. prev", value: deltaStr, color: delta > 0 ? "#10B981" : delta < 0 ? "#F87171" : "#64748B" },
                     ].map(s => (
                       <div key={s.label} className="flex-1 px-3 py-2.5 bg-[#080E1A]">
