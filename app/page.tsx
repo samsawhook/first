@@ -127,7 +127,7 @@ function CompaniesDropdown({
       <button
         ref={btnRef}
         onClick={() => (open ? setOpen(false) : openMenu())}
-        className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+        className={`flex items-center gap-2 px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
           activeCompanyId !== null
             ? "border-emerald-500 text-emerald-400"
             : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
@@ -206,47 +206,43 @@ export default function Dashboard() {
       {/* Top nav bar */}
       <header className="sticky top-0 z-30 bg-[#060B14]/90 backdrop-blur-md border-b border-[#1E2D3D]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-stretch h-14">
             {/* Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0 pr-4 border-r border-[#1E2D3D]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
                 alt="nth Venture"
-                className="h-8 w-auto"
+                className="h-7 w-auto"
                 style={{ filter: "brightness(0) invert(1)" }}
               />
-              <span className="text-xs text-slate-500 leading-tight hidden sm:block border-l border-[#1E2D3D] pl-3">
-                Investor Portal
-              </span>
+              <span className="text-xs text-slate-500 hidden sm:block">Investor Portal</span>
             </div>
 
-            {/* Quick stats */}
-            {(() => {
-              const active = portfolio.filter((c) => c.status === "active");
-              const totalValue = active.reduce((s, c) => s + c.currentValue, 0);
-              const totalInvested = active.reduce((s, c) => s + c.invested, 0);
-              const moic = (totalValue / totalInvested).toFixed(2);
-              return (
-                <div className="hidden lg:flex items-center gap-6 text-xs">
-                  <div className="text-right">
-                    <p className="text-slate-500">Portfolio Value</p>
-                    <p className="text-emerald-400 font-semibold tabular-nums">{fmt(totalValue)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-slate-500">MOIC</p>
-                    <p className="text-slate-200 font-semibold tabular-nums">{moic}x</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-slate-500">Companies</p>
-                    <p className="text-slate-200 font-semibold tabular-nums">{active.length}</p>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Nav tabs */}
+            <div className="flex flex-1 items-stretch overflow-x-auto no-scrollbar">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id)}
+                  className={`flex items-center gap-2 px-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    activeCompanyId === null && activeTab === tab.id
+                      ? "border-emerald-500 text-emerald-400"
+                      : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+              <CompaniesDropdown
+                activeCompanyId={activeCompanyId}
+                onSelect={(id) => setActiveCompanyId(id)}
+              />
+            </div>
 
             {/* Account + confidential */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-[#1E2D3D]">
               <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-600 border border-[#1E2D3D] rounded-lg px-2 py-1.5">
                 <Lock size={10} />
                 <span>Confidential</span>
@@ -265,36 +261,6 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
-
-      {/* Tab bar */}
-      <div className="sticky top-14 z-20 bg-[#060B14]/90 backdrop-blur-md border-b border-[#1E2D3D]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-0 overflow-x-auto no-scrollbar">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabClick(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  activeCompanyId === null && activeTab === tab.id
-                    ? "border-emerald-500 text-emerald-400"
-                    : "border-transparent text-slate-500 hover:text-slate-300 hover:border-[#1E2D3D]"
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-
-            {/* Companies dropdown tab */}
-            <CompaniesDropdown
-              activeCompanyId={activeCompanyId}
-              onSelect={(id) => {
-                setActiveCompanyId(id);
-              }}
-            />
-          </div>
-        </div>
-      </div>
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
