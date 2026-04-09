@@ -52,7 +52,7 @@ export const portfolio: PortfolioCompany[] = [
     votingOwnership: 17.6,   // 7,023,990 ÷ 40,000,000 common (RSUs non-voting until settled)
     stage: "Growth",
     founded: 2022,
-    employees: 0,
+    employees: 2,
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 3_156_849,  // est. prior basis; no new appraisal
@@ -66,9 +66,8 @@ export const portfolio: PortfolioCompany[] = [
     ebitda: 47_516,          // FY 2025 NOI (profitable)
     financialsAsOf: "4/9/26",
     valuationRefs: [
-      { label: "Prior Basis",             low: 3_156_849, high: 3_156_849, color: "#64748B", note: "Estimated prior basis · no formal appraisal" },
-      { label: "Revenue Multiple (1–3×)", low: 111_000,   high: 332_000,   color: "#10B981", note: "1–3× FY 2025 revenue of $111K · boutique advisory · AI-generated estimate" },
-      { label: "EBITDA Multiple (5–12×)", low: 238_000,   high: 570_000,   color: "#F59E0B", note: "5–12× FY 2025 EBITDA of $47.5K · AI-generated estimate" },
+      { label: "Revenue Multiple (1–3×)", low: 111_000, high: 332_000, color: "#10B981", note: "1–3× FY 2025 revenue of $111K · boutique advisory · AI-generated estimate" },
+      { label: "EBITDA Multiple (5–12×)", low: 238_000, high: 570_000, color: "#F59E0B", note: "5–12× FY 2025 EBITDA of $47.5K · AI-generated estimate" },
     ] satisfies ValuationRef[],
     financialHistory: [
       // ── 2022 (partial — first month of revenue) ──
