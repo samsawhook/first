@@ -96,6 +96,8 @@ export const portfolio: PortfolioCompany[] = [
         color: "#64748B", note: "$0.03/sh × 88M adj. FD · DLOM applied" },
       { label: "409A – Guideline Txns (2022)", low: 4_360_000, high: 4_360_000,
         color: "#94A3B8", note: "Guideline transaction multiples" },
+      { label: "Management Estimate", low: 1_600_000, high: 4_800_000,
+        color: "#8B5CF6", note: "50–150% growth scenario range" },
       { label: "Revenue Multiple (2–6×)", low: 418_000, high: 1_254_000,
         color: "#10B981", note: "2–6× FY 2025 revenue of $209K · ~100% YoY growth · AI-generated estimate" },
       { label: "EBITDA Multiple (8–20×)", low: 256_000, high: 640_000,
