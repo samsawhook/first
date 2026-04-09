@@ -88,6 +88,10 @@ export const portfolio: PortfolioCompany[] = [
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
+    valuationRefs: [
+      { label: "409A (2022)", low: 1_194_609, high: 1_194_609,
+        color: "#64748B", note: "$0.03/sh × 39,820,287 shares" },
+    ] satisfies ValuationRef[],
     shareTransactions: [
       { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 0, certificateNumber: "CS-02" },
     ] satisfies ShareTransaction[],
@@ -229,6 +233,8 @@ export const portfolio: PortfolioCompany[] = [
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,
     valuationRefs: [
+      { label: "409A (2022)", low: 2_080_166, high: 2_080_166,
+        color: "#64748B", note: "$0.04/sh × 52,004,140 shares" },
       { label: "Recent Transaction", low: 520_041, high: 520_041,
         color: "#10B981", note: "$0.01/sh × 52,004,140 shares" },
       { label: "2.2× Revenue", low: 2_536_600, high: 2_536_600,
