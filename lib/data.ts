@@ -133,7 +133,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. $0.03/share × 52,004,140 total shares
     totalShares: 52_004_140,
-    linkedInUrl: "https://www.linkedin.com/company/audily",
+    linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,
@@ -196,6 +196,36 @@ export const portfolio: PortfolioCompany[] = [
         depreciation: 36_000, netIncome: -406_000,
       },
     ] satisfies FinancialPeriod[],
+    news: [
+      {
+        source: "LinkedIn",
+        date: "2025",
+        headline: "Audily launches Pinwheel for chatcast & interview-driven content",
+        snippet: "Pinwheel is Audily's new platform dedicated to producing chatcasts and interview-driven content for brand leaders — joining Rococo Punch and Pop Ups Studio under the Audily umbrella.",
+        url: "https://pinwheelshows.com/blogs/test-blog/solo-vs-interview-podcast-which-format-fits-you-test",
+      },
+      {
+        source: "LinkedIn",
+        date: "2025",
+        headline: "Audily welcomes The Pop Ups — GRAMMY-nominated children's content team",
+        snippet: "Audily and The Pop Ups announced a business combination to bring first-class children's musical and podcast content and live event services to market. The Pop Ups are led by three-time Grammy nominees Jason Rabinowitz and Jacob Stein.",
+        url: "https://www.imdb.com/news/ni64453211/",
+      },
+      {
+        source: "Webby Awards",
+        date: "2025",
+        headline: "'Inconceivable Truth' wins 2025 Webby Award for Best Documentary Series Episode",
+        snippet: "Audily narrative production brand Rococo Punch took home the 2025 Webby Award for Best Documentary Series Episode for 'Inconceivable Truth', honoring the team's dedication to storytelling excellence.",
+        url: "https://www.audily.com/blog",
+      },
+      {
+        source: "LinkedIn",
+        date: "2025",
+        headline: "Audily launches Liftoff live events brand",
+        snippet: "Audily announced the launch of Liftoff, a boutique live events brand and Audily's solution for the growing needs of podcasters and creators in the live events space.",
+        url: "https://www.linkedin.com/company/audily-linkedin",
+      },
+    ] satisfies NewsItem[],
   },
   {
     id: "sbr2th",
