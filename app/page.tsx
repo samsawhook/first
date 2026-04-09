@@ -1104,11 +1104,11 @@ export default function Dashboard() {
                                               <div className="flex items-center gap-1">
                                                 <input
                                                   autoFocus
-                                                  type="number" min={0} max={500} step={5}
+                                                  type="number" min={0} max={500}
                                                   defaultValue={varPct}
                                                   onBlur={e  => { setOptionVariances(p => ({ ...p, [o.id]: Math.max(0, Number(e.target.value)) })); setEditingVarianceId(null); }}
                                                   onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur(); }}
-                                                  className="w-14 bg-[#111D2E] border border-rose-500/50 rounded px-1.5 py-0.5 text-[11px] text-slate-200 tabular-nums text-right focus:outline-none"
+                                                  className="w-14 bg-[#111D2E] border border-rose-500/50 rounded px-1.5 py-0.5 text-[11px] text-slate-200 tabular-nums text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 />
                                                 <span className="text-[10px] text-slate-600">%</span>
                                               </div>
