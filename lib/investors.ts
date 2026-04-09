@@ -2,135 +2,69 @@ import type { Investor } from "./types";
 
 // ─── Investors ────────────────────────────────────────────────────────────────
 //
-// Holdings can be any mix of:
-//   equity    – direct shares in a portfolio company  (value = shares × impliedValuation/totalShares)
-//   lp_units  – LP interest in Co-Owner Fund, LP      (value = lpPct/100 × fund.nav)
-//   debt      – credit instrument in a portco or fund (value = currentValue as marked)
+// Holdings reflect the fund's actual registered positions as of the cap tables.
+// Preferred shares are modelled as debt (they carry a yield and a conversion feature).
+// Options are modelled as their own class with shares + strikePrice.
 //
-// Share counts sourced from Pulley cap table export (secondary transfers from founders).
+// Accrued value on the Audily Series A Preferred:
+//   13.4% cumulative on $115,000 face, beginning 12/31/24.
+//   As of April 2026 ≈ 15.3 months → ~$19,700 accrued → currentValue ~$134,700.
 
 export const investors: Investor[] = [
   {
-    id: "neil-wolfson",
-    name: "Neil Wolfson",
+    id: "co-owner-fund",
+    name: "Co-Owner Fund, LP",
     holdings: [
-      { class: "equity", entityId: "audily",         shares: 2_749_945 },
-      { class: "equity", entityId: "falconer",       shares: 2_706_173 },
-      { class: "equity", entityId: "certd",          shares: 1_838_246 },
-      { class: "equity", entityId: "merchant-boxes", shares: 2_745_343 },
-      { class: "equity", entityId: "sbr2th",         shares: 1_855_904 },
-    ],
-  },
-  {
-    id: "nathaniel-deily",
-    name: "Nathaniel Deily",
-    holdings: [
-      { class: "equity", entityId: "audily",         shares: 4_812_403 },
-      { class: "equity", entityId: "falconer",       shares: 4_735_803 },
-      { class: "equity", entityId: "certd",          shares: 3_216_930 },
-      { class: "equity", entityId: "merchant-boxes", shares: 4_804_351 },
-      { class: "equity", entityId: "sbr2th",         shares: 3_247_832 },
-    ],
-  },
-  {
-    id: "sanford-leeds",
-    name: "Sanford Leeds",
-    holdings: [
-      { class: "equity", entityId: "audily",         shares: 1_409_347 },
-      { class: "equity", entityId: "falconer",       shares: 1_386_914 },
-      { class: "equity", entityId: "certd",          shares: 942_101 },
-      { class: "equity", entityId: "merchant-boxes", shares: 1_406_988 },
-      { class: "equity", entityId: "sbr2th",         shares: 951_151 },
-    ],
-  },
-  {
-    id: "garry-bledsoe",
-    name: "Garry Bledsoe",
-    holdings: [
-      { class: "equity", entityId: "audily",         shares: 166_667 },
-      { class: "equity", entityId: "falconer",       shares: 444_445 },
-      { class: "equity", entityId: "certd",          shares: 444_445 },
-      { class: "equity", entityId: "merchant-boxes", shares: 222_222 },
-      { class: "equity", entityId: "sbr2th",         shares: 333_334 },
-    ],
-  },
-  {
-    id: "jay-heller",
-    name: "Jay Heller",
-    holdings: [
-      { class: "equity", entityId: "audily",         shares: 1_374_972 },
-      { class: "equity", entityId: "falconer",       shares: 1_353_087 },
-      { class: "equity", entityId: "certd",          shares: 919_123 },
-      { class: "equity", entityId: "merchant-boxes", shares: 1_372_672 },
-      { class: "equity", entityId: "sbr2th",         shares: 927_952 },
-    ],
-  },
-  {
-    id: "edward-ladd",
-    name: "Edward Ladd",
-    holdings: [
-      { class: "equity", entityId: "audily",         shares: 1_374_972 },
-      { class: "equity", entityId: "falconer",       shares: 1_353_087 },
-      { class: "equity", entityId: "certd",          shares: 919_123 },
-      { class: "equity", entityId: "merchant-boxes", shares: 1_372_672 },
-      { class: "equity", entityId: "sbr2th",         shares: 927_952 },
-    ],
-  },
-  {
-    id: "steven-maasch",
-    name: "Steven Maasch",
-    holdings: [
-      { class: "equity", entityId: "audily",         shares: 1_374_972 },
-      { class: "equity", entityId: "falconer",       shares: 1_353_087 },
-      { class: "equity", entityId: "certd",          shares: 919_123 },
-      { class: "equity", entityId: "merchant-boxes", shares: 1_372_672 },
-      { class: "equity", entityId: "sbr2th",         shares: 927_952 },
-    ],
-  },
-
-  // ── LP example ──────────────────────────────────────────────────────────────
-  // Fund LP interests — value = lpPct/100 × fund.nav
-  // lpPct and units to be confirmed from fund records
-  {
-    id: "lp-example",
-    name: "LP Investor (Example)",
-    holdings: [
+      // ── Audily Inc. ─────────────────────────────────────────────────────────
       {
-        class: "lp_units",
-        entityId: "co-owner-fund",
-        lpPct: 10,            // 10% of Co-Owner Fund, LP
-        units: 100_000,
+        class: "equity",
+        entityId: "audily",
+        shares: 16_537_717,   // Class A Common; 31.20% voting stock
       },
-    ],
-  },
-
-  // ── Debt example ────────────────────────────────────────────────────────────
-  // Convertible note in a portco; debt in the fund; etc.
-  // currentValue = principal + accrued interest as of reporting date
-  {
-    id: "debt-example",
-    name: "Debt Holder (Example)",
-    holdings: [
       {
         class: "debt",
-        entityId: "falconer",
-        instrument: "Convertible Note",
-        principal: 250_000,
-        interestRate: 6,
-        maturityDate: "2027-06-01",
-        currentValue: 265_000,
+        entityId: "audily",
+        instrument: "Series A Preferred",
+        principal: 115_000,
+        interestRate: 13.4,   // cumulative yield beginning 12/31/24
+        currentValue: 134_700, // principal + ~15 months accrued interest
         convertible: true,
-        conversionCap: 12_000_000,
+        notes: "1,150 shares at $100 face. Converts to Class A Common at 1:1,000 per preferred share.",
       },
       {
-        class: "debt",
-        entityId: "co-owner-fund",
-        instrument: "Term Loan",
-        principal: 500_000,
-        interestRate: 9,
-        maturityDate: "2026-12-31",
-        currentValue: 518_750,
-        convertible: false,
+        class: "option",
+        entityId: "audily",
+        shares: 15_000_000,   // Class A Common
+        strikePrice: 0.01,
+        notes: "Option to purchase 15,000,000 Class A Common Shares at $0.01/share.",
+      },
+
+      // ── CERTD Inc. (dba Pigeon Service) ──────────────────────────────────
+      {
+        class: "equity",
+        entityId: "certd",
+        shares: 4_350_663,    // Class A Common
+      },
+
+      // ── Falconer Inc. (dba nth Corporation) ───────────────────────────────
+      {
+        class: "equity",
+        entityId: "falconer",
+        shares: 7_023_990,    // Class A Common
+      },
+
+      // ── Merchant Boxes Inc. ───────────────────────────────────────────────
+      {
+        class: "equity",
+        entityId: "merchant-boxes",
+        shares: 6_530_527,    // Class A Common
+      },
+
+      // ── SBR2TH Recruiting Inc. ────────────────────────────────────────────
+      {
+        class: "equity",
+        entityId: "sbr2th",
+        shares: 4_617_214,    // Class A Common
       },
     ],
   },

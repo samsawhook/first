@@ -320,9 +320,18 @@ export interface DebtHolding {
   currentValue: number;     // principal + accrued interest, or marked fair value
   convertible?: boolean;    // true if instrument converts to equity
   conversionCap?: number;   // valuation cap for conversion
+  notes?: string;           // free-text e.g. conversion terms
 }
 
-export type Holding = EquityHolding | LPHolding | DebtHolding;
+export interface OptionHolding {
+  class: "option";
+  entityId: string;         // portfolio company id
+  shares: number;           // number of shares optionable
+  strikePrice: number;      // exercise price per share ($)
+  notes?: string;
+}
+
+export type Holding = EquityHolding | LPHolding | DebtHolding | OptionHolding;
 
 export interface Investor {
   id: string;
