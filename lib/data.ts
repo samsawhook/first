@@ -217,7 +217,7 @@ export const portfolio: PortfolioCompany[] = [
       "Full-service podcast and audio production studio. Audily handles strategy, recording, editing, and distribution for B2B brands that want to own their category conversation.",
     invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
     currentValue: 496_132,   // 16,537,717 shares × est. $0.03/share
-    ownership: 16.2,         // 16,537,717 ÷ 102,105,334 fully diluted (Pulley 4/9/26)
+    ownership: 13.6,         // 16,537,717 ÷ 121,288,833 (adj FD ex-pool)
     stage: "Seed",
     founded: 2021,
     employees: 8,
@@ -226,8 +226,8 @@ export const portfolio: PortfolioCompany[] = [
     ebitda: -1_740,          // FY 2025 net operating income (essentially breakeven)
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_560_124,  // est. $0.015/share × 102,105,334 fully diluted
-    totalShares: 132_188_837,     // Pulley 4/9/26 adjusted FD (incl. contingent options)
+    impliedValuation: 1_560_124,  // est. per-share × fully diluted
+    totalShares: 132_188_837,     // Pulley 4/9/26 adj FD: 53M common + 4.19M pref-converted + 49.1M RSUs + 10.9M pool + 15M contingent
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
@@ -241,10 +241,10 @@ export const portfolio: PortfolioCompany[] = [
       classes: [
         { label: "Co-Owner Fund",       shares: 16_537_717, color: "#10B981", note: "Common · CS-01" },
         { label: "Other Common",        shares: 36_462_283, color: "#8B5CF6", note: "Founders, employees, converted SAFEs" },
-        { label: "Preferred Series A",  shares: 5_338,      color: "#3B82F6", note: "$490K capital contribution" },
+        { label: "Preferred Series A",  shares: 4_188_837,  color: "#3B82F6", note: "5,338 pref × ~785 conv. ratio · $490K capital contribution" },
         { label: "RSUs Outstanding",    shares: 49_099_996, color: "#F59E0B", note: "2025 Incentive Award Plan" },
         { label: "Unissued Pool",       shares: 10_900_004, color: "#1E2D3D", note: "Available for grant", isPool: true },
-        { label: "Contingent Options",  shares: 19_183_499, color: "#EF4444", note: "Exceed authorized; contingent on future share authorization", isContingent: true },
+        { label: "Contingent Options",  shares: 15_000_000, color: "#EF4444", note: "Exceed authorized; contingent on future share authorization", isContingent: true },
       ],
     } satisfies CapTableSummary,
     valuationRefs: [
