@@ -18,6 +18,7 @@ import type {
   DebtPosition,
   ManagedFundPosition,
   ManagedFundTransaction,
+  CapTableSummary,
 } from "./types";
 
 export const fund: FundMetrics = {
@@ -216,7 +217,7 @@ export const portfolio: PortfolioCompany[] = [
       "Full-service podcast and audio production studio. Audily handles strategy, recording, editing, and distribution for B2B brands that want to own their category conversation.",
     invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
     currentValue: 496_132,   // 16,537,717 shares × est. $0.03/share
-    ownership: 31.8,         // 16,537,717 ÷ 52,004,140
+    ownership: 16.2,         // 16,537,717 ÷ 102,105,334 fully diluted (Pulley 4/9/26)
     stage: "Seed",
     founded: 2021,
     employees: 8,
@@ -225,13 +226,24 @@ export const portfolio: PortfolioCompany[] = [
     ebitda: -1_740,          // FY 2025 net operating income (essentially breakeven)
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_560_124,  // est. $0.03/share × 52,004,140 total shares
-    totalShares: 52_004_140,
+    impliedValuation: 1_560_124,  // est. $0.015/share × 102,105,334 fully diluted
+    totalShares: 102_105_334,     // Pulley 4/9/26: 53M common + 5,338 pref + 49.1M RSUs
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
-    votingOwnership: 31.20,
+    votingOwnership: 31.20,   // 16,537,717 ÷ 53,000,000 common (non-voting RSUs excluded)
+    capTable: {
+      asOf: "April 9, 2026",
+      source: "Pulley",
+      classes: [
+        { label: "Co-Owner Fund",       shares: 16_537_717, color: "#10B981", note: "Common · CS-01" },
+        { label: "Other Common",        shares: 36_462_283, color: "#8B5CF6", note: "Founders, employees, converted SAFEs" },
+        { label: "Preferred Series A",  shares: 5_338,      color: "#3B82F6", note: "$490K capital contribution" },
+        { label: "RSUs Outstanding",    shares: 49_099_996, color: "#F59E0B", note: "2025 Incentive Award Plan" },
+        { label: "Unissued Pool",       shares: 10_900_004, color: "#1E2D3D", note: "Available for grant", isPool: true },
+      ],
+    } satisfies CapTableSummary,
     valuationRefs: [
       { label: "409A (2022)", low: 2_080_166, high: 2_080_166,
         color: "#64748B", note: "$0.04/sh × 52,004,140 shares" },

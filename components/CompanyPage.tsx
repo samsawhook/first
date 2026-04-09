@@ -6,7 +6,7 @@ import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Databa
 // Update this date whenever a new QuickBooks export is imported.
 const QB_EXPORT_DATE = "4/8/26";
 import FootballField from "@/components/FootballField";
-import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter, BalanceSheetSnapshot } from "@/lib/types";
+import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter, BalanceSheetSnapshot, CapTableClass } from "@/lib/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -527,6 +527,117 @@ function FinancingHistorySection({ history }: { history: FinancingRound[] }) {
   );
 }
 
+// ── Cap Table ─────────────────────────────────────────────────────────────────
+
+function CapTableSection({ company }: { company: PortfolioCompany }) {
+  const ct = company.capTable;
+  if (!ct) return null;
+
+  const issued = ct.classes.filter(c => !c.isPool);
+  const pool   = ct.classes.find(c => c.isPool);
+  const totalFD   = issued.reduce((s, c) => s + c.shares, 0);
+  const totalIncPool = totalFD + (pool?.shares ?? 0);
+
+  // SVG donut
+  const cx = 80, cy = 80, R = 62, r = 44;
+  let angle = -Math.PI / 2;
+  const arcs = ct.classes.map(cls => {
+    const total = cls.isPool ? totalIncPool : totalFD;
+    // pools are shown proportionally against totalIncPool
+    const sweep = (cls.shares / totalIncPool) * 2 * Math.PI;
+    const x1 = cx + R * Math.cos(angle), y1 = cy + R * Math.sin(angle);
+    angle += sweep;
+    const x2 = cx + R * Math.cos(angle), y2 = cy + R * Math.sin(angle);
+    const ix1 = cx + r * Math.cos(angle - sweep), iy1 = cy + r * Math.sin(angle - sweep);
+    const ix2 = cx + r * Math.cos(angle), iy2 = cy + r * Math.sin(angle);
+    const large = sweep > Math.PI ? 1 : 0;
+    const pct = ((cls.shares / totalIncPool) * 100).toFixed(1);
+    return { ...cls, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z`, pct };
+  });
+
+  const fmtShares = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : `${(n / 1_000).toFixed(0)}K`;
+
+  return (
+    <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
+      <SectionHeader title="Equity Ownership Structure" />
+      <div className="flex flex-col sm:flex-row gap-6 items-start">
+
+        {/* Donut */}
+        <div className="shrink-0 self-center sm:self-auto">
+          <svg viewBox="0 0 160 160" className="w-36 h-36 sm:w-44 sm:h-44">
+            {arcs.map((arc, i) => (
+              <path
+                key={i}
+                d={arc.path}
+                fill={arc.color}
+                opacity={arc.isPool ? 0.25 : 0.85}
+                className="transition-opacity hover:opacity-100"
+              />
+            ))}
+            {/* Center label */}
+            <text x={cx} y={cy - 6} textAnchor="middle" fontSize="11" fontWeight="600"
+              fill="#F1F5F9" fontFamily="Poppins,sans-serif">
+              {fmtShares(totalFD)}
+            </text>
+            <text x={cx} y={cy + 9} textAnchor="middle" fontSize="8"
+              fill="#64748B" fontFamily="Poppins,sans-serif">
+              fully diluted
+            </text>
+          </svg>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 min-w-0 w-full">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[10px] text-slate-600 uppercase tracking-wide border-b border-[#1E2D3D]">
+                <th className="pb-2 text-left font-medium">Class</th>
+                <th className="pb-2 text-right font-medium">Shares</th>
+                <th className="pb-2 text-right font-medium">% FD</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#111D2E]">
+              {ct.classes.map((cls, i) => {
+                const fdPct = ((cls.shares / totalFD) * 100);
+                const inclPct = ((cls.shares / totalIncPool) * 100);
+                return (
+                  <tr key={i} className={cls.isPool ? "opacity-40" : ""}>
+                    <td className="py-2 pr-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: cls.color, opacity: cls.isPool ? 0.5 : 1 }} />
+                        <div>
+                          <span className="text-slate-300">{cls.label}</span>
+                          {cls.note && <span className="text-slate-600 ml-1.5 text-[10px]">· {cls.note}</span>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-slate-400">{fmtShares(cls.shares)}</td>
+                    <td className="py-2 text-right tabular-nums">
+                      {cls.isPool
+                        ? <span className="text-slate-600">{inclPct.toFixed(1)}%</span>
+                        : <span className="text-slate-200 font-medium">{fdPct.toFixed(1)}%</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+              <tr className="border-t border-[#1E2D3D]">
+                <td className="pt-2.5 text-slate-500 font-medium">Total Fully Diluted</td>
+                <td className="pt-2.5 text-right tabular-nums text-slate-300 font-medium">{fmtShares(totalFD)}</td>
+                <td className="pt-2.5 text-right text-slate-400">100%</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-[10px] text-slate-600 mt-3">
+            Source: {ct.source ?? "Pulley"} · as of {ct.asOf} · pool ({fmtShares(pool?.shares ?? 0)}) excluded from % FD
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Football Field ────────────────────────────────────────────────────────────
 
 function ValuationSection({
@@ -759,6 +870,7 @@ export default function CompanyPage({
       {company.financingHistory?.length && (
         <FinancingHistorySection history={company.financingHistory} />
       )}
+      <CapTableSection company={company} />
       <ValuationSection
         company={company}
         savedValuation={savedValuation}

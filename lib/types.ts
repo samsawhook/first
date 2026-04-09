@@ -121,6 +121,20 @@ export interface BalanceSheetSnapshot {
   totalEquity: number;
 }
 
+export interface CapTableClass {
+  label: string;
+  shares: number;
+  color: string;
+  note?: string;
+  isPool?: boolean;      // unissued / available pool
+}
+
+export interface CapTableSummary {
+  asOf: string;
+  source?: string;       // e.g. "Pulley"
+  classes: CapTableClass[];
+}
+
 export interface ManagedFundTransaction {
   date: string;
   type: "Capital Call" | "Distribution" | "Commitment";
@@ -187,6 +201,7 @@ export interface PortfolioCompany {
   shareholderLetters?: CompanyLetter[];
   annualMeetingDate?: string;
   annualMeetingUrl?: string;
+  capTable?: CapTableSummary;
 }
 
 export interface FundMetrics {
