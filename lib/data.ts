@@ -696,26 +696,6 @@ export const portfolio: PortfolioCompany[] = [
       // Share count not yet confirmed in fund cap table records
     ] satisfies ShareTransaction[],
   },
-  {
-    id: "hep-global",
-    name: "hep global GmbH",
-    legalName: "hep global GmbH",
-    initials: "HG",
-    sector: "Health Education",
-    tagline: "International health literacy platform",
-    description:
-      "Digital health education platform delivering accredited continuing medical education (CME) across 14 countries in 9 languages. First realized investment.",
-    invested: 0,
-    currentValue: 0,
-    ownership: 0,
-    stage: "Growth",
-    founded: 2019,
-    employees: 0,
-    status: "realized",
-    secondaryAvailable: false,
-    impliedValuation: 0,
-    accentColor: "#6366F1",
-  },
 ];
 
 // NAV history — no verified data yet; populate from fund records
