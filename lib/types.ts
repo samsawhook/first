@@ -169,6 +169,7 @@ export interface ManagedFundPosition {
 export interface PortfolioCompany {
   id: string;
   name: string;
+  legalName?: string;
   initials: string;
   sector: string;
   tagline: string;

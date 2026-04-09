@@ -40,7 +40,8 @@ export const fund: FundMetrics = {
 export const portfolio: PortfolioCompany[] = [
   {
     id: "falconer",
-    name: "Falconer Inc.",
+    name: "Falconer",
+    legalName: "Falconer Inc.",
     initials: "FA",
     sector: "Financial Services",
     tagline: "Full-journey transaction advisory and consulting boutique",
@@ -193,6 +194,7 @@ export const portfolio: PortfolioCompany[] = [
   {
     id: "merchant-boxes",
     name: "Merchant Boxes",
+    legalName: "Merchant Boxes Inc.",
     initials: "MB",
     sector: "E-Commerce / Logistics",
     tagline: "Modern packaging for modern commerce",
@@ -332,6 +334,7 @@ export const portfolio: PortfolioCompany[] = [
   {
     id: "certd",
     name: "Pigeon Service",
+    legalName: "CERTD Inc. dba Pigeon Service",
     initials: "PS",
     sector: "Logistics / Operations",
     tagline: "Modern same-day delivery infrastructure for local commerce",
@@ -357,6 +360,7 @@ export const portfolio: PortfolioCompany[] = [
   {
     id: "audily",
     name: "Audily",
+    legalName: "Audily Inc.",
     initials: "AU",
     sector: "Media / Podcasting",
     tagline: "Audio production for ambitious brands",
@@ -538,7 +542,8 @@ export const portfolio: PortfolioCompany[] = [
   },
   {
     id: "sbr2th",
-    name: "SBR2TH Recruiting Inc.",
+    name: "SBR2TH Recruiting",
+    legalName: "SBR2TH Recruiting Inc.",
     initials: "SR",
     sector: "Talent / Staffing",
     tagline: "Niche tech talent for high-growth teams",
@@ -668,6 +673,7 @@ export const portfolio: PortfolioCompany[] = [
   {
     id: "galileo",
     name: "Galileo Computing",
+    legalName: "PRreact Inc. dba Galileo Computing",
     initials: "GC",
     sector: "Developer Tools / Cloud",
     tagline: "Intelligent compute orchestration for AI workloads",
@@ -684,7 +690,7 @@ export const portfolio: PortfolioCompany[] = [
     impliedValuation: 1_400_000,  // est. $0.05/share × 28,000,000 total shares (TBD)
     totalShares: 28_000_000,
     website: "https://galileocomputing.com",
-    logoUrl: "https://logo.clearbit.com/galileocomputing.com",
+    logoUrl: "/logos/galileo.webp",
     accentColor: "#6366F1",
     shareTransactions: [
       // Share count not yet confirmed in fund cap table records
@@ -693,6 +699,7 @@ export const portfolio: PortfolioCompany[] = [
   {
     id: "hep-global",
     name: "hep global GmbH",
+    legalName: "hep global GmbH",
     initials: "HG",
     sector: "Health Education",
     tagline: "International health literacy platform",

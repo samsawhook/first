@@ -93,6 +93,9 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
               </span>
             </div>
             <p className="text-sm text-slate-400 mt-0.5">{company.tagline}</p>
+            {company.legalName && (
+              <p className="text-xs text-slate-600 mt-0.5">{company.legalName}</p>
+            )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">
               <span>{company.sector}</span>
               <span className="text-[#1E2D3D]">·</span>
