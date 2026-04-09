@@ -98,7 +98,7 @@ export interface ShareTransaction {
 export interface DebtPosition {
   id: string;
   date: string;
-  instrument: "Convertible Note" | "SAFE" | "Term Loan" | "Line of Credit" | "Revenue Based Financing";
+  instrument: "Convertible Note" | "SAFE" | "Term Loan" | "Line of Credit" | "Revenue Based Financing" | "Preferred";
   principal: number;
   interestRate?: number;                // annual %; undefined for SAFEs
   maturityDate?: string;               // "Jun 2026"; undefined for open-ended SAFEs

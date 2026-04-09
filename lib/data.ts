@@ -389,6 +389,10 @@ Thank you for your patience — this is a complex market to move in, and we are 
         valuationCap: 3_000_000, discountRate: 20,
         status: "Accruing", currentValue: 100_000,
         notes: "Post-money SAFE, 20% discount to next round, $3M valuation cap." },
+      { id: "audily-pref-a", date: "Dec 2024", instrument: "Preferred", principal: 115_000,
+        interestRate: 13.4,
+        status: "Accruing", currentValue: 134_700,
+        notes: "1,150 Series A Preferred shares at $100 face. 13.4% cumulative yield beginning 12/31/24. Converts to Class A Common at 1:1,000 per preferred share (1,150,000 common shares if fully converted)." },
     ] satisfies DebtPosition[],
     valuationRefs: [
       { label: "409A",        date: "Jan 2025", low: 600_000,   high: 1_800_000, color: "#64748B", note: "Most recent 409A range" },

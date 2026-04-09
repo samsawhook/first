@@ -24,12 +24,12 @@ export const investors: Investor[] = [
       {
         class: "debt",
         entityId: "audily",
-        instrument: "Series A Preferred",
-        principal: 115_000,
-        interestRate: 13.4,   // cumulative yield beginning 12/31/24
-        currentValue: 134_700, // principal + ~15 months accrued interest
+        instrument: "Preferred",          // convertible — see audily-pref-a in debtPositions
+        principal: 115_000,               // $100 face × 1,150 shares
+        interestRate: 13.4,               // cumulative yield beginning 12/31/24
+        currentValue: 134_700,            // principal + ~15 months accrued
         convertible: true,
-        notes: "1,150 shares at $100 face. Converts to Class A Common at 1:1,000 per preferred share.",
+        notes: "1,150 Series A Preferred shares. Converts to Class A Common 1:1,000 (1,150,000 shares if fully converted).",
       },
       {
         class: "option",
