@@ -94,10 +94,10 @@ export const portfolio: PortfolioCompany[] = [
     valuationRefs: [
       { label: "409A (2022)", low: 1_194_609, high: 1_194_609,
         color: "#64748B", note: "$0.03/sh × 39,820,287 shares" },
-      { label: "Revenue Multiple (1–3×)", low: 209_000, high: 627_000,
-        color: "#10B981", note: "1–3× FY 2025 revenue of $209K · AI-generated estimate" },
-      { label: "EBITDA Multiple (5–12×)", low: 160_000, high: 384_000,
-        color: "#F59E0B", note: "5–12× FY 2025 EBITDA of $32K · AI-generated estimate" },
+      { label: "Revenue Multiple (2–6×)", low: 418_000, high: 1_254_000,
+        color: "#10B981", note: "2–6× FY 2025 revenue of $209K · ~100% YoY growth · AI-generated estimate" },
+      { label: "EBITDA Multiple (8–20×)", low: 256_000, high: 640_000,
+        color: "#F59E0B", note: "8–20× FY 2025 EBITDA of $32K · AI-generated estimate" },
     ] satisfies ValuationRef[],
     capTable: {
       asOf: "April 9, 2026",
@@ -105,7 +105,7 @@ export const portfolio: PortfolioCompany[] = [
       authorizedCommon: 100_000_000,
       adjustedFullyDiluted: 88_000_000,
       classes: [
-        { label: "Common Stock",     shares: 40_000_000, color: "#F59E0B", note: "Founders, employees & fund (CA- prefix)" },
+        { label: "Common Stock",     shares: 40_000_000, color: "#F59E0B" },
         { label: "RSUs Outstanding", shares: 38_350_000, color: "#10B981", note: "2022 Incentive Award Plan" },
         { label: "Unissued Pool",    shares:  9_650_000, color: "#1E2D3D", note: "Available for grant", isPool: true },
       ],
@@ -257,7 +257,7 @@ export const portfolio: PortfolioCompany[] = [
       authorizedCommon: 125_000_000,
       adjustedFullyDiluted: 133_338_000,
       classes: [
-        { label: "Common Stock",        shares: 53_000_000, color: "#8B5CF6", note: "Founders, employees, fund & converted SAFEs" },
+        { label: "Common Stock",        shares: 53_000_000, color: "#8B5CF6" },
         { label: "Preferred Series A",  shares: 5_338_000,  color: "#3B82F6", note: "5,338 shares × 1,000 conv. ratio · $490K capital contribution" },
         { label: "RSUs Outstanding",    shares: 49_099_996, color: "#F59E0B", note: "2025 Incentive Award Plan" },
         { label: "Unissued Pool",       shares: 10_900_004, color: "#1E2D3D", note: "Available for grant", isPool: true },
