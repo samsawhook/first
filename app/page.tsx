@@ -323,7 +323,12 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 sm:pb-8">
         {/* Company detail page */}
         {activeCompany && (
-          <CompanyPage company={activeCompany} />
+          <CompanyPage
+            company={activeCompany}
+            savedValuation={userValuations[activeCompany.id]}
+            onSaveValuation={(v) => setUserValuations(prev => ({ ...prev, [activeCompany.id]: v }))}
+            onResetValuation={() => setUserValuations(prev => { const n = { ...prev }; delete n[activeCompany.id]; return n; })}
+          />
         )}
 
         {!activeCompany && activeTab === "overview" && (

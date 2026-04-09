@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle } from "lucide-react";
+import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle, Check, RotateCcw, Save } from "lucide-react";
 
 // ── Data source ───────────────────────────────────────────────────────────────
 // Update this date whenever a new QuickBooks export is imported.
@@ -529,12 +529,54 @@ function FinancingHistorySection({ history }: { history: FinancingRound[] }) {
 
 // ── Football Field ────────────────────────────────────────────────────────────
 
-function ValuationSection({ company }: { company: PortfolioCompany }) {
+function ValuationSection({
+  company,
+  savedValuation,
+  onSaveValuation,
+  onResetValuation,
+}: {
+  company: PortfolioCompany;
+  savedValuation?: number;
+  onSaveValuation?: (v: number) => void;
+  onResetValuation?: () => void;
+}) {
   if (!company.valuationRefs?.length) return null;
+
+  const [pendingVal, setPendingVal] = useState(savedValuation ?? company.impliedValuation);
+  const isSaved = pendingVal === (savedValuation ?? company.impliedValuation);
+  const hasCustom = savedValuation !== undefined && savedValuation !== company.impliedValuation;
+
   return (
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-      <SectionHeader title="Football Field Valuation" />
-      <FootballField company={company} />
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xs text-slate-500 uppercase tracking-widest font-medium">Football Field Valuation</h2>
+        {onSaveValuation && (
+          <div className="flex items-center gap-2">
+            {hasCustom && (
+              <button
+                onClick={() => { onResetValuation?.(); setPendingVal(company.impliedValuation); }}
+                className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-300 border border-[#1E2D3D] hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                <RotateCcw size={11} /> Reset
+              </button>
+            )}
+            {isSaved ? (
+              <span className="flex items-center gap-1.5 text-[11px] text-emerald-500/70 px-2.5 py-1.5">
+                <Check size={11} /> Saved to overview
+              </span>
+            ) : (
+              <button
+                onClick={() => onSaveValuation(pendingVal)}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-white px-3 py-1.5 rounded-lg transition-colors"
+                style={{ background: company.accentColor }}
+              >
+                <Save size={11} /> Save to overview
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <FootballField company={company} controlled={{ value: pendingVal, onChange: setPendingVal }} />
     </div>
   );
 }
@@ -690,7 +732,17 @@ function NewsCard({ item }: { item: NewsItem }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function CompanyPage({ company }: { company: PortfolioCompany }) {
+export default function CompanyPage({
+  company,
+  savedValuation,
+  onSaveValuation,
+  onResetValuation,
+}: {
+  company: PortfolioCompany;
+  savedValuation?: number;
+  onSaveValuation?: (v: number) => void;
+  onResetValuation?: () => void;
+}) {
   return (
     <div className="space-y-5">
       {/* Beta / data disclaimer */}
@@ -707,7 +759,12 @@ export default function CompanyPage({ company }: { company: PortfolioCompany }) 
       {company.financingHistory?.length && (
         <FinancingHistorySection history={company.financingHistory} />
       )}
-      <ValuationSection company={company} />
+      <ValuationSection
+        company={company}
+        savedValuation={savedValuation}
+        onSaveValuation={onSaveValuation}
+        onResetValuation={onResetValuation}
+      />
       {company.annualMeetingDate && <AnnualMeetingSection company={company} />}
       {company.shareholderLetters?.length && (
         <ShareholderLettersSection letters={company.shareholderLetters} />
