@@ -190,12 +190,17 @@ export default function Dashboard() {
   }, [userValuations]);
 
   // Helpers: effective implied valuation and portfolio current value
+  const defaultImplied = useCallback((c: typeof portfolio[0]) =>
+    c.customPricePerShare && c.totalShares
+      ? c.customPricePerShare * c.totalShares
+      : c.impliedValuation, []);
   const effectiveImplied = useCallback((c: typeof portfolio[0]) =>
-    userValuations[c.id] ?? c.impliedValuation, [userValuations]);
+    userValuations[c.id] ?? defaultImplied(c), [userValuations, defaultImplied]);
   const effectiveCurrVal = useCallback((c: typeof portfolio[0]) => {
-    if (userValuations[c.id] === undefined) return c.currentValue;
+    const base = defaultImplied(c);
+    if (userValuations[c.id] === undefined) return c.currentValue * (base / c.impliedValuation);
     return c.currentValue * (userValuations[c.id] / c.impliedValuation);
-  }, [userValuations]);
+  }, [userValuations, defaultImplied]);
 
   const toggleTable = (key: string) =>
     setOpenInstrumentTables((prev) => {
@@ -662,7 +667,7 @@ export default function Dashboard() {
                                         <TD className="text-slate-300 tabular-nums">{cost > 0 ? fmt(cost) : <span className="text-slate-600">—</span>}</TD>
                                         <TD className="tabular-nums">
                                           {(() => {
-                                            const defaultPps = c.totalShares ? c.impliedValuation / c.totalShares : null;
+                                            const defaultPps = c.totalShares ? defaultImplied(c) / c.totalShares : null;
                                             const customPps  = userValuations[c.id] !== undefined && c.totalShares ? userValuations[c.id] / c.totalShares : null;
                                             if (customPps !== null && defaultPps !== null) {
                                               return (

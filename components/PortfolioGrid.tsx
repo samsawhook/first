@@ -127,7 +127,9 @@ function CompanyCard({
         <p className="text-xs text-slate-500">
           Implied valuation:{" "}
           <span className="text-slate-300 tabular-nums">
-            {fmt(company.impliedValuation)}
+            {fmt(company.customPricePerShare && company.totalShares
+              ? company.customPricePerShare * company.totalShares
+              : company.impliedValuation)}
           </span>
         </p>
 
