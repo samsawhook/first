@@ -117,6 +117,30 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Nov 2025", periodType: "monthly", revenue: 2_369.40,   costOfRevenue: 0, grossProfit: 2_369.40,   operatingExpenses: 2_894.25,   ebitda: -524.85,    netIncome: -524.85 },
       { period: "Dec 2025", periodType: "monthly", revenue: 0.09,       costOfRevenue: 0, grossProfit: 0.09,       operatingExpenses: 391.58,     ebitda: -391.49,    netIncome: -391.49 },
     ] satisfies FinancialPeriod[],
+    balanceSheet: {
+      asOf: "December 31, 2025",
+      cash: -217,                    // bank account in slight overdraft (Dec 2025)
+      accountsReceivable: 0,         // cash basis
+      otherCurrentAssets: 57_255,    // employee cash advances (ECA Typrin + ECA Sawhook)
+      totalAssets: 64_521,
+      totalLiabilities: 7_273,       // Shopify Capital + short-term shareholder loan
+      netEquity: 57_248,
+    } satisfies BalanceSheet,
+    balanceSheetHistory: [
+      { period: "Q4 2022", cash:     5,  totalCurrentAssets:      5,  totalAssets:      5,  totalCurrentLiabilities:    100,  totalLiabilities:    100,  totalEquity:    -95 },
+      { period: "Q1 2023", cash:  -108,  totalCurrentAssets:   -108,  totalAssets:   -108,  totalCurrentLiabilities:    100,  totalLiabilities:    100,  totalEquity:   -208 },
+      { period: "Q2 2023", cash:  2_470, totalCurrentAssets:  2_470,  totalAssets:  2_470,  totalCurrentLiabilities:    610,  totalLiabilities:    610,  totalEquity:  1_860 },
+      { period: "Q3 2023", cash:    -63, totalCurrentAssets:    -63,  totalAssets:  5_432,  totalCurrentLiabilities:  5_418,  totalLiabilities:  5_418,  totalEquity:     14 },
+      { period: "Q4 2023", cash:    370, totalCurrentAssets:  8_620,  totalAssets: 13_931,  totalCurrentLiabilities:  4_731,  totalLiabilities:  4_731,  totalEquity:  9_200 },
+      { period: "Q1 2024", cash:  2_253, totalCurrentAssets: 15_009,  totalAssets: 20_321,  totalCurrentLiabilities:  3_434,  totalLiabilities:  3_434,  totalEquity: 16_887 },
+      { period: "Q2 2024", cash:   -365, totalCurrentAssets: 11_190,  totalAssets: 16_502,  totalCurrentLiabilities:  2_747,  totalLiabilities:  2_747,  totalEquity: 13_755 },
+      { period: "Q3 2024", cash:  1_222, totalCurrentAssets: 12_227,  totalAssets: 20_134,  totalCurrentLiabilities:  7_330,  totalLiabilities:  7_330,  totalEquity: 12_804 },
+      { period: "Q4 2024", cash:  6_270, totalCurrentAssets:  6_270,  totalAssets: 13_753,  totalCurrentLiabilities:  4_019,  totalLiabilities:  4_019,  totalEquity:  9_734 },
+      { period: "Q1 2025", cash:  1_924, totalCurrentAssets:  1_924,  totalAssets:  9_407,  totalCurrentLiabilities:  7_122,  totalLiabilities:  7_122,  totalEquity:  2_285 },
+      { period: "Q2 2025", cash:    782, totalCurrentAssets:  9_302,  totalAssets: 16_784,  totalCurrentLiabilities:  5_210,  totalLiabilities:  5_210,  totalEquity: 11_575 },
+      { period: "Q3 2025", cash:   -128, totalCurrentAssets: 41_918,  totalAssets: 49_401,  totalCurrentLiabilities:  4_205,  totalLiabilities:  4_205,  totalEquity: 45_196 },
+      { period: "Q4 2025", cash:   -217, totalCurrentAssets: 57_038,  totalAssets: 64_521,  totalCurrentLiabilities:  7_273,  totalLiabilities:  7_273,  totalEquity: 57_248 },
+    ] satisfies BalanceSheetSnapshot[],
     capTable: {
       asOf: "April 9, 2026",
       source: "Pulley",
