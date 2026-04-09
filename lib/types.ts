@@ -111,6 +111,17 @@ export interface DebtPosition {
   notes?: string;
 }
 
+export interface OptionPosition {
+  id: string;
+  date?: string;                       // grant date, e.g. "Jan 2024"
+  instrument: "Option" | "Warrant";
+  shares: number;                      // number of shares exercisable
+  strikePrice: number;                 // exercise price per share ($)
+  expirationDate?: string;             // e.g. "Dec 2030"; omit if perpetual / no expiration
+  currentValue?: number;               // est. fair value of the position
+  notes?: string;
+}
+
 export interface BalanceSheetSnapshot {
   period: string;                  // e.g. "Q4 2021"
   cash: number;                    // total bank accounts
@@ -197,6 +208,7 @@ export interface PortfolioCompany {
   votingOwnership?: number;      // voting % (may be less than ownership due to non-voting RSUs)
   shareTransactions?: ShareTransaction[]; // per-tranche purchase history ordered oldest → newest
   debtPositions?: DebtPosition[];        // outstanding debt / convertible instruments held by the fund
+  optionPositions?: OptionPosition[];    // options and warrants held by the fund
   incomeStatement?: IncomeStatement;
   balanceSheet?: BalanceSheet;
   balanceSheetHistory?: BalanceSheetSnapshot[];

@@ -16,6 +16,7 @@ import type {
   CompanyLetter,
   ShareTransaction,
   DebtPosition,
+  OptionPosition,
   ManagedFundPosition,
   ManagedFundTransaction,
   CapTableSummary,
@@ -453,6 +454,15 @@ export const portfolio: PortfolioCompany[] = [
         status: "Current", currentValue: 25_000,
         notes: "1-year amortizing note at 20% annual rate. Monthly payment ~$2,309. 12 equal monthly installments." },
     ] satisfies DebtPosition[],
+    optionPositions: [
+      {
+        id: "audily-opt-1",
+        instrument: "Option",
+        shares: 15_000_000,
+        strikePrice: 0.01,
+        notes: "Option to purchase 15,000,000 shares of Audily common stock at $0.01/share. No expiration date — exercisable in perpetuity.",
+      },
+    ] satisfies OptionPosition[],
     financialHistory: [
       // ── 2021 ──────────────────────────────────────────────────────────────
       { period: "Dec 2021", periodType: "monthly", revenue: 5_000, costOfRevenue: 0, grossProfit: 5_000, operatingExpenses: 0, ebitda: 5_001, netIncome: 5_001 },
