@@ -2,9 +2,7 @@
 import { useState, useMemo } from "react";
 import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle, Check, RotateCcw, Save } from "lucide-react";
 
-// ── Data source ───────────────────────────────────────────────────────────────
-// Update this date whenever a new QuickBooks export is imported.
-const QB_EXPORT_DATE = "4/8/26";
+// QB_EXPORT_DATE is now per-company via company.financialsAsOf (set in data.ts on each import).
 import FootballField from "@/components/FootballField";
 import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter, BalanceSheetSnapshot, CapTableClass } from "@/lib/types";
 
@@ -71,9 +69,6 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
     ? pct(company.incomeStatement.grossProfit, company.incomeStatement.revenue)
     : null;
 
-  const stageBg: Record<string, string> = { Seed: "#8B5CF620", "Pre-Series A": "#3B82F620", "Series A": "#10B98120", Growth: "#06B6D420" };
-  const stageColor: Record<string, string> = { Seed: "#8B5CF6", "Pre-Series A": "#3B82F6", "Series A": "#10B981", Growth: "#06B6D4" };
-
   return (
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
       <div className="h-1" style={{ background: company.accentColor }} />
@@ -93,15 +88,8 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-semibold text-slate-100">{company.name}</h1>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: stageBg[company.stage] ?? "#64748B20", color: stageColor[company.stage] ?? "#94A3B8" }}>
-                {company.stage}
-              </span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                company.status === "active" ? "bg-emerald-500/10 text-emerald-400"
-                : company.status === "realized" ? "bg-violet-500/10 text-violet-400"
-                : "bg-slate-500/10 text-slate-400"}`}>
-                {company.status.charAt(0).toUpperCase() + company.status.slice(1)}
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
+                Invested
               </span>
             </div>
             <p className="text-sm text-slate-400 mt-0.5">{company.tagline}</p>
@@ -376,7 +364,7 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
           <SectionHeader title="Revenue & EBITDA History" />
           <PLHistoryChart history={hist} accentColor={company.accentColor} />
           <p className="text-[10px] text-slate-600 mt-2">
-            Source: Modified Cash Export · QuickBooks · as of {QB_EXPORT_DATE}
+            Source: Modified Cash Export · QuickBooks{company.financialsAsOf ? ` · as of ${company.financialsAsOf}` : ""}
           </p>
         </div>
       )}
@@ -386,7 +374,7 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
           <SectionHeader title="Capital Structure History" />
           <BalanceSheetHistoryChart history={company.balanceSheetHistory} accentColor={company.accentColor} />
           <p className="text-[10px] text-slate-600 mt-2">
-            Quarterly snapshots · cash basis · Source: QuickBooks as of {QB_EXPORT_DATE}
+            Quarterly snapshots · cash basis · Source: QuickBooks{company.financialsAsOf ? ` as of ${company.financialsAsOf}` : ""}
           </p>
         </div>
       )}
@@ -432,7 +420,6 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
                   <tbody className="divide-y divide-[#111D2E]">
                     {[
                       { label: "Cash & Equivalents", value: bs.cash, cyan: true },
-                      { label: "Accounts Receivable", value: bs.accountsReceivable, cyan: false },
                       ...(bs.otherCurrentAssets ? [{ label: "Other Current Assets", value: bs.otherCurrentAssets, cyan: false }] : []),
                       { label: "Total Assets", value: bs.totalAssets, cyan: false, bold: true },
                     ].map((row) => (
@@ -571,7 +558,7 @@ function CapTableSection({ company }: { company: PortfolioCompany }) {
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : n.toString();
 
   const authorized = ct.authorizedCommon;
-  const authUsed = authorized ? Math.min((53_000_000 / authorized) * 100, 100) : null; // rough visual
+  const overAuthorized = authorized ? adjustedFD > authorized : false;
 
   return (
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
@@ -586,16 +573,26 @@ function CapTableSection({ company }: { company: PortfolioCompany }) {
           </div>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-500">Fully Diluted (adjusted)</span>
-            <span className="tabular-nums font-semibold text-amber-400">{fmtN(adjustedFD)}</span>
+            <span className={`tabular-nums font-semibold ${overAuthorized ? "text-amber-400" : "text-emerald-400"}`}>{fmtN(adjustedFD)}</span>
           </div>
-          {/* Stacked bar: authorized / overage */}
-          <div className="h-2 rounded-full bg-[#111D2E] overflow-hidden flex">
-            <div className="h-full bg-slate-600/60 rounded-l-full" style={{ width: `${(authorized / adjustedFD) * 100}%` }} />
-            <div className="h-full bg-red-500/50 rounded-r-full flex-1" />
-          </div>
+          {/* Stacked bar */}
+          {overAuthorized ? (
+            <div className="h-2 rounded-full bg-[#111D2E] overflow-hidden flex">
+              <div className="h-full bg-slate-600/60 rounded-l-full" style={{ width: `${(authorized / adjustedFD) * 100}%` }} />
+              <div className="h-full bg-red-500/50 rounded-r-full flex-1" />
+            </div>
+          ) : (
+            <div className="h-2 rounded-full bg-[#1E2D3D] overflow-hidden">
+              <div className="h-full bg-emerald-600/50 rounded-full" style={{ width: `${(adjustedFD / authorized) * 100}%` }} />
+            </div>
+          )}
           <div className="flex justify-between text-[10px] text-slate-600">
             <span>Authorized: {fmtN(authorized)}</span>
-            <span className="text-red-400/70">+{fmtN(adjustedFD - authorized)} over authorized</span>
+            {overAuthorized ? (
+              <span className="text-red-400/70">Adj. FD exceeds authorized by {fmtN(adjustedFD - authorized)}</span>
+            ) : (
+              <span>{fmtN(authorized - adjustedFD)} unissued authorized capacity</span>
+            )}
           </div>
         </div>
       )}
@@ -908,7 +905,7 @@ export default function CompanyPage({
       <div className="flex items-start gap-3 bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-3">
         <AlertCircle size={14} className="text-amber-500/70 shrink-0 mt-0.5" />
         <p className="text-[11px] text-slate-500 leading-relaxed">
-          <span className="text-amber-400/80 font-medium">Beta</span> — This dashboard is a work in progress. Financial data is sourced from QuickBooks (Modified Cash Export as of {QB_EXPORT_DATE}) and may not reflect final audited figures. Cap table data (ownership, shares, valuations) is for reference only —{" "}
+          <span className="text-amber-400/80 font-medium">Beta</span> — This dashboard is a work in progress. Financial data is sourced from QuickBooks (Modified Cash Export{company.financialsAsOf ? ` as of ${company.financialsAsOf}` : ""}) and may not reflect final audited figures. Cap table data (ownership, shares, valuations) is for reference only —{" "}
           <a href="https://pulley.com" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">Pulley</a>{" "}
           is the authoritative source of truth for the cap table. Implied valuations are estimates and do not constitute a formal appraisal.
         </p>

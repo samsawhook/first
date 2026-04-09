@@ -185,6 +185,7 @@ export interface PortfolioCompany {
   secondaryAvailable: boolean;
   impliedValuation: number;
   totalShares?: number; // fully-diluted share count; enables per-share price calc
+  financialsAsOf?: string;   // date QB export was pulled, e.g. "4/8/26"; set per company on import
   website?: string;
   linkedInUrl?: string;
   logoUrl?: string;

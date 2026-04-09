@@ -77,7 +77,7 @@ export const portfolio: PortfolioCompany[] = [
     ownership: 8.3,          // 6,530,527 ÷ 78,350,000 fully diluted (Pulley 4/9/26)
     stage: "Pre-Series A",
     founded: 2022,
-    employees: 0,
+    employees: 4,
     revenue: 209_000,        // FY 2025
     revenueGrowth: 104,      // FY 2024 → FY 2025 ($103K → $209K)
     ebitda: 32_000,          // FY 2025 net operating income (profitable)
@@ -85,6 +85,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: false,
     impliedValuation: 1_991_014,  // est. $0.025/share × 78,350,000 fully diluted
     totalShares: 78_350_000,      // Pulley 4/9/26: 40M common + 38.35M RSUs
+    financialsAsOf: "4/8/26",
     website: "https://www.merchantboxes.com",
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
@@ -93,6 +94,10 @@ export const portfolio: PortfolioCompany[] = [
     valuationRefs: [
       { label: "409A (2022)", low: 1_194_609, high: 1_194_609,
         color: "#64748B", note: "$0.03/sh × 39,820,287 shares" },
+      { label: "Revenue Multiple (1–3×)", low: 209_000, high: 627_000,
+        color: "#10B981", note: "1–3× FY 2025 revenue of $209K · AI-generated estimate" },
+      { label: "EBITDA Multiple (5–12×)", low: 160_000, high: 384_000,
+        color: "#F59E0B", note: "5–12× FY 2025 EBITDA of $32K · AI-generated estimate" },
     ] satisfies ValuationRef[],
     capTable: {
       asOf: "April 9, 2026",
@@ -240,6 +245,7 @@ export const portfolio: PortfolioCompany[] = [
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. per-share × fully diluted
     totalShares: 133_338_000,     // Pulley 4/9/26 adj FD: 53M common + 5.338M pref-converted (1:1000) + 49.1M RSUs + 10.9M pool + 15M contingent
+    financialsAsOf: "4/8/26",
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",

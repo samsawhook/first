@@ -120,12 +120,6 @@ function CompaniesDropdown({
                 </div>
               )}
               <span className="truncate flex-1">{company.name}</span>
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
-                style={{ background: `${company.accentColor}15`, color: company.accentColor }}
-              >
-                {company.stage.split(" ")[0]}
-              </span>
             </button>
           ))}
       </div>
@@ -1213,11 +1207,11 @@ export default function Dashboard() {
             <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
               This portal is for informational purposes only and is intended solely for accredited investors.
               Nothing here constitutes an offer to sell or a solicitation to buy any security.
-              Past performance is not indicative of future results. nth Venture LLC is not a
+              Past performance is not indicative of future results. nth Venture Inc. is not a
               registered broker-dealer or investment adviser.
             </p>
             <p className="text-xs text-slate-600 whitespace-nowrap">
-              © 2026 nth Venture LLC · Confidential
+              © 2026 nth Venture Inc. · Confidential
             </p>
           </div>
         </div>
