@@ -44,7 +44,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Full-journey investment advisory boutique",
     description:
       "Boutique investment advisory firm helping founders and families navigate liquidity events, estate planning, and capital allocation with radical alignment.",
-    invested: 702_399,
+    invested: 0,             // actual cost basis unknown
     currentValue: 561_919,   // 7,023,990 shares × est. $0.08/share
     ownership: 17.8,         // 7,023,990 ÷ 39,460,619
     stage: "Growth",
@@ -59,7 +59,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
     shareTransactions: [
-      { date: "Aug 2022", type: "Common", shares: 7_023_990, pricePerShare: 0.10, amount: 702_399, certificateNumber: "CS-01" },
+      { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 0, certificateNumber: "CS-01" },
     ] satisfies ShareTransaction[],
   },
   {
@@ -70,7 +70,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Modern packaging for modern commerce",
     description:
       "Design-led packaging sourcing and fulfillment partner for DTC brands and eCommerce operators. Turns packaging from cost center to brand asset.",
-    invested: 489_790,
+    invested: 0,             // actual cost basis unknown
     currentValue: 326_526,   // 6,530,527 shares × est. $0.05/share
     ownership: 16.4,         // 6,530,527 ÷ 39,820,287
     stage: "Pre-Series A",
@@ -84,7 +84,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
     shareTransactions: [
-      { date: "Jun 2022", type: "Common", shares: 6_530_527, pricePerShare: 0.075, amount: 489_790, certificateNumber: "CS-02" },
+      { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 0, certificateNumber: "CS-02" },
     ] satisfies ShareTransaction[],
   },
   {
@@ -95,7 +95,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Modern same-day delivery infrastructure for local commerce",
     description:
       "Pigeon Service (fka CERTD) builds last-mile delivery infrastructure for local businesses, enabling same-day and scheduled delivery without the complexity of managing a fleet.",
-    invested: 247_988,
+    invested: 0,             // actual cost basis unknown
     currentValue: 174_027,   // 4,350,663 shares × est. $0.04/share
     ownership: 14.3,         // 4,350,663 ÷ 30,423,657
     stage: "Seed",
@@ -109,7 +109,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://logo.clearbit.com/pigeonservice.com",
     accentColor: "#10B981",
     shareTransactions: [
-      { date: "Mar 2022", type: "Common", shares: 4_350_663, pricePerShare: 0.057, amount: 247_988, certificateNumber: "CS-03" },
+      { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 0, certificateNumber: "CS-03" },
     ] satisfies ShareTransaction[],
   },
   {
@@ -120,7 +120,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Audio production for ambitious brands",
     description:
       "Full-service podcast and audio production studio. Audily handles strategy, recording, editing, and distribution for B2B brands that want to own their category conversation.",
-    invested: 966_886,    // CS-04 $826,886 + Series A Pref $115,000 + note $25,000
+    invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
     currentValue: 496_132,   // 16,537,717 shares × est. $0.03/share
     ownership: 31.8,         // 16,537,717 ÷ 52,004,140
     stage: "Seed",
@@ -135,7 +135,7 @@ export const portfolio: PortfolioCompany[] = [
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,
     shareTransactions: [
-      { date: "Sep 2021", type: "Common", shares: 16_537_717, pricePerShare: 0.05, amount: 826_886, certificateNumber: "CS-04" },
+      { date: "Sep 2021", type: "Common", shares: 16_537_717, amount: 0, certificateNumber: "CS-04" },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "audily-pref-a", date: "Dec 2024", instrument: "Preferred", principal: 115_000,
@@ -156,7 +156,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Niche tech talent for high-growth teams",
     description:
       "Specialized recruiting firm placing senior engineers, product managers, and data professionals at venture-backed companies. Known for speed and signal-to-noise.",
-    invested: 394_377,    // CS-05 $369,377 + note $25,000
+    invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
     currentValue: 277_033,   // 4,617,214 shares × est. $0.06/share
     ownership: 15.0,         // 4,617,214 ÷ 30,781,427
     stage: "Growth",
@@ -170,7 +170,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
     shareTransactions: [
-      { date: "Apr 2022", type: "Common", shares: 4_617_214, pricePerShare: 0.08, amount: 369_377, certificateNumber: "CS-05" },
+      { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 0, certificateNumber: "CS-05" },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "sbr2th-note-1", date: "UNK", instrument: "Term Loan", principal: 25_000,
@@ -212,17 +212,15 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "International health literacy platform",
     description:
       "Digital health education platform delivering accredited continuing medical education (CME) across 14 countries in 9 languages. First realized investment.",
-    invested: 400_000,
-    currentValue: 780_000,
-    ownership: 12.0,
+    invested: 0,
+    currentValue: 0,
+    ownership: 0,
     stage: "Growth",
     founded: 2019,
-    employees: 22,
-    revenue: 4_200_000,
-    revenueGrowth: 18,
+    employees: 0,
     status: "realized",
     secondaryAvailable: false,
-    impliedValuation: 6_500_000,
+    impliedValuation: 0,
     accentColor: "#6366F1",
   },
 ];

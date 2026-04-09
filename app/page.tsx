@@ -307,11 +307,10 @@ export default function Dashboard() {
 
               // ── Allocation by security type ────────────────────────────────────
               const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
+              // Equity cost basis unknown — use est. current value as size proxy
               let equityBasis = 0, creditBasis = 0, convertBasis = 0;
               for (const c of portfolio) {
-                for (const t of (c.shareTransactions ?? [])) {
-                  if (t.type === "Common") equityBasis += t.amount;
-                }
+                if (c.status === "active") equityBasis += effectiveCurrVal(c);
                 for (const d of (c.debtPositions ?? [])) {
                   if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditBasis += d.principal;
                   else convertBasis += d.principal;
@@ -414,7 +413,7 @@ export default function Dashboard() {
 
                   {/* ③ Allocation by security type */}
                   <div className="p-5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">By Security Type <span className="normal-case text-slate-700">(cost basis)</span></p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">By Security Type <span className="normal-case text-slate-700">(est. value / principal)</span></p>
                     <div className="space-y-3">
                       {allocTypes.map(t => (
                         <div key={t.label}>
@@ -534,9 +533,9 @@ export default function Dashboard() {
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Equity" tableKey="common" accent="#10B981" stats={[
-                            { label: "Cost Basis",     value: fmt(totalCost) },
+                            { label: "Cost Basis",     value: totalCost > 0 ? fmt(totalCost) : "—" },
                             { label: "Est. Value",     value: fmt(estValue), color: "#10B981" },
-                            { label: "MOIC",           value: moic !== null ? `${moic.toFixed(2)}×` : "—", color: moic && moic >= 1 ? "#10B981" : "#F87171" },
+                            { label: "MOIC",           value: moic !== null ? `${moic.toFixed(2)}×` : "—", color: moic && moic >= 1 ? "#10B981" : undefined },
                             { label: "Ann. ROI",       value: annRoi !== null ? `${annRoi.toFixed(1)}%` : "—", color: "#10B981" },
                           ]} />
                         </div>
@@ -581,7 +580,7 @@ export default function Dashboard() {
                                           </div>
                                         </TD>
                                         <TD className="tabular-nums text-slate-400">{sh > 0 ? sh.toLocaleString() : "—"}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{fmt(cost)}</TD>
+                                        <TD className="text-slate-300 tabular-nums">{cost > 0 ? fmt(cost) : <span className="text-slate-600">—</span>}</TD>
                                         <TD className="tabular-nums">
                                           {(() => {
                                             const defaultPps = c.totalShares ? c.impliedValuation / c.totalShares : null;
@@ -620,7 +619,7 @@ export default function Dashboard() {
                                         <TD className="tabular-nums font-medium" style={{ color: c.accentColor }}>
                                           {currVal !== null ? fmt(currVal) : "—"}
                                         </TD>
-                                        <TD className={`tabular-nums font-medium ${cMoic !== null && cMoic >= 1 ? "text-emerald-400" : "text-rose-400"}`}>
+                                        <TD className={`tabular-nums font-medium ${cMoic !== null && cMoic >= 1 ? "text-emerald-400" : "text-slate-600"}`}>
                                           {cMoic !== null ? `${cMoic.toFixed(2)}×` : "—"}
                                         </TD>
                                         <TD className="text-emerald-400 tabular-nums">
@@ -650,9 +649,9 @@ export default function Dashboard() {
                                             </div>
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
+                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.amount > 0 ? fmt(t.amount) : <span className="text-slate-700">—</span>}</td>
                                           <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums">
-                                            {t.pricePerShare !== undefined ? `$${t.pricePerShare.toFixed(4)}` : "—"}
+                                            {t.pricePerShare !== undefined ? `$${t.pricePerShare.toFixed(4)}` : <span className="text-slate-700">—</span>}
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
                                             {t.shares !== undefined && valPerSh !== null ? fmt(t.shares * valPerSh) : "—"}
@@ -666,7 +665,7 @@ export default function Dashboard() {
                                 <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                   <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
                                   <td className="py-2 px-3 text-xs text-slate-500 tabular-nums">{companiesWithCommon.reduce((s,c)=>s+(c.shareTransactions??[]).filter(t=>t.type==="Common").reduce((a,t)=>a+(t.shares??0),0),0).toLocaleString()}</td>
-                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalCost)}</td>
+                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{totalCost > 0 ? fmt(totalCost) : <span className="text-slate-600">—</span>}</td>
                                   <td />
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(estValue)}</td>
                                   <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{moic !== null ? `${moic.toFixed(2)}×` : "—"}</td>
