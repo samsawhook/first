@@ -65,6 +65,11 @@ export const portfolio: PortfolioCompany[] = [
     revenueGrowth: 5.9,      // FY 2024 ($104.4K) → FY 2025 ($110.5K)
     ebitda: 47_516,          // FY 2025 NOI (profitable)
     financialsAsOf: "4/9/26",
+    valuationRefs: [
+      { label: "Prior Basis",             low: 3_156_849, high: 3_156_849, color: "#64748B", note: "Estimated prior basis · no formal appraisal" },
+      { label: "Revenue Multiple (1–3×)", low: 111_000,   high: 332_000,   color: "#10B981", note: "1–3× FY 2025 revenue of $111K · boutique advisory · AI-generated estimate" },
+      { label: "EBITDA Multiple (5–12×)", low: 238_000,   high: 570_000,   color: "#F59E0B", note: "5–12× FY 2025 EBITDA of $47.5K · AI-generated estimate" },
+    ] satisfies ValuationRef[],
     financialHistory: [
       // ── 2022 (partial — first month of revenue) ──
       { period: "Mar 2022", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 140.30,     ebitda: 4_859.70,   netIncome: 4_859.70 },
