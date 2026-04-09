@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp } from "lucide-react";
 import FootballField from "@/components/FootballField";
 import type { PortfolioCompany, FinancingRound, NewsItem, FinancialPeriod, CompanyLetter } from "@/lib/types";
@@ -150,14 +150,41 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
 
 // ── P&L History Chart ─────────────────────────────────────────────────────────
 
+const MON_TO_Q: Record<string, number> = {
+  Jan: 1, Feb: 1, Mar: 1, Apr: 2, May: 2, Jun: 2,
+  Jul: 3, Aug: 3, Sep: 3, Oct: 4, Nov: 4, Dec: 4,
+};
+
 function PLHistoryChart({ history, accentColor }: { history: FinancialPeriod[]; accentColor: string }) {
   const PAD = { top: 24, right: 12, bottom: 36, left: 56 };
   const W = 620, H = 200;
   const CW = W - PAD.left - PAD.right;
   const CH = H - PAD.top - PAD.bottom;
 
-  const revenues = history.map((p) => p.revenue);
-  const ebitdas = history.map((p) => p.ebitda);
+  // Aggregate monthly → quarterly when there are many monthly periods
+  const displayHistory = useMemo(() => {
+    const isMonthly = history.some(p => p.periodType === "monthly");
+    if (!isMonthly || history.length <= 12) return history;
+    const qMap = new Map<string, FinancialPeriod>();
+    for (const p of history) {
+      const [mon, yr] = p.period.split(" ");
+      const q = MON_TO_Q[mon] ?? 1;
+      const key = `Q${q}'${yr?.slice(2) ?? ""}`;
+      if (!qMap.has(key)) {
+        qMap.set(key, { period: key, periodType: "quarterly", revenue: 0, costOfRevenue: 0, grossProfit: 0, operatingExpenses: 0, ebitda: 0, netIncome: 0 });
+      }
+      const qp = qMap.get(key)!;
+      qp.revenue += p.revenue;
+      qp.grossProfit += p.grossProfit;
+      qp.operatingExpenses += p.operatingExpenses;
+      qp.ebitda += p.ebitda;
+      qp.netIncome += p.netIncome;
+    }
+    return Array.from(qMap.values());
+  }, [history]);
+
+  const revenues = displayHistory.map((p) => p.revenue);
+  const ebitdas = displayHistory.map((p) => p.ebitda);
   const maxVal = Math.max(...revenues) * 1.12;
   const minVal = Math.min(0, ...ebitdas) * 1.2;
   const range = maxVal - minVal;
@@ -165,7 +192,7 @@ function PLHistoryChart({ history, accentColor }: { history: FinancialPeriod[]; 
   const toY = (v: number) => PAD.top + CH - ((v - minVal) / range) * CH;
   const baseline = toY(0);
 
-  const n = history.length;
+  const n = displayHistory.length;
   const groupW = CW / n;
   const barW = groupW * 0.28;
   const gap = groupW * 0.06;
@@ -188,7 +215,7 @@ function PLHistoryChart({ history, accentColor }: { history: FinancialPeriod[]; 
       ))}
 
       {/* Bars per period */}
-      {history.map((period, i) => {
+      {displayHistory.map((period, i) => {
         const gx = PAD.left + i * groupW;
         const rx = gx + groupW * 0.08;
         const ex = rx + barW + gap;

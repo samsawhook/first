@@ -52,7 +52,7 @@ export interface NewsItem {
 // QuickBooks-compatible period snapshot — import by mapping QB P&L export columns
 export interface FinancialPeriod {
   period: string;                // "Q1 2025", "FY 2024"
-  periodType: "quarterly" | "annual";
+  periodType: "quarterly" | "annual" | "monthly";
   startDate?: string;            // ISO date; populated on QB import
   endDate?: string;
   // Income Statement
