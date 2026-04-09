@@ -137,6 +137,14 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/5e0320bd-ac40-42b3-905e-8091114b3615/23.jpg",
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,
+    valuationRefs: [
+      { label: "Recent Transaction", low: 520_041, high: 520_041,
+        color: "#10B981", note: "$0.01/sh × 52,004,140 shares" },
+      { label: "2.2× Revenue", low: 2_536_600, high: 2_536_600,
+        color: "#F59E0B", note: "Industry M&A reference on $1.153M FY 2024 revenue" },
+      { label: "Mgmt Target", low: 5_200_414, high: 5_200_414,
+        color: "#8B5CF6", note: "$0.10/sh × 52,004,140 shares" },
+    ] satisfies ValuationRef[],
     shareTransactions: [
       { date: "Sep 2021", type: "Common", shares: 16_537_717, amount: 0, certificateNumber: "CS-04" },
     ] satisfies ShareTransaction[],
