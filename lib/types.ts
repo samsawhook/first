@@ -5,6 +5,7 @@ export interface ValuationRef {
   high: number;        // upper bound of range ($)
   color?: string;      // hex accent for the bar
   note?: string;       // e.g. "3–8× on $2.1M ARR"
+  isEnterpriseValue?: boolean; // if true, low/high are EV; bridge deduction applied to reach equity value
 }
 
 export interface IncomeStatement {
@@ -28,6 +29,7 @@ export interface BalanceSheet {
   netEquity: number;
   monthlyBurn?: number;          // positive = cash outflow per month; omit if profitable
   runwayMonths?: number;
+  preferredLiquidation?: number; // total preferred liquidation preference ($); used in EV→equity bridge
 }
 
 export interface FinancingRound {

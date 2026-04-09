@@ -56,9 +56,19 @@ export default function FootballField({
   const revenue = company.revenue ?? 0;
   const ebitda = company.ebitda;
   const employees = company.employees;
+  const bs = company.balanceSheet;
 
-  // Axis bounds: 0 → 130% of the widest range across all refs, min $500K
-  const allVals = refs.flatMap((r) => [r.low, r.high]).concat([company.impliedValuation]);
+  // EV → equity bridge: net debt + preferred liquidation preference
+  const evBridge = bs
+    ? Math.max((bs.totalLiabilities - bs.cash) + (bs.preferredLiquidation ?? 0), 0)
+    : 0;
+
+  // For EV refs, shift bar position to equity value space (EV - bridge)
+  const equityLow  = (r: typeof refs[0]) => r.isEnterpriseValue ? Math.max(r.low  - evBridge, 0) : r.low;
+  const equityHigh = (r: typeof refs[0]) => r.isEnterpriseValue ? Math.max(r.high - evBridge, 0) : r.high;
+
+  // Axis bounds: 0 → 130% of the widest equity-adjusted range, min $500K
+  const allVals = refs.flatMap((r) => [equityLow(r), equityHigh(r)]).concat([company.impliedValuation]);
   const axisMax = Math.max(...allVals) * 1.3;
   const axisMin = 0;
 
@@ -72,9 +82,9 @@ export default function FootballField({
 
   // Imputed metrics
   const equityValue = sliderVal;
-  // EV = equity + debt (simplified: equity × 1.05 as proxy when no debt data)
-  const ev = equityValue;
-  const revMultiple = revenue > 0 ? equityValue / revenue : null;
+  // EV = equity + net debt + preferred liquidation (from balance sheet if available)
+  const ev = equityValue + evBridge;
+  const revMultiple = revenue > 0 ? ev / revenue : null;
   const ebitdaMultiple = ebitda && ebitda > 0 ? equityValue / ebitda : null;
   const valuePerEmployee = employees > 0 ? equityValue / employees : null;
   const moic = invested > 0 ? equityValue / invested : null;
@@ -118,9 +128,11 @@ export default function FootballField({
           {/* ── Valuation ref bars ── */}
           {refs.map((ref, i) => {
             const y = TOP_PAD + i * (BAR_H + BAR_GAP);
-            const x1 = toX(ref.low);
-            const x2 = toX(ref.high);
-            const isPoint = ref.low === ref.high;
+            const eLow  = equityLow(ref);
+            const eHigh = equityHigh(ref);
+            const x1 = toX(eLow);
+            const x2 = toX(eHigh);
+            const isPoint = eLow === eHigh;
             const barColor = ref.color ?? company.accentColor;
 
             return (
@@ -165,14 +177,16 @@ export default function FootballField({
                 )}
 
                 {/* Note tooltip-ish label on right */}
-                {ref.note && (
+                {(ref.note || ref.isEnterpriseValue) && (
                   <text
                     x={SVG_W - RIGHT - 2} y={y + BAR_H / 2 + 4}
                     textAnchor="end" fontSize="8"
                     fill="#475569"
                     fontFamily="Poppins, sans-serif"
                   >
-                    {ref.note}
+                    {ref.isEnterpriseValue
+                      ? `EV ${fmtM(ref.low)} → eq. ${fmtM(eLow)}`
+                      : ref.note}
                   </text>
                 )}
               </g>
@@ -291,13 +305,10 @@ export default function FootballField({
           />
         )}
         {revMultiple !== null && (
-          <MetricCell label="Rev Multiple" value={`${revMultiple.toFixed(1)}×`} color="#8B5CF6" />
+          <MetricCell label="EV / Revenue" value={`${revMultiple.toFixed(1)}×`} color="#8B5CF6" />
         )}
         {ebitdaMultiple !== null && (
           <MetricCell label="EBITDA Multiple" value={`${ebitdaMultiple.toFixed(1)}×`} color="#F59E0B" />
-        )}
-        {ebitda !== undefined && ebitda <= 0 && revenue > 0 && (
-          <MetricCell label="Rev Multiple" value={revMultiple !== null ? `${revMultiple.toFixed(1)}×` : "—"} color="#8B5CF6" />
         )}
         {valuePerEmployee !== null && (
           <MetricCell label="Value / Employee" value={fmtM(valuePerEmployee)} color="#94A3B8" />

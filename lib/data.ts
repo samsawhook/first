@@ -141,10 +141,22 @@ export const portfolio: PortfolioCompany[] = [
       { label: "Recent Transaction", low: 520_041, high: 520_041,
         color: "#10B981", note: "$0.01/sh × 52,004,140 shares" },
       { label: "2.2× Revenue", low: 2_536_600, high: 2_536_600,
-        color: "#F59E0B", note: "Industry M&A reference on $1.153M FY 2024 revenue" },
+        color: "#F59E0B", note: "Industry M&A reference on $1.153M FY 2024 revenue",
+        isEnterpriseValue: true },
       { label: "Mgmt Target", low: 5_200_414, high: 5_200_414,
         color: "#8B5CF6", note: "$0.10/sh × 52,004,140 shares" },
     ] satisfies ValuationRef[],
+    balanceSheet: {
+      asOf: "December 31, 2024",
+      cash: 58_000,
+      accountsReceivable: 0,
+      otherCurrentAssets: 32_000,        // security deposits
+      totalAssets: 520_000,
+      totalLiabilities: 331_000,         // Term debt $83K + Other notes $55K + SBA EIDL $153K + Other term $40K
+      netEquity: 190_000,
+      monthlyBurn: 34_000,
+      preferredLiquidation: 534_000,     // Series A preferred liquidation preference
+    } satisfies BalanceSheet,
     shareTransactions: [
       { date: "Sep 2021", type: "Common", shares: 16_537_717, amount: 0, certificateNumber: "CS-04" },
     ] satisfies ShareTransaction[],
