@@ -173,6 +173,11 @@ export default function Dashboard() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "managed"]));
+  const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
+    const defaults: Record<string, number> = {};
+    for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
+    return defaults;
+  });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
 
   // ── User-set valuations (persistent) ─────────────────────────────────────────
@@ -378,20 +383,30 @@ export default function Dashboard() {
                 }
               }
               const managedBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
-              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis;
+              // Option total value: intrinsic + time value (variance-weighted)
+              const optionsBasis = portfolio.reduce((sum, c) => {
+                const pps = c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
+                return sum + (c.optionPositions ?? []).reduce((s, o) => {
+                  const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
+                  const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
+                  return s + intrinsic + timeVal;
+                }, 0);
+              }, 0);
+              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis;
               const allocTypes = [
-                { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis  / allocTotal : 0 },
-                { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis  / allocTotal : 0 },
-                { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis / allocTotal : 0 },
-                { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis / allocTotal : 0 },
-              ].filter(t => t.amount > 0);
+                { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis   / allocTotal : 0 },
+                { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis   / allocTotal : 0 },
+                { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis  / allocTotal : 0 },
+                { label: "Options",       amount: optionsBasis, color: "#F43F5E", pct: allocTotal > 0 ? optionsBasis  / allocTotal : 0 },
+                { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis  / allocTotal : 0 },
+              ];
 
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
                 <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
                   {[
-                    { label: "Portfolio Value", value: fmt(portfolio.filter(c => c.status === "active").reduce((s, c) => s + effectiveCurrVal(c), 0)), accent: "#10B981" },
+                    { label: "Portfolio Value", value: fmt(portfolio.filter(c => c.status === "active").reduce((s, c) => s + effectiveCurrVal(c), 0) + optionsBasis), accent: "#10B981" },
                     { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
                     { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
                     { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
@@ -1023,16 +1038,26 @@ export default function Dashboard() {
                 {/* ══ 4. OPTIONS & WARRANTS ═══════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const allOptPos = companiesWithOptions.flatMap(c => c.optionPositions ?? []);
-                    const totalShares   = allOptPos.reduce((s, o) => s + o.shares, 0);
-                    const totalExposure = allOptPos.reduce((s, o) => s + o.shares * o.strikePrice, 0);
+                    // Per-position valuation helpers
+                    const optPps   = (c: typeof portfolio[0]) => c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
+                    const intrinsic = (o: NonNullable<typeof portfolio[0]["optionPositions"]>[0], pps: number) =>
+                      o.shares * Math.max(pps - o.strikePrice, 0);
+                    const timeVal   = (o: NonNullable<typeof portfolio[0]["optionPositions"]>[0], pps: number) =>
+                      o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
+                    const totalVal  = (o: NonNullable<typeof portfolio[0]["optionPositions"]>[0], pps: number) =>
+                      intrinsic(o, pps) + timeVal(o, pps);
+
+                    const allRows = companiesWithOptions.flatMap(c => (c.optionPositions ?? []).map(o => ({ o, c, pps: optPps(c) })));
+                    const grandIntrinsic = allRows.reduce((s, { o, pps }) => s + intrinsic(o, pps), 0);
+                    const grandTime      = allRows.reduce((s, { o, pps }) => s + timeVal(o, pps), 0);
+                    const grandTotal     = grandIntrinsic + grandTime;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Options & Warrants" tableKey="options" accent="#EC4899" stats={[
-                            { label: "Positions",      value: `${allOptPos.length}` },
-                            { label: "Total Shares",   value: `${(totalShares / 1_000_000).toFixed(1)}M`, color: "#EC4899" },
-                            { label: "Total Exposure", value: fmt(totalExposure) },
+                          <SectionHeader label="Options & Warrants" tableKey="options" accent="#F43F5E" stats={[
+                            { label: "Intrinsic Value", value: fmt(grandIntrinsic) },
+                            { label: "Time Value",      value: fmt(grandTime),  color: "#F43F5E" },
+                            { label: "Total Value",     value: fmt(grandTotal), color: "#F43F5E" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("options") && (
@@ -1042,14 +1067,19 @@ export default function Dashboard() {
                                 <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                   <tr>
                                     <TH></TH><TH wide>Company</TH><TH>Type</TH>
-                                    <TH>Shares</TH><TH>Strike</TH><TH>Exposure</TH><TH>Expiration</TH>
+                                    <TH>Shares</TH><TH>Strike</TH><TH>Curr. PPS</TH>
+                                    <TH>Intrinsic</TH><TH>Variance %</TH><TH>Time Value</TH><TH>Total Value</TH><TH>Expiration</TH>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {companiesWithOptions.map((c) => {
                                     const positions = c.optionPositions ?? [];
+                                    const pps = optPps(c);
                                     const rowKey = `opt-${c.id}`;
                                     const isOpen = expandedRows.has(rowKey);
+                                    const compIntrinsic = positions.reduce((s, o) => s + intrinsic(o, pps), 0);
+                                    const compTime      = positions.reduce((s, o) => s + timeVal(o, pps), 0);
+                                    const compTotal     = compIntrinsic + compTime;
                                     return (
                                       <>
                                         <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
@@ -1064,47 +1094,74 @@ export default function Dashboard() {
                                             </div>
                                           </TD>
                                           <TD>
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 font-medium">
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-medium">
                                               {positions.length === 1 ? positions[0].instrument : `${positions.length} instruments`}
                                             </span>
                                           </TD>
                                           <TD className="text-slate-300 tabular-nums font-medium">
                                             {(positions.reduce((s, o) => s + o.shares, 0) / 1_000_000).toFixed(1)}M
                                           </TD>
-                                          <TD className="text-pink-400 tabular-nums">
-                                            {positions.length === 1 ? `$${positions[0].strikePrice.toFixed(2)}` : "—"}
+                                          <TD className="text-rose-400 tabular-nums">
+                                            {positions.length === 1 ? `$${positions[0].strikePrice.toFixed(4)}` : "—"}
                                           </TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">
-                                            {fmt(positions.reduce((s, o) => s + o.shares * o.strikePrice, 0))}
-                                          </TD>
+                                          <TD className="text-slate-400 tabular-nums">{pps > 0 ? `$${pps.toFixed(4)}` : "—"}</TD>
+                                          <TD className={`tabular-nums font-medium ${compIntrinsic > 0 ? "text-emerald-400" : "text-slate-600"}`}>{compIntrinsic > 0 ? fmt(compIntrinsic) : "—"}</TD>
+                                          <TD className="tabular-nums">—</TD>
+                                          <TD className="text-rose-400 tabular-nums font-medium">{compTime > 0 ? fmt(compTime) : "—"}</TD>
+                                          <TD className="text-slate-200 tabular-nums font-semibold">{compTotal > 0 ? fmt(compTotal) : "—"}</TD>
                                           <TD className="text-slate-500">
                                             {positions.every(o => !o.expirationDate) ? <span className="text-emerald-500/60 text-[10px]">No expiry</span> : positions.length === 1 ? positions[0].expirationDate : "—"}
                                           </TD>
                                         </tr>
-                                        {isOpen && positions.map((o, i) => (
-                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                            <td className="py-2 px-3 w-6" />
-                                            <td className="py-2 px-3 pl-11">
-                                              {o.date && <p className="text-[11px] text-slate-500">{o.date}</p>}
-                                              {o.notes && <p className="text-[10px] text-slate-600 max-w-sm">{o.notes}</p>}
-                                            </td>
-                                            <td className="py-2 px-3">
-                                              <span className="text-[10px] px-1 py-0.5 rounded bg-pink-500/10 text-pink-400">{o.instrument}</span>
-                                            </td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{o.shares.toLocaleString()}</td>
-                                            <td className="py-2 px-3 text-[11px] text-pink-400 tabular-nums">${o.strikePrice.toFixed(2)}</td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(o.shares * o.strikePrice)}</td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-500">{o.expirationDate ?? <span className="text-emerald-500/60">No expiry</span>}</td>
-                                          </tr>
-                                        ))}
+                                        {isOpen && positions.map((o, i) => {
+                                          const iv = intrinsic(o, pps);
+                                          const tv = timeVal(o, pps);
+                                          const tot = iv + tv;
+                                          const varPct = optionVariances[o.id] ?? 0;
+                                          return (
+                                            <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                              <td className="py-2 px-3 w-6" />
+                                              <td className="py-2 px-3 pl-11">
+                                                {o.date && <p className="text-[11px] text-slate-500">{o.date}</p>}
+                                                {o.notes && <p className="text-[10px] text-slate-600 max-w-xs">{o.notes}</p>}
+                                              </td>
+                                              <td className="py-2 px-3">
+                                                <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400">{o.instrument}</span>
+                                              </td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{o.shares.toLocaleString()}</td>
+                                              <td className="py-2 px-3 text-[11px] text-rose-400 tabular-nums">${o.strikePrice.toFixed(4)}</td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{pps > 0 ? `$${pps.toFixed(4)}` : "—"}</td>
+                                              <td className="py-2 px-3 text-[11px] tabular-nums">
+                                                <span className={iv > 0 ? "text-emerald-400" : "text-slate-600"}>{iv > 0 ? fmt(iv) : "—"}</span>
+                                              </td>
+                                              <td className="py-2 px-3" onClick={e => e.stopPropagation()}>
+                                                <div className="flex items-center gap-1">
+                                                  <input
+                                                    type="number"
+                                                    min={0} max={500} step={5}
+                                                    value={varPct}
+                                                    onChange={e => setOptionVariances(prev => ({ ...prev, [o.id]: Math.max(0, Number(e.target.value)) }))}
+                                                    className="w-14 bg-[#111D2E] border border-[#1E2D3D] rounded px-1.5 py-0.5 text-[11px] text-slate-200 tabular-nums text-right focus:outline-none focus:border-rose-500/50"
+                                                  />
+                                                  <span className="text-[10px] text-slate-600">%</span>
+                                                </div>
+                                              </td>
+                                              <td className="py-2 px-3 text-[11px] text-rose-400 tabular-nums">{tv > 0 ? fmt(tv) : "—"}</td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-200 tabular-nums font-semibold">{tot > 0 ? fmt(tot) : "—"}</td>
+                                              <td className="py-2 px-3 text-[11px] text-slate-500">{o.expirationDate ?? <span className="text-emerald-500/60">No expiry</span>}</td>
+                                            </tr>
+                                          );
+                                        })}
                                       </>
                                     );
                                   })}
                                   <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                     <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
-                                    <td /><td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{(totalShares / 1_000_000).toFixed(1)}M</td>
+                                    <td /><td /><td /><td />
+                                    <td className="py-2 px-3 text-xs tabular-nums font-semibold text-emerald-400">{grandIntrinsic > 0 ? fmt(grandIntrinsic) : "—"}</td>
                                     <td />
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalExposure)}</td>
+                                    <td className="py-2 px-3 text-xs text-rose-400 tabular-nums font-semibold">{grandTime > 0 ? fmt(grandTime) : "—"}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{grandTotal > 0 ? fmt(grandTotal) : "—"}</td>
                                     <td />
                                   </tr>
                                 </tbody>

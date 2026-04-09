@@ -119,6 +119,7 @@ export interface OptionPosition {
   strikePrice: number;                 // exercise price per share ($)
   expirationDate?: string;             // e.g. "Dec 2030"; omit if perpetual / no expiration
   currentValue?: number;               // est. fair value of the position
+  defaultVariancePct?: number;         // default volatility/variance % for time-value estimate (e.g. 100 = 100%)
   notes?: string;
 }
 

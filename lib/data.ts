@@ -463,6 +463,7 @@ export const portfolio: PortfolioCompany[] = [
         instrument: "Option",
         shares: 15_000_000,
         strikePrice: 0.01,
+        defaultVariancePct: 100,
         notes: "Option to purchase 15,000,000 shares of Audily common stock at $0.01/share. No expiration date — exercisable in perpetuity.",
       },
     ] satisfies OptionPosition[],
