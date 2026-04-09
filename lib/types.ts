@@ -206,6 +206,7 @@ export interface PortfolioCompany {
   valuationRefs?: ValuationRef[];
   ebitda?: number;               // trailing EBITDA ($); negative = loss
   votingOwnership?: number;      // voting % (may be less than ownership due to non-voting RSUs)
+  customPricePerShare?: number;           // fund's default per-share estimate; drives "Fund Est." football field bar
   shareTransactions?: ShareTransaction[]; // per-tranche purchase history ordered oldest → newest
   debtPositions?: DebtPosition[];        // outstanding debt / convertible instruments held by the fund
   optionPositions?: OptionPosition[];    // options and warrants held by the fund

@@ -50,7 +50,20 @@ export default function FootballField({
   company: PortfolioCompany;
   controlled?: { value: number; onChange: (v: number) => void };
 }) {
-  const refs = company.valuationRefs ?? [];
+  const baseRefs = company.valuationRefs ?? [];
+  const refs = company.customPricePerShare && company.totalShares
+    ? [
+        {
+          label: "Fund Est.",
+          low:  company.customPricePerShare * company.totalShares,
+          high: company.customPricePerShare * company.totalShares,
+          color: "#10B981",
+          note: `$${company.customPricePerShare.toFixed(4)}/sh`,
+          isEnterpriseValue: false as const,
+        },
+        ...baseRefs,
+      ]
+    : baseRefs;
   const totalShares = company.totalShares ?? 0;
   const invested = company.invested;
   const revenue = company.revenue ?? 0;

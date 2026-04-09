@@ -58,6 +58,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 3_156_849,  // est. prior basis; no new appraisal
+    customPricePerShare: 0.0045,
     totalShares: 90_000_000,      // Pulley 4/9/26 adj FD: 40M common + 31.725M RSUs + 18.275M pool
     website: "https://falconer.io",
     linkedInUrl: "https://www.linkedin.com/company/falconerco",
@@ -213,6 +214,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 1_991_014,  // est. $0.025/share × 78,350,000 fully diluted
+    customPricePerShare: 0.0285,
     totalShares: 78_350_000,      // Pulley 4/9/26: 40M common + 38.35M RSUs
     financialsAsOf: "4/8/26",
     website: "https://www.merchantboxes.com",
@@ -350,6 +352,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 1_216_946,  // est. $0.04/share × 30,423,657 total shares
+    customPricePerShare: 0.01,
     totalShares: 30_423_657,
     website: "https://pigeonservice.com",
     logoUrl: "/logos/pigeon.png",
@@ -379,6 +382,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 1_560_124,  // est. per-share × fully diluted
+    customPricePerShare: 0.0081,
     totalShares: 133_338_000,     // Pulley 4/9/26 adj FD: 53M common + 5.338M pref-converted (1:1000) + 49.1M RSUs + 10.9M pool + 15M contingent
     financialsAsOf: "4/8/26",
     website: "https://audily.com",
@@ -572,6 +576,7 @@ export const portfolio: PortfolioCompany[] = [
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 2_263_047,  // 2024 409A equity value
+    customPricePerShare: 0.0107,
     totalShares: 81_000_000,      // Pulley 4/9/26 adj FD: 31M common + 27.6M RSUs + 22.4M pool
     financialsAsOf: "4/9/26",
     capTable: {
