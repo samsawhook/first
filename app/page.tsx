@@ -148,7 +148,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "preferred", "debt", "managed"]));
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "managed"]));
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
 
   // ── User-set valuations (persistent) ─────────────────────────────────────────
@@ -306,22 +306,25 @@ export default function Dashboard() {
               const xLabels = navHistory.filter((_, i) => i % 4 === 0);
 
               // ── Allocation by security type ────────────────────────────────────
+              const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
               let equityBasis = 0, creditBasis = 0, convertBasis = 0;
               for (const c of portfolio) {
                 for (const t of (c.shareTransactions ?? [])) {
                   if (t.type === "Common") equityBasis += t.amount;
-                  else if (t.type === "Preferred") creditBasis += t.amount;
                 }
-                for (const d of (c.debtPositions ?? [])) convertBasis += d.principal;
+                for (const d of (c.debtPositions ?? [])) {
+                  if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditBasis += d.principal;
+                  else convertBasis += d.principal;
+                }
               }
-              const managedBasis    = managedFundPositions.reduce((s, p) => s + p.called, 0);
-              const allocTotal      = equityBasis + creditBasis + convertBasis + managedBasis;
+              const managedBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
+              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis;
               const allocTypes = [
-                { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: equityBasis  / allocTotal },
-                { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: creditBasis  / allocTotal },
-                { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: convertBasis / allocTotal },
-                { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: managedBasis / allocTotal },
-              ];
+                { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis  / allocTotal : 0 },
+                { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis  / allocTotal : 0 },
+                { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis / allocTotal : 0 },
+                { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis / allocTotal : 0 },
+              ].filter(t => t.amount > 0);
 
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
@@ -493,9 +496,11 @@ export default function Dashboard() {
               );
 
               // ── Group transactions by company ──────────────────────────────────
-              const companiesWithCommon = portfolio.filter(c => (c.shareTransactions ?? []).some(t => t.type === "Common"));
-              const companiesWithPref   = portfolio.filter(c => (c.shareTransactions ?? []).some(t => t.type === "Preferred"));
-              const companiesWithDebt   = portfolio.filter(c => c.debtPositions?.length);
+              const CREDIT_INSTRUMENTS  = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
+              const CONVERT_INSTRUMENTS = ["SAFE", "Convertible Note", "Preferred"];
+              const companiesWithCommon   = portfolio.filter(c => (c.shareTransactions ?? []).some(t => t.type === "Common"));
+              const companiesWithCredit   = portfolio.filter(c => (c.debtPositions ?? []).some(d => CREDIT_INSTRUMENTS.includes(d.instrument)));
+              const companiesWithConvert  = portfolio.filter(c => (c.debtPositions ?? []).some(d => CONVERT_INSTRUMENTS.includes(d.instrument)));
 
               return (
               <div className="space-y-3">
@@ -690,126 +695,121 @@ export default function Dashboard() {
                   })()}
                 </div>
 
-                {/* ══ 2. CREDIT (Preferred Stock) ══════════════════════════════════ */}
+                {/* ══ 2. CREDIT ════════════════════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const parseDate = (s: string) => {
-                      const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
-                      const [m, y] = s.split(" "); return new Date(parseInt(y), mo[m]);
+                    const monthlyPmt = (principal: number, annualRate: number, months = 12) => {
+                      const r = annualRate / 100 / 12;
+                      return r > 0 ? principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1) : principal / months;
                     };
-                    const totalInvested = companiesWithPref.reduce((s, c) => s + (c.shareTransactions ?? []).filter(t => t.type === "Preferred").reduce((a, t) => a + t.amount, 0), 0);
-                    // Outstanding principal = sum of liquidation preferences
-                    const outstandingPrincipal = companiesWithPref.reduce((s, c) => {
-                      const txns = (c.shareTransactions ?? []).filter(t => t.type === "Preferred");
-                      return s + txns.reduce((a, t) => a + t.amount * (t.liquidationMultiple ?? 1), 0);
-                    }, 0);
-                    // Weighted current yield (by cost basis)
-                    const { yieldNum, yieldDen } = companiesWithPref.reduce<{ yieldNum: number; yieldDen: number }>((acc, c) => {
-                      for (const t of (c.shareTransactions ?? []).filter(tx => tx.type === "Preferred")) {
-                        if (t.dividendRate !== undefined) { acc.yieldNum += t.amount * t.dividendRate; acc.yieldDen += t.amount; }
-                      }
-                      return acc;
-                    }, { yieldNum: 0, yieldDen: 0 });
-                    const wtdYield = yieldDen > 0 ? yieldNum / yieldDen : null;
-                    // Weighted duration in years (by cost basis)
-                    const { durNum, durDen } = companiesWithPref.reduce<{ durNum: number; durDen: number }>((acc, c) => {
-                      for (const t of (c.shareTransactions ?? []).filter(tx => tx.type === "Preferred")) {
-                        const yrs = (Date.now() - parseDate(t.date).getTime()) / (365.25 * 86400_000);
-                        acc.durNum += t.amount * yrs; acc.durDen += t.amount;
-                      }
-                      return acc;
-                    }, { durNum: 0, durDen: 0 });
-                    const wtdDuration = durDen > 0 ? durNum / durDen : null;
+                    const allCreditPos = companiesWithCredit.flatMap(c =>
+                      (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument))
+                    );
+                    const totalPrincipal = allCreditPos.reduce((s, d) => s + d.principal, 0);
+                    const totalCurrVal   = allCreditPos.reduce((s, d) => s + d.currentValue, 0);
+                    const ratedPos = allCreditPos.filter(d => d.interestRate !== undefined);
+                    const wtdRate = ratedPos.length > 0
+                      ? ratedPos.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.principal, 0)
+                      : null;
+                    const totalMonthly = allCreditPos.reduce((s, d) =>
+                      d.interestRate !== undefined ? s + monthlyPmt(d.principal, d.interestRate) : s, 0);
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Credit" tableKey="preferred" accent="#6366F1" stats={[
-                            { label: "Total Investments",     value: fmt(totalInvested) },
-                            { label: "Outstanding Principal", value: fmt(outstandingPrincipal), color: "#6366F1" },
-                            { label: "Wtd Current Yield",     value: wtdYield !== null ? `${wtdYield.toFixed(1)}%` : "—" },
-                            { label: "Wtd Duration",          value: wtdDuration !== null ? `${wtdDuration.toFixed(1)} yrs` : "—" },
+                          <SectionHeader label="Credit" tableKey="credit" accent="#6366F1" stats={[
+                            { label: "Total Principal",   value: fmt(totalPrincipal) },
+                            { label: "Current Value",     value: fmt(totalCurrVal), color: "#6366F1" },
+                            { label: "Wtd Rate",          value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
+                            { label: "Monthly Payments",  value: totalMonthly > 0 ? `~${fmt(totalMonthly)}/mo` : "—" },
                           ]} />
                         </div>
-                        {openInstrumentTables.has("preferred") && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
-                                <tr>
-                                  <TH></TH><TH wide>Company</TH><TH>Invested</TH>
-                                  <TH>Liq Pref</TH><TH>Wtd Yield</TH><TH>Duration</TH>
-                                  <TH>Shares</TH><TH>Type</TH><TH>Conv Ratio</TH><TH>Sh if Conv</TH>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {companiesWithPref.map((c) => {
-                                  const txns = (c.shareTransactions ?? []).filter(t => t.type === "Preferred");
-                                  const sh = txns.reduce((s, t) => s + (t.shares ?? 0), 0);
-                                  const cost = txns.reduce((s, t) => s + t.amount, 0);
-                                  const liqPref = txns.reduce((s, t) => s + t.amount * (t.liquidationMultiple ?? 1), 0);
-                                  const wtdConv = sh > 0 ? txns.reduce((s, t) => s + (t.shares ?? 0) * (t.conversionRatio ?? 1), 0) / sh : 1;
-                                  const sharesIfConv = Math.round(sh * (wtdConv ?? 1));
-                                  const hasDivs = txns.some(t => t.dividendRate !== undefined);
-                                  const wtdDiv = hasDivs && cost > 0 ? txns.reduce((s, t) => s + t.amount * (t.dividendRate ?? 0), 0) / cost : null;
-                                  const { dN, dD } = txns.reduce<{ dN: number; dD: number }>((a, t) => {
-                                    const mo: Record<string,number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
-                                    const [mn, yr] = t.date.split(" ");
-                                    const yrs = (Date.now() - new Date(parseInt(yr), mo[mn]).getTime()) / (365.25 * 86400_000);
-                                    a.dN += t.amount * yrs; a.dD += t.amount; return a;
-                                  }, { dN: 0, dD: 0 });
-                                  const dur = dD > 0 ? dN / dD : null;
-                                  const rowKey = `pref-${c.id}`;
-                                  const isOpen = expandedRows.has(rowKey);
-                                  const prefType = txns[0]?.preferredType ?? "—";
-                                  return (
-                                    <>
-                                      <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
-                                        <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
-                                        <TD>
-                                          <div className="flex items-center gap-2">
-                                            {companyLogo(c)}
-                                            <div>
-                                              <p className="font-semibold text-slate-200">{c.name}</p>
-                                              <p className="text-[10px] text-slate-600">{c.stage}</p>
+                        {openInstrumentTables.has("credit") && (
+                          companiesWithCredit.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                  <tr>
+                                    <TH></TH><TH wide>Company</TH><TH>Type</TH>
+                                    <TH>Principal</TH><TH>Rate</TH><TH>Monthly Pmt</TH><TH>Status</TH>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {companiesWithCredit.map((c) => {
+                                    const positions = (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument));
+                                    const principal = positions.reduce((s, d) => s + d.principal, 0);
+                                    const ratedP = positions.filter(d => d.interestRate !== undefined);
+                                    const compRate = ratedP.length > 0
+                                      ? ratedP.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedP.reduce((s, d) => s + d.principal, 0)
+                                      : null;
+                                    const totalMo = positions.reduce((s, d) =>
+                                      d.interestRate !== undefined ? s + monthlyPmt(d.principal, d.interestRate) : s, 0);
+                                    const rowKey = `credit-${c.id}`;
+                                    const isOpen = expandedRows.has(rowKey);
+                                    const instrType = positions.length === 1 ? positions[0].instrument : `${positions.length} instruments`;
+                                    return (
+                                      <>
+                                        <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
+                                          <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
+                                          <TD>
+                                            <div className="flex items-center gap-2">
+                                              {companyLogo(c)}
+                                              <div>
+                                                <p className="font-semibold text-slate-200">{c.name}</p>
+                                                <p className="text-[10px] text-slate-600">{positions.length} instrument{positions.length !== 1 ? "s" : ""}</p>
+                                              </div>
                                             </div>
-                                          </div>
-                                        </TD>
-                                        <TD className="text-slate-300 tabular-nums font-medium">{fmt(cost)}</TD>
-                                        <TD className="text-indigo-400 tabular-nums">{fmt(liqPref)}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{wtdDiv !== null ? `${wtdDiv.toFixed(1)}%` : <span className="text-slate-600">—</span>}</TD>
-                                        <TD className="text-slate-400 tabular-nums">{dur !== null ? `${dur.toFixed(1)} yr` : "—"}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{sh.toLocaleString()}</TD>
-                                        <TD><span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-500/10 text-indigo-400">{prefType}</span></TD>
-                                        <TD className="text-slate-400 tabular-nums">{`${wtdConv.toFixed(2)}:1`}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{sharesIfConv.toLocaleString()}</TD>
-                                      </tr>
-                                      {isOpen && txns.map((t, i) => (
-                                        <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                          <td className="py-2 px-3 w-6" />
-                                          <td className="py-2 px-3 text-[11px] text-slate-500 pl-11">{t.date}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(t.amount)}</td>
-                                          <td className="py-2 px-3 text-[11px] text-indigo-400 tabular-nums">{fmt(t.amount * (t.liquidationMultiple ?? 1))}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.dividendRate !== undefined ? `${t.dividendRate}%` : "—"}</td>
-                                          <td className="py-2 px-3" />
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares?.toLocaleString() ?? "—"}</td>
-                                          <td className="py-2 px-3">{t.preferredType && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{t.preferredType}</span>}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400">{t.conversionRatio !== undefined ? `${t.conversionRatio}:1` : "—"}</td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares && t.conversionRatio !== undefined ? Math.round(t.shares * t.conversionRatio).toLocaleString() : "—"}</td>
+                                          </TD>
+                                          <TD>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-medium">{instrType}</span>
+                                          </TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(principal)}</TD>
+                                          <TD className="text-indigo-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : <span className="text-slate-500">—</span>}</TD>
+                                          <TD className="text-slate-300 tabular-nums">{totalMo > 0 ? `~${fmt(totalMo)}/mo` : "—"}</TD>
+                                          <TD>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${positions[0]?.status === "Current" ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"}`}>
+                                              {positions[0]?.status ?? "—"}
+                                            </span>
+                                          </TD>
                                         </tr>
-                                      ))}
-                                    </>
-                                  );
-                                })}
-                                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
-                                  <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalInvested)}</td>
-                                  <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{fmt(outstandingPrincipal)}</td>
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdYield !== null ? `${wtdYield.toFixed(1)}%` : "—"}</td>
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDuration !== null ? `${wtdDuration.toFixed(1)} yrs` : "—"}</td>
-                                  <td /><td /><td /><td />
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
+                                        {isOpen && positions.map((d, i) => (
+                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                            <td className="py-2 px-3 w-6" />
+                                            <td className="py-2 px-3 pl-11">
+                                              <p className="text-[11px] text-slate-500">{d.date}</p>
+                                              {d.notes && <p className="text-[10px] text-slate-600 max-w-xs">{d.notes}</p>}
+                                            </td>
+                                            <td className="py-2 px-3">
+                                              <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{d.instrument}</span>
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
+                                            <td className="py-2 px-3 text-[11px] text-indigo-400 tabular-nums">
+                                              {d.interestRate !== undefined ? `${d.interestRate}%` : "—"}
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
+                                              {d.interestRate !== undefined ? `~${fmt(monthlyPmt(d.principal, d.interestRate))}/mo` : "—"}
+                                            </td>
+                                            <td className="py-2 px-3">
+                                              <span className={`text-[10px] px-1 py-0.5 rounded ${d.status === "Current" ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"}`}>{d.status}</span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </>
+                                    );
+                                  })}
+                                  <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                    <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                    <td />
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalPrincipal)}</td>
+                                    <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—"}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalMonthly > 0 ? `~${fmt(totalMonthly)}/mo` : "—"}</td>
+                                    <td />
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="px-5 py-8 text-center text-xs text-slate-600">No credit positions in portfolio.</div>
+                          )
                         )}
                       </>
                     );
@@ -819,49 +819,46 @@ export default function Dashboard() {
                 {/* ══ 3. CONVERTIBLES ══════════════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const totalPrincipal = companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => a + d.principal, 0), 0);
-                    const totalCurrVal   = companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => a + d.currentValue, 0), 0);
-                    const allPositions   = companiesWithDebt.flatMap(c => c.debtPositions ?? []);
-                    const ratedPositions = allPositions.filter(d => d.interestRate !== undefined);
+                    const allConvPos = companiesWithConvert.flatMap(c =>
+                      (c.debtPositions ?? []).filter(d => CONVERT_INSTRUMENTS.includes(d.instrument))
+                    );
+                    const totalPrincipal = allConvPos.reduce((s, d) => s + d.principal, 0);
+                    const totalCurrVal   = allConvPos.reduce((s, d) => s + d.currentValue, 0);
+                    const ratedPositions = allConvPos.filter(d => d.interestRate !== undefined);
                     const wtdRate = ratedPositions.length > 0
-                      ? ratedPositions.reduce((s, d) => s + d.principal * (d.interestRate!), 0) / ratedPositions.reduce((s, d) => s + d.principal, 0)
+                      ? ratedPositions.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedPositions.reduce((s, d) => s + d.principal, 0)
                       : null;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Convertibles" tableKey="debt" accent="#F59E0B" stats={[
-                            { label: "Basis",          value: fmt(totalPrincipal), color: "#F59E0B" },
-                            { label: "Wtd Yield",      value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
-                            { label: "Current Value",  value: fmt(totalCurrVal) },
-                            { label: "Accrued",        value: totalCurrVal > totalPrincipal ? `+${fmt(totalCurrVal - totalPrincipal)}` : "—", color: "#10B981" },
+                          <SectionHeader label="Convertibles" tableKey="convertibles" accent="#F59E0B" stats={[
+                            { label: "Basis",         value: fmt(totalPrincipal), color: "#F59E0B" },
+                            { label: "Wtd Yield",     value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
+                            { label: "Current Value", value: fmt(totalCurrVal) },
+                            { label: "Accrued",       value: totalCurrVal > totalPrincipal ? `+${fmt(totalCurrVal - totalPrincipal)}` : "—", color: "#10B981" },
                           ]} />
                         </div>
-                        {openInstrumentTables.has("debt") && (
-                          companiesWithDebt.length > 0 ? (
+                        {openInstrumentTables.has("convertibles") && (
+                          companiesWithConvert.length > 0 ? (
                             <div className="overflow-x-auto">
                               <table className="w-full text-xs">
                                 <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                   <tr>
                                     <TH></TH><TH wide>Company</TH><TH>Type</TH>
-                                    <TH>Basis</TH><TH>Yield</TH><TH># Sh if Conv</TH><TH>Conv Ratio</TH>
+                                    <TH>Principal</TH><TH>Yield</TH><TH>Current Value</TH><TH>Accrued</TH>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {companiesWithDebt.map((c) => {
-                                    const positions = c.debtPositions ?? [];
+                                  {companiesWithConvert.map((c) => {
+                                    const positions = (c.debtPositions ?? []).filter(d => CONVERT_INSTRUMENTS.includes(d.instrument));
                                     const principal = positions.reduce((s, d) => s + d.principal, 0);
+                                    const currVal   = positions.reduce((s, d) => s + d.currentValue, 0);
+                                    const accrued   = currVal - principal;
                                     const ratedPos  = positions.filter(d => d.interestRate !== undefined);
                                     const compRate  = ratedPos.length > 0
                                       ? ratedPos.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.principal, 0)
                                       : null;
-                                    // Est shares if converted (per cap)
-                                    const estShares = positions.reduce((s, d) => {
-                                      if (d.valuationCap && c.totalShares) {
-                                        return s + Math.round(d.principal * c.totalShares / d.valuationCap);
-                                      }
-                                      return s;
-                                    }, 0);
-                                    const rowKey = `debt-${c.id}`;
+                                    const rowKey = `conv-${c.id}`;
                                     const isOpen = expandedRows.has(rowKey);
                                     const instrType = positions.length === 1 ? positions[0].instrument : `${positions.length} instruments`;
                                     return (
@@ -882,32 +879,33 @@ export default function Dashboard() {
                                           </TD>
                                           <TD className="text-slate-300 tabular-nums font-medium">{fmt(principal)}</TD>
                                           <TD className="text-amber-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : <span className="text-slate-500">—</span>}</TD>
-                                          <TD className="text-slate-300 tabular-nums">{estShares > 0 ? estShares.toLocaleString() : "—"}</TD>
-                                          <TD className="text-slate-500">—</TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(currVal)}</TD>
+                                          <TD className={`tabular-nums ${accrued > 0 ? "text-emerald-400" : "text-slate-500"}`}>
+                                            {accrued > 0 ? `+${fmt(accrued)}` : "—"}
+                                          </TD>
                                         </tr>
-                                        {isOpen && positions.map((d, i) => {
-                                          const shConv = d.valuationCap && c.totalShares ? Math.round(d.principal * c.totalShares / d.valuationCap) : null;
-                                          return (
-                                            <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                              <td className="py-2 px-3 w-6" />
-                                              <td className="py-2 px-3 pl-11">
-                                                <p className="text-[11px] text-slate-500">{d.date}</p>
-                                                {d.notes && <p className="text-[10px] text-slate-600 max-w-xs truncate">{d.notes}</p>}
-                                              </td>
-                                              <td className="py-2 px-3">
-                                                <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400">{d.instrument}</span>
-                                              </td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
-                                              <td className="py-2 px-3 text-[11px] text-amber-400 tabular-nums">
-                                                {d.interestRate !== undefined ? `${d.interestRate}%` : d.discountRate !== undefined ? `${d.discountRate}% disc.` : "—"}
-                                              </td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
-                                                {shConv !== null ? shConv.toLocaleString() : d.valuationCap ? `(cap $${(d.valuationCap/1_000_000).toFixed(1)}M)` : "—"}
-                                              </td>
-                                              <td className="py-2 px-3 text-[11px] text-slate-600">—</td>
-                                            </tr>
-                                          );
-                                        })}
+                                        {isOpen && positions.map((d, i) => (
+                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                            <td className="py-2 px-3 w-6" />
+                                            <td className="py-2 px-3 pl-11">
+                                              <p className="text-[11px] text-slate-500">{d.date}</p>
+                                              {d.notes && <p className="text-[10px] text-slate-600 max-w-xs">{d.notes}</p>}
+                                            </td>
+                                            <td className="py-2 px-3">
+                                              <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400">{d.instrument}</span>
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
+                                            <td className="py-2 px-3 text-[11px] text-amber-400 tabular-nums">
+                                              {d.interestRate !== undefined ? `${d.interestRate}%` : d.discountRate !== undefined ? `${d.discountRate}% disc.` : "—"}
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.currentValue)}</td>
+                                            <td className="py-2 px-3 text-[11px] tabular-nums">
+                                              {d.currentValue > d.principal
+                                                ? <span className="text-emerald-400">+{fmt(d.currentValue - d.principal)}</span>
+                                                : <span className="text-slate-600">—</span>}
+                                            </td>
+                                          </tr>
+                                        ))}
                                       </>
                                     );
                                   })}
@@ -916,12 +914,10 @@ export default function Dashboard() {
                                     <td />
                                     <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalPrincipal)}</td>
                                     <td className="py-2 px-3 text-xs text-amber-400 tabular-nums font-semibold">{wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—"}</td>
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">
-                                      {companiesWithDebt.reduce((s, c) => s + (c.debtPositions ?? []).reduce((a, d) => {
-                                        return a + (d.valuationCap && c.totalShares ? Math.round(d.principal * c.totalShares / d.valuationCap) : 0);
-                                      }, 0), 0).toLocaleString()}
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalCurrVal)}</td>
+                                    <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">
+                                      {totalCurrVal > totalPrincipal ? `+${fmt(totalCurrVal - totalPrincipal)}` : "—"}
                                     </td>
-                                    <td />
                                   </tr>
                                 </tbody>
                               </table>
@@ -935,7 +931,7 @@ export default function Dashboard() {
                   })()}
                 </div>
 
-                {/* ══ 4. MANAGED FUNDS (Evergreen) ════════════════════════════════ */}
+                {/* ══ 4. MANAGED FUNDS ═════════════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
                     const totalLpBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
@@ -943,7 +939,6 @@ export default function Dashboard() {
                     const totalDistrib = managedFundPositions.reduce((s, p) => s + p.distributions, 0);
                     const wtdTvpi      = totalLpBasis > 0 ? (totalNav + totalDistrib) / totalLpBasis : null;
                     const wtdDpi       = totalLpBasis > 0 ? totalDistrib / totalLpBasis : null;
-                    // Weighted IRR by LP basis
                     const { irrNum, irrDen } = managedFundPositions.reduce<{ irrNum: number; irrDen: number }>((acc, p) => {
                       acc.irrNum += p.called * p.irr; acc.irrDen += p.called; return acc;
                     }, { irrNum: 0, irrDen: 0 });
@@ -952,77 +947,81 @@ export default function Dashboard() {
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Managed Funds" tableKey="managed" accent="#EC4899" stats={[
-                            { label: "LP Basis",   value: fmt(totalLpBasis) },
-                            { label: "NAV",        value: fmt(totalNav), color: "#EC4899" },
-                            { label: "DPI",        value: wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—" },
-                            { label: "TVPI",       value: wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—", color: "#EC4899" },
-                            { label: "IRR",        value: wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—", color: "#10B981" },
+                            { label: "LP Basis", value: totalLpBasis > 0 ? fmt(totalLpBasis) : "—" },
+                            { label: "NAV",      value: totalNav > 0 ? fmt(totalNav) : "—", color: "#EC4899" },
+                            { label: "DPI",      value: wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—" },
+                            { label: "TVPI",     value: wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—", color: "#EC4899" },
+                            { label: "IRR",      value: wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—", color: "#10B981" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("managed") && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
-                                <tr>
-                                  <TH></TH><TH wide>Fund</TH><TH>Vintage</TH>
-                                  <TH>Unit Price</TH><TH>LP Basis</TH>
-                                  <TH>NAV</TH><TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {managedFundPositions.map((p) => {
-                                  const rowKey = `fund-${p.id}`;
-                                  const isOpen = expandedRows.has(rowKey);
-                                  return (
-                                    <>
-                                      <tr key={p.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
-                                        <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
-                                        <TD>
-                                          <div>
-                                            <p className="font-semibold text-slate-200">{p.fundName}</p>
-                                            <p className="text-[10px] text-slate-600">As of {p.asOf}</p>
-                                          </div>
-                                        </TD>
-                                        <TD className="text-slate-400 tabular-nums">{p.vintage}</TD>
-                                        <TD className="text-slate-400 tabular-nums">${p.unitPrice.toFixed(2)}</TD>
-                                        <TD className="text-slate-300 tabular-nums font-medium">{fmt(p.called)}</TD>
-                                        <TD className="text-pink-400 tabular-nums font-semibold">{fmt(p.nav)}</TD>
-                                        <TD className="text-slate-300 tabular-nums">{p.dpi.toFixed(2)}×</TD>
-                                        <TD className="text-pink-400 tabular-nums font-medium">{p.tvpi.toFixed(2)}×</TD>
-                                        <TD className="text-emerald-400 tabular-nums">{p.irr.toFixed(1)}%</TD>
-                                      </tr>
-                                      {isOpen && (p.transactions ?? []).map((t, i) => (
-                                        <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                          <td className="py-2 px-3 w-6" />
-                                          <td className="py-2 px-3 pl-11">
-                                            <p className="text-[11px] text-slate-400 font-medium">{t.type}</p>
-                                            {t.notes && <p className="text-[10px] text-slate-600">{t.notes}</p>}
-                                          </td>
-                                          <td className="py-2 px-3 text-[11px] text-slate-500">{t.date}</td>
-                                          <td />
-                                          <td className="py-2 px-3 text-[11px] tabular-nums font-medium">
-                                            <span className={t.type === "Distribution" ? "text-emerald-400" : "text-slate-300"}>
-                                              {t.type === "Distribution" ? "+" : ""}{fmt(t.amount)}
-                                            </span>
-                                          </td>
-                                          <td colSpan={4} />
+                          managedFundPositions.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                  <tr>
+                                    <TH></TH><TH wide>Fund</TH><TH>Vintage</TH>
+                                    <TH>Unit Price</TH><TH>LP Basis</TH>
+                                    <TH>NAV</TH><TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {managedFundPositions.map((p) => {
+                                    const rowKey = `fund-${p.id}`;
+                                    const isOpen = expandedRows.has(rowKey);
+                                    return (
+                                      <>
+                                        <tr key={p.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
+                                          <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
+                                          <TD>
+                                            <div>
+                                              <p className="font-semibold text-slate-200">{p.fundName}</p>
+                                              <p className="text-[10px] text-slate-600">As of {p.asOf}</p>
+                                            </div>
+                                          </TD>
+                                          <TD className="text-slate-400 tabular-nums">{p.vintage}</TD>
+                                          <TD className="text-slate-400 tabular-nums">${p.unitPrice.toFixed(2)}</TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(p.called)}</TD>
+                                          <TD className="text-pink-400 tabular-nums font-semibold">{fmt(p.nav)}</TD>
+                                          <TD className="text-slate-300 tabular-nums">{p.dpi.toFixed(2)}×</TD>
+                                          <TD className="text-pink-400 tabular-nums font-medium">{p.tvpi.toFixed(2)}×</TD>
+                                          <TD className="text-emerald-400 tabular-nums">{p.irr.toFixed(1)}%</TD>
                                         </tr>
-                                      ))}
-                                    </>
-                                  );
-                                })}
-                                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
-                                  <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                                  <td /><td />
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalLpBasis)}</td>
-                                  <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{fmt(totalNav)}</td>
-                                  <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—"}</td>
-                                  <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—"}</td>
-                                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—"}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
+                                        {isOpen && (p.transactions ?? []).map((t, i) => (
+                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                            <td className="py-2 px-3 w-6" />
+                                            <td className="py-2 px-3 pl-11">
+                                              <p className="text-[11px] text-slate-400 font-medium">{t.type}</p>
+                                              {t.notes && <p className="text-[10px] text-slate-600">{t.notes}</p>}
+                                            </td>
+                                            <td className="py-2 px-3 text-[11px] text-slate-500">{t.date}</td>
+                                            <td />
+                                            <td className="py-2 px-3 text-[11px] tabular-nums font-medium">
+                                              <span className={t.type === "Distribution" ? "text-emerald-400" : "text-slate-300"}>
+                                                {t.type === "Distribution" ? "+" : ""}{fmt(t.amount)}
+                                              </span>
+                                            </td>
+                                            <td colSpan={4} />
+                                          </tr>
+                                        ))}
+                                      </>
+                                    );
+                                  })}
+                                  <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                    <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
+                                    <td /><td />
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalLpBasis)}</td>
+                                    <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{fmt(totalNav)}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—"}</td>
+                                    <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—"}</td>
+                                    <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—"}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="px-5 py-8 text-center text-xs text-slate-600">No managed fund positions in this portfolio.</div>
+                          )
                         )}
                       </>
                     );
