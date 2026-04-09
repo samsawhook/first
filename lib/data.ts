@@ -147,11 +147,7 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Oct 2025", periodType: "monthly", revenue: 23_258, costOfRevenue: 9_498,  grossProfit: 13_760,  operatingExpenses: 3_414,  ebitda: 10_346,  netIncome: 10_346  },
       { period: "Nov 2025", periodType: "monthly", revenue: 15_062, costOfRevenue: 12_284, grossProfit: 2_778,   operatingExpenses: 837,    ebitda: 1_941,   netIncome: 1_941   },
       { period: "Dec 2025", periodType: "monthly", revenue: 20_348, costOfRevenue: 1_625,  grossProfit: 18_723,  operatingExpenses: 1_340,  ebitda: 17_383,  netIncome: 17_383  },
-      // ── 2026 YTD ──────────────────────────────────────────────────────────────
-      { period: "Jan 2026", periodType: "monthly", revenue: 11_029, costOfRevenue: 10_334, grossProfit: 695,     operatingExpenses: 12_687, ebitda: -11_993, netIncome: -11_993 },
-      { period: "Feb 2026", periodType: "monthly", revenue: 29_259, costOfRevenue: 31_259, grossProfit: -2_000,  operatingExpenses: 957,    ebitda: -2_957,  netIncome: -2_957  },
-      { period: "Mar 2026", periodType: "monthly", revenue: 13_643, costOfRevenue: 28_236, grossProfit: -14_593, operatingExpenses: 3_423,  ebitda: -18_016, netIncome: -18_016 },
-      { period: "Apr 2026", periodType: "monthly", revenue: 13_710, costOfRevenue: 5_359,  grossProfit: 8_352,   operatingExpenses: 154,    ebitda: 8_198,   netIncome: 8_198   },
+
     ] satisfies FinancialPeriod[],
   },
   {
