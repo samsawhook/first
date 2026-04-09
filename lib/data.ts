@@ -74,7 +74,7 @@ export const portfolio: PortfolioCompany[] = [
       "Design-led packaging sourcing and fulfillment partner for DTC brands and eCommerce operators. Turns packaging from cost center to brand asset.",
     invested: 0,             // actual cost basis unknown
     currentValue: 326_526,   // 6,530,527 shares × est. $0.05/share
-    ownership: 16.4,         // 6,530,527 ÷ 39,820,287
+    ownership: 8.3,          // 6,530,527 ÷ 78,350,000 fully diluted (Pulley 4/9/26)
     stage: "Pre-Series A",
     founded: 2022,
     employees: 0,
@@ -83,8 +83,8 @@ export const portfolio: PortfolioCompany[] = [
     ebitda: 32_000,          // FY 2025 net operating income (profitable)
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_991_014,  // est. $0.05/share × 39,820,287 total shares
-    totalShares: 39_820_287,
+    impliedValuation: 1_991_014,  // est. $0.025/share × 78,350,000 fully diluted
+    totalShares: 78_350_000,      // Pulley 4/9/26: 40M common + 38.35M RSUs
     website: "https://www.merchantboxes.com",
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
@@ -93,6 +93,17 @@ export const portfolio: PortfolioCompany[] = [
       { label: "409A (2022)", low: 1_194_609, high: 1_194_609,
         color: "#64748B", note: "$0.03/sh × 39,820,287 shares" },
     ] satisfies ValuationRef[],
+    capTable: {
+      asOf: "April 9, 2026",
+      source: "Pulley",
+      authorizedCommon: 100_000_000,
+      adjustedFullyDiluted: 88_000_000,
+      classes: [
+        { label: "Common Stock",     shares: 40_000_000, color: "#F59E0B", note: "Founders, employees & fund (CA- prefix)" },
+        { label: "RSUs Outstanding", shares: 38_350_000, color: "#10B981", note: "2022 Incentive Award Plan" },
+        { label: "Unissued Pool",    shares:  9_650_000, color: "#1E2D3D", note: "Available for grant", isPool: true },
+      ],
+    } satisfies CapTableSummary,
     shareTransactions: [
       { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 0, certificateNumber: "CS-02" },
     ] satisfies ShareTransaction[],
