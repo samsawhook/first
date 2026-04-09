@@ -89,6 +89,7 @@ export const portfolio: PortfolioCompany[] = [
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/0447362a-668a-4f17-ae20-6cb7ac57df6f/MB%2BLogo_Horizontal_Color.png",
     accentColor: "#F59E0B",
+    votingOwnership: 16.3,    // 6,530,527 ÷ 40,000,000 common (RSUs non-voting until settled)
     valuationRefs: [
       { label: "409A (2022)", low: 1_194_609, high: 1_194_609,
         color: "#64748B", note: "$0.03/sh × 39,820,287 shares" },

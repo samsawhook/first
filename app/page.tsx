@@ -628,7 +628,8 @@ export default function Dashboard() {
                               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                 <tr>
                                   <TH></TH><TH wide>Company</TH><TH>Shares</TH><TH>Cost Basis</TH>
-                                  <TH>Share Price</TH><TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH><TH></TH>
+                                  <TH>Share Price</TH><TH>Est. Value</TH><TH>MOIC</TH><TH>Ann. ROI</TH>
+                                  <TH>% FD</TH><TH>Voting %</TH><TH></TH>
                                 </tr>
                               </thead>
                               <tbody>
@@ -708,6 +709,12 @@ export default function Dashboard() {
                                         <TD className="text-emerald-400 tabular-nums">
                                           {cAnnRoi !== null ? `${cAnnRoi.toFixed(1)}%` : "—"}
                                         </TD>
+                                        <TD className="tabular-nums text-slate-400">
+                                          {c.totalShares && sh > 0 ? `${((sh / c.totalShares) * 100).toFixed(1)}%` : "—"}
+                                        </TD>
+                                        <TD className="tabular-nums text-slate-400">
+                                          {c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
+                                        </TD>
                                         <TD>
                                           {userValuations[c.id] !== undefined && (
                                             <button
@@ -739,7 +746,7 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
                                             {t.shares !== undefined && valPerSh !== null ? fmt(t.shares * valPerSh) : "—"}
                                           </td>
-                                          <td className="py-2 px-3" /><td className="py-2 px-3" /><td className="py-2 px-3" />
+                                          <td className="py-2 px-3" /><td className="py-2 px-3" /><td className="py-2 px-3" /><td className="py-2 px-3" /><td className="py-2 px-3" />
                                         </tr>
                                       ))}
                                     </>
