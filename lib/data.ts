@@ -92,8 +92,8 @@ export const portfolio: PortfolioCompany[] = [
     accentColor: "#F59E0B",
     votingOwnership: 16.3,    // 6,530,527 ÷ 40,000,000 common (RSUs non-voting until settled)
     valuationRefs: [
-      { label: "409A (2022)", low: 1_194_609, high: 1_194_609,
-        color: "#64748B", note: "$0.03/sh × 39,820,287 shares" },
+      { label: "409A (2022)", low: 4_360_000, high: 4_360_000,
+        color: "#64748B", note: "$0.03/sh × 145,333,333 shares" },
       { label: "Revenue Multiple (2–6×)", low: 418_000, high: 1_254_000,
         color: "#10B981", note: "2–6× FY 2025 revenue of $209K · ~100% YoY growth · AI-generated estimate" },
       { label: "EBITDA Multiple (8–20×)", low: 256_000, high: 640_000,
