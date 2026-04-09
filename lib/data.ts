@@ -61,6 +61,62 @@ export const portfolio: PortfolioCompany[] = [
     linkedInUrl: "https://www.linkedin.com/company/falconerco",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
     accentColor: "#3B82F6",
+    revenue: 110_523,        // FY 2025
+    revenueGrowth: 5.9,      // FY 2024 ($104.4K) → FY 2025 ($110.5K)
+    ebitda: 47_516,          // FY 2025 NOI (profitable)
+    financialsAsOf: "4/9/26",
+    financialHistory: [
+      // ── 2022 (partial — first month of revenue) ──
+      { period: "Mar 2022", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 140.30,     ebitda: 4_859.70,   netIncome: 4_859.70 },
+      { period: "Apr 2022", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 6_137.24,   ebitda: -1_137.24,  netIncome: -1_137.24 },
+      { period: "May 2022", periodType: "monthly", revenue: 10_000,     costOfRevenue: 0, grossProfit: 10_000,     operatingExpenses: 11_733.06,  ebitda: -1_733.06,  netIncome: -1_733.06 },
+      { period: "Jun 2022", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 6_940.97,   ebitda: -1_940.97,  netIncome: -1_940.97 },
+      { period: "Jul 2022", periodType: "monthly", revenue: 15_000,     costOfRevenue: 0, grossProfit: 15_000,     operatingExpenses: 4_597.74,   ebitda: 10_402.26,  netIncome: 10_402.26 },
+      { period: "Aug 2022", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 7_134.66,   ebitda: -2_134.66,  netIncome: -2_134.66 },
+      { period: "Sep 2022", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 12_588.43,  ebitda: -7_588.43,  netIncome: -7_588.43 },
+      { period: "Oct 2022", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 40.89,      ebitda: -40.89,     netIncome: -40.89 },
+      { period: "Nov 2022", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 740.89,     ebitda: -740.89,    netIncome: -740.89 },
+      { period: "Dec 2022", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 40.89,      ebitda: -40.89,     netIncome: -40.89 },
+      // ── 2023 ──
+      { period: "Jan 2023", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 81.21,      ebitda: -81.21,     netIncome: -81.21 },
+      { period: "Feb 2023", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 16,         ebitda: -16,        netIncome: -16 },
+      { period: "Mar 2023", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 15.99,      ebitda: -15.99,     netIncome: -15.99 },
+      { period: "Apr 2023", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 400,        ebitda: -400,       netIncome: -400 },
+      { period: "May 2023", periodType: "monthly", revenue: 10_000,     costOfRevenue: 0, grossProfit: 10_000,     operatingExpenses: 9_989.14,   ebitda: 10.86,      netIncome: 10.86 },
+      { period: "Jun 2023", periodType: "monthly", revenue: 42_093.30,  costOfRevenue: 0, grossProfit: 42_093.30,  operatingExpenses: 39_635.56,  ebitda: 2_457.74,   netIncome: 2_457.74 },
+      { period: "Jul 2023", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 3_948.58,   ebitda: 1_051.42,   netIncome: 1_051.42 },
+      { period: "Aug 2023", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 3_083.73,   ebitda: -3_083.73,  netIncome: -3_083.73 },
+      { period: "Sep 2023", periodType: "monthly", revenue: 5_000,      costOfRevenue: 0, grossProfit: 5_000,      operatingExpenses: 4_813.75,   ebitda: 186.25,     netIncome: 186.25 },
+      { period: "Oct 2023", periodType: "monthly", revenue: 7_680,      costOfRevenue: 0, grossProfit: 7_680,      operatingExpenses: 4_003.43,   ebitda: 3_676.57,   netIncome: 3_676.57 },
+      { period: "Nov 2023", periodType: "monthly", revenue: 11_460,     costOfRevenue: 0, grossProfit: 11_460,     operatingExpenses: 9_727.23,   ebitda: 1_732.77,   netIncome: 1_732.77 },
+      { period: "Dec 2023", periodType: "monthly", revenue: 11_460,     costOfRevenue: 0, grossProfit: 11_460,     operatingExpenses: 7_499.99,   ebitda: 3_960.01,   netIncome: 3_776.84 },  // amortization −$183.17
+      // ── 2024 ──
+      { period: "Jan 2024", periodType: "monthly", revenue: 46_775,     costOfRevenue: 0, grossProfit: 46_775,     operatingExpenses: 43_333.16,  ebitda: 3_441.84,   netIncome: 3_441.84 },
+      { period: "Feb 2024", periodType: "monthly", revenue: 28_325,     costOfRevenue: 0, grossProfit: 28_325,     operatingExpenses: 17_411.24,  ebitda: 10_913.76,  netIncome: 10_913.76 },
+      { period: "Mar 2024", periodType: "monthly", revenue: 254.50,     costOfRevenue: 0, grossProfit: 254.50,     operatingExpenses: 6_924.02,   ebitda: -6_669.52,  netIncome: -6_669.52 },
+      { period: "Apr 2024", periodType: "monthly", revenue: 0,          costOfRevenue: 0, grossProfit: 0,          operatingExpenses: 2_703.01,   ebitda: -2_703.01,  netIncome: -2_703.01 },
+      { period: "May 2024", periodType: "monthly", revenue: 3_384.97,   costOfRevenue: 0, grossProfit: 3_384.97,   operatingExpenses: 3_389.41,   ebitda: -4.44,      netIncome: -4.44 },
+      { period: "Jun 2024", periodType: "monthly", revenue: 487.13,     costOfRevenue: 0, grossProfit: 487.13,     operatingExpenses: 911.30,     ebitda: -424.17,    netIncome: -424.17 },
+      { period: "Jul 2024", periodType: "monthly", revenue: 2_382.81,   costOfRevenue: 0, grossProfit: 2_382.81,   operatingExpenses: 1_840.12,   ebitda: 542.69,     netIncome: 542.69 },
+      { period: "Aug 2024", periodType: "monthly", revenue: 3_576.40,   costOfRevenue: 0, grossProfit: 3_576.40,   operatingExpenses: 1_086.72,   ebitda: 2_489.68,   netIncome: 2_489.68 },
+      { period: "Sep 2024", periodType: "monthly", revenue: 4_156.60,   costOfRevenue: 0, grossProfit: 4_156.60,   operatingExpenses: 8_140.31,   ebitda: -3_983.71,  netIncome: -3_983.71 },
+      { period: "Oct 2024", periodType: "monthly", revenue: 3_586.60,   costOfRevenue: 0, grossProfit: 3_586.60,   operatingExpenses: 3_659.02,   ebitda: -72.42,     netIncome: -72.42 },
+      { period: "Nov 2024", periodType: "monthly", revenue: 6_177.33,   costOfRevenue: 0, grossProfit: 6_177.33,   operatingExpenses: 5_511.06,   ebitda: 666.27,     netIncome: 666.27 },
+      { period: "Dec 2024", periodType: "monthly", revenue: 5_278.48,   costOfRevenue: 0, grossProfit: 5_278.48,   operatingExpenses: 8_517.48,   ebitda: -3_239,     netIncome: -3_663 },    // amortization −$424
+      // ── 2025 ──
+      { period: "Jan 2025", periodType: "monthly", revenue: 2_877.79,   costOfRevenue: 0, grossProfit: 2_877.79,   operatingExpenses: 5_309.88,   ebitda: -2_432.09,  netIncome: -2_432.09 },
+      { period: "Feb 2025", periodType: "monthly", revenue: 4_952.14,   costOfRevenue: 0, grossProfit: 4_952.14,   operatingExpenses: 11_904.36,  ebitda: -6_952.22,  netIncome: -6_952.22 },
+      { period: "Mar 2025", periodType: "monthly", revenue: 9_609.64,   costOfRevenue: 0, grossProfit: 9_609.64,   operatingExpenses: 7_674.86,   ebitda: 1_934.78,   netIncome: 1_934.78 },
+      { period: "Apr 2025", periodType: "monthly", revenue: 7_652.14,   costOfRevenue: 0, grossProfit: 7_652.14,   operatingExpenses: 4_597.90,   ebitda: 3_054.24,   netIncome: 3_054.24 },
+      { period: "May 2025", periodType: "monthly", revenue: 6_869.40,   costOfRevenue: 0, grossProfit: 6_869.40,   operatingExpenses: 2_921.44,   ebitda: 3_947.96,   netIncome: 3_947.96 },
+      { period: "Jun 2025", periodType: "monthly", revenue: 7_606.95,   costOfRevenue: 0, grossProfit: 7_606.95,   operatingExpenses: 5_319.36,   ebitda: 2_287.59,   netIncome: 2_287.59 },
+      { period: "Jul 2025", periodType: "monthly", revenue: 18_316.34,  costOfRevenue: 0, grossProfit: 18_316.34,  operatingExpenses: 3_657.57,   ebitda: 14_658.77,  netIncome: 14_658.77 },
+      { period: "Aug 2025", periodType: "monthly", revenue: 15_816.34,  costOfRevenue: 0, grossProfit: 15_816.34,  operatingExpenses: 5_235.31,   ebitda: 10_581.03,  netIncome: 10_578.96 }, // vehicle expense −$2.07
+      { period: "Sep 2025", periodType: "monthly", revenue: 10_816.34,  costOfRevenue: 0, grossProfit: 10_816.34,  operatingExpenses: 2_432.67,   ebitda: 8_383.67,   netIncome: 8_383.67 },
+      { period: "Oct 2025", periodType: "monthly", revenue: 23_636.07,  costOfRevenue: 0, grossProfit: 23_636.07,  operatingExpenses: 10_667.44,  ebitda: 12_968.63,  netIncome: 12_968.63 },
+      { period: "Nov 2025", periodType: "monthly", revenue: 2_369.40,   costOfRevenue: 0, grossProfit: 2_369.40,   operatingExpenses: 2_894.25,   ebitda: -524.85,    netIncome: -524.85 },
+      { period: "Dec 2025", periodType: "monthly", revenue: 0.09,       costOfRevenue: 0, grossProfit: 0.09,       operatingExpenses: 391.58,     ebitda: -391.49,    netIncome: -391.49 },
+    ] satisfies FinancialPeriod[],
     capTable: {
       asOf: "April 9, 2026",
       source: "Pulley",
