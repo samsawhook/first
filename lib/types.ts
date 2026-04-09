@@ -269,6 +269,7 @@ export interface Letter {
   body: string;
   author: string;
   type: "quarterly" | "annual" | "special";
+  pdfUrl?: string;
 }
 
 export type IOIPayload = {

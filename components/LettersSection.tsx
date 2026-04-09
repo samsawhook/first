@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, FileText, Calendar } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, Calendar, ExternalLink } from "lucide-react";
 import { letters } from "@/lib/data";
 import type { Letter } from "@/lib/types";
 
@@ -40,12 +40,15 @@ function LetterCard({ letter }: { letter: Letter }) {
     });
   };
 
+  const hasPdf = !!letter.pdfUrl;
+  const hasBody = !!letter.body;
+
   return (
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden card-hover">
       {/* Header */}
-      <button
-        className="w-full text-left p-5 flex items-start justify-between gap-4"
-        onClick={() => setExpanded((v) => !v)}
+      <div
+        className={`p-5 flex items-start justify-between gap-4 ${hasBody ? "cursor-pointer" : ""}`}
+        onClick={() => hasBody && setExpanded((v) => !v)}
       >
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg bg-[#111D2E] border border-[#1E2D3D] flex items-center justify-center shrink-0">
@@ -66,18 +69,34 @@ function LetterCard({ letter }: { letter: Letter }) {
               <span className="text-xs text-slate-600">·</span>
               <span className="text-xs text-slate-500">{letter.author}</span>
             </div>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-xl">
-              {letter.excerpt}
-            </p>
+            {letter.excerpt && (
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-xl">
+                {letter.excerpt}
+              </p>
+            )}
+            {hasPdf && (
+              <a
+                href={letter.pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors"
+              >
+                <ExternalLink size={11} />
+                View Letter (PDF)
+              </a>
+            )}
           </div>
         </div>
-        <div className="shrink-0 text-slate-500 mt-1">
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </div>
-      </button>
+        {hasBody && (
+          <div className="shrink-0 text-slate-500 mt-1">
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
+        )}
+      </div>
 
       {/* Expanded body */}
-      {expanded && (
+      {hasBody && expanded && (
         <div className="border-t border-[#1E2D3D] px-5 pb-6 pt-5">
           <div className="max-w-2xl space-y-0.5">
             {renderBody(letter.body)}

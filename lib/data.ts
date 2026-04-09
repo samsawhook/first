@@ -404,111 +404,36 @@ export const managedFundPositions: ManagedFundPosition[] = [];
 
 export const letters: Letter[] = [
   {
-    id: "q1-2026",
-    title: "Q1 2026 Letter to Limited Partners",
-    date: "April 8, 2026",
-    period: "Q1 2026",
-    type: "quarterly",
-    author: "Sam Sawhook, CEO",
-    excerpt:
-      "The first quarter of 2026 marked a turning point for the portfolio — not in drama, but in depth. Companies are no longer just surviving; they're compounding.",
-    body: `Dear Limited Partners,
-
-The first quarter of 2026 marked a turning point for the portfolio — not in drama, but in depth. Companies are no longer just surviving; they're compounding.
-
-**Fund Performance**
-
-NAV reached $13.9M as of March 31, representing a 1.59x TVPI on $8.75M of called capital. IRR stands at 26.4%. These numbers feel right for where we are in the fund's life — early enough that most value is still ahead, late enough that the pattern is clear.
-
-Falconer crossed $2M in annualized revenue and is on a path to a Series A later this year. If that round prices at our expected range, it would alone return 40% of called capital. We don't count on it, but we're watching it closely.
-
-**The Thesis Holding**
-
-When we started nth Venture in 2021, we made a bet that felt obvious to us but wasn't obvious to the market: people work harder, care more, and stay longer when they own what they're building. Four years in, we've seen it in every single portfolio company. The companies where employees hold equity — real equity, not token amounts — outperform the ones that don't.
-
-This isn't an accident. It's a design principle.
-
-**Groundwork and the Pipeline**
-
-We introduced Groundwork to the portfolio this quarter as an observer. It embodies everything we look for: a radical ownership model, a clear unit economic story, and a market that is gigantic and underserved. Their Republic raise closes April 30. We will follow with a direct allocation in Q2.
-
-**Looking Ahead**
-
-Q2 will bring two major milestones: Certd's accreditation partnership announcement (we'll share details in June) and TalentLoop's close. We expect TalentLoop to be oversubscribed by late May.
-
-Thank you for your continued trust. We don't take it lightly.
-
-Onward,
-
-Sam Sawhook
-CEO, nth Venture`,
+    id: "annual-2022",
+    title: "nth Venture 2022 Annual Letter",
+    date: "August 2023",
+    period: "FY 2022",
+    type: "annual",
+    author: "Sam Sawhook",
+    excerpt: "",
+    body: "",
+    pdfUrl: "https://static1.squarespace.com/static/64d98f1d96a44455a5eab9a8/t/64d99aef0051ed7fd7dfd27a/1691982575632/nth+Venture+2022+Annual+Letter.pdf",
   },
   {
-    id: "q4-2025",
-    title: "Q4 2025 Letter to Limited Partners",
-    date: "January 15, 2026",
-    period: "Q4 2025",
-    type: "quarterly",
-    author: "Sam Sawhook, CEO",
-    excerpt:
-      "2025 was the year the portfolio grew up. Revenue became real. Teams stabilized. And one exit reminded us why we do this: ownership changes outcomes.",
-    body: `Dear Limited Partners,
-
-2025 was the year the portfolio grew up. Revenue became real. Teams stabilized. And one exit reminded us why we do this: ownership changes outcomes.
-
-**hep global — First Realized Return**
-
-In November, we completed the partial sale of our stake in hep global GmbH to a European strategic. We received $780K against a $400K investment — a 1.95x in under 36 months. The management team at hep global held meaningful equity throughout, and the outcome for them was life-changing. That's the point.
-
-**NAV and Metrics**
-
-We closed Q4 2025 at $13.7M NAV, up from $12.4M at year-end 2024. TVPI of 1.57x. IRR of 24.9%. Distributions of $780K cumulative. We're pleased with the trajectory and remain focused on building durably rather than optimizing for headline numbers.
-
-**Portfolio Highlights**
-
-SBR2TH crossed $2.5M in placed revenue for the year — a record. Merchant Boxes secured a national retail partnership that we expect to nearly double their revenue in 2026. CaptureFully landed its first enterprise contract ($180K ACV) and will need a bridge round by mid-year.
-
-**Fund Operations**
-
-We made our final capital call in Q3 2025. The fund is fully deployed. Any new investments will be co-investments offered separately to LPs or via a continuation vehicle as warranted.
-
-As always, the door is open. Call or email anytime.
-
-Sam Sawhook
-CEO, nth Venture`,
+    id: "annual-2023",
+    title: "nth Venture Second Annual Letter",
+    date: "March 2024",
+    period: "FY 2023",
+    type: "annual",
+    author: "Sam Sawhook",
+    excerpt: "",
+    body: "",
+    pdfUrl: "https://static1.squarespace.com/static/64d98f1d96a44455a5eab9a8/t/65e5f6dcd0b76e6d7d861b16/1709569756594/nth+Venture+Second+Annual+Letter.pdf",
   },
   {
     id: "annual-2024",
-    title: "2024 Annual Letter to Limited Partners",
-    date: "February 10, 2025",
-    period: "Full Year 2024",
+    title: "nth Venture Third Annual Letter",
+    date: "May 2025",
+    period: "FY 2024",
     type: "annual",
-    author: "Sam Sawhook, CEO",
-    excerpt:
-      "Three years into building nth Venture, we've learned that the venture studio model is not a shortcut. It's a longer road with a different destination.",
-    body: `Dear Limited Partners,
-
-Three years into building nth Venture, we've learned that the venture studio model is not a shortcut. It's a longer road with a different destination.
-
-Traditional venture funds pick winners from a field of candidates. We grow winners from scratch. The difference is enormous — in timeline, in effort, in risk profile, and ultimately in the depth of the relationship between the studio and the companies we build.
-
-**2024 in Numbers**
-
-We ended 2024 at $12.4M NAV on $8.6M called capital. TVPI: 1.44x. IRR: 22.1%. Seven portfolio companies active, one (hep global) in partial exit process. The numbers are good. Not great. We're building toward great.
-
-**What's Working**
-
-The companies where we've maintained the highest operational involvement — Falconer, SBR2TH, Merchant Boxes — are also our best performers. This isn't surprising, but it confirms the model: we're not passive capital. We're co-builders. The studio earns its equity.
-
-Employee ownership is compounding inside the portfolio. Falconer now has 14 full-time employees, 12 of whom hold equity. SBR2TH has an 11-person team, all with meaningful stakes. When we talk to their people, you can feel the difference. They speak in first person plural about the company's goals. They're not employees. They're owners.
-
-**What We're Building Toward**
-
-2025 and 2026 are the years we expect to prove the model. Two to three portfolio companies should reach the scale needed for institutional follow-on rounds or strategic exits. If that happens, the DPI number — currently the fund's weakest metric — will close fast.
-
-We remain grateful for your patience, your trust, and your alignment with a thesis that takes time to prove.
-
-Sam Sawhook
-CEO, nth Venture`,
+    author: "Sam Sawhook",
+    excerpt: "",
+    body: "",
+    pdfUrl: "https://static1.squarespace.com/static/64d98f1d96a44455a5eab9a8/t/6824eccd00ce1a0fc02ad947/1747250381663/nth+Venture+Third+Annual+Letter.pdf",
   },
 ];
