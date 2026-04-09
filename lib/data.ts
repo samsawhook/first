@@ -43,9 +43,9 @@ export const portfolio: PortfolioCompany[] = [
     name: "Falconer Inc.",
     initials: "FA",
     sector: "Financial Services",
-    tagline: "Full-journey investment advisory boutique",
+    tagline: "Full-journey transaction advisory and consulting boutique",
     description:
-      "Boutique investment advisory firm helping founders and families navigate liquidity events, estate planning, and capital allocation with radical alignment.",
+      "Boutique transaction advisory and consulting firm helping founders and families navigate liquidity events, estate planning, and capital allocation with radical alignment.",
     invested: 0,             // actual cost basis unknown
     currentValue: 246_542,   // 7,023,990 / 90,000,000 × $3,156,849 implied
     ownership: 7.8,          // 7,023,990 ÷ 90,000,000 adj FD (Pulley 4/9/26)
@@ -185,7 +185,7 @@ export const portfolio: PortfolioCompany[] = [
         source: "IMDb",
         date: "2024",
         headline: "Falconer Featured in Entertainment Industry Coverage",
-        snippet: "Falconer's investment advisory and M&A work in the entertainment industry.",
+        snippet: "Falconer's transaction advisory and M&A work in the entertainment industry.",
         url: "https://www.imdb.com/news/ni64453211/",
       },
     ] satisfies NewsItem[],
