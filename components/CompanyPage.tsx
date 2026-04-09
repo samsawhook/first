@@ -482,6 +482,15 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
           </div>
         </div>
       )}
+
+      {/* Non-GAAP / Unaudited disclaimer */}
+      <div className="flex items-start gap-2.5 bg-[#080E1A] border border-[#1E2D3D] rounded-lg px-3 py-2.5">
+        <AlertCircle size={11} className="text-slate-600 shrink-0 mt-0.5" />
+        <p className="text-[10px] text-slate-600 leading-relaxed">
+          <span className="text-slate-500 font-medium">Non-GAAP / Unaudited.</span>{" "}
+          Financial data is presented on a modified cash basis as exported from QuickBooks and has not been audited or reviewed by an independent accountant. These are non-GAAP measures and may differ materially from statements prepared in accordance with U.S. GAAP. Not for reliance in making investment decisions.
+        </p>
+      </div>
     </div>
   );
 }
