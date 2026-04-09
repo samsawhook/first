@@ -453,10 +453,14 @@ export const portfolio: PortfolioCompany[] = [
         interestRate: 13.4,
         status: "Accruing", currentValue: 134_700,
         notes: "1,150 Series A Preferred shares at $100 face. 13.4% cumulative yield beginning 12/31/24. Converts to Class A Common at 1:1,000 per preferred share (1,150,000 common shares if fully converted)." },
-      { id: "audily-note-1", date: "UNK", instrument: "Term Loan", principal: 25_000,
+      { id: "audily-note-1", date: "UNK", instrument: "Term Loan", principal: 8_000,
         interestRate: 20,
-        status: "Current", currentValue: 25_000,
-        notes: "1-year amortizing note at 20% annual rate. Monthly payment ~$2,309. 12 equal monthly installments." },
+        status: "Current", currentValue: 8_000,
+        notes: "1-year amortizing note at 20% annual rate. ~$737/mo over 12 months." },
+      { id: "audily-note-2", date: "UNK", instrument: "Term Loan", principal: 17_000,
+        interestRate: 20,
+        status: "Current", currentValue: 17_000,
+        notes: "1-year amortizing note at 20% annual rate. ~$1,565/mo over 12 months." },
     ] satisfies DebtPosition[],
     optionPositions: [
       {
@@ -611,10 +615,14 @@ export const portfolio: PortfolioCompany[] = [
       { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 1, certificateNumber: "CS-05" },
     ] satisfies ShareTransaction[],
     debtPositions: [
-      { id: "sbr2th-note-1", date: "UNK", instrument: "Term Loan", principal: 25_000,
+      { id: "sbr2th-note-1", date: "UNK", instrument: "Term Loan", principal: 8_000,
         interestRate: 20,
-        status: "Current", currentValue: 25_000,
-        notes: "1-year amortizing note at 20% annual rate. Monthly payment ~$2,309. 12 equal monthly installments." },
+        status: "Current", currentValue: 8_000,
+        notes: "1-year amortizing note at 20% annual rate. ~$737/mo over 12 months." },
+      { id: "sbr2th-note-2", date: "UNK", instrument: "Term Loan", principal: 17_000,
+        interestRate: 20,
+        status: "Current", currentValue: 17_000,
+        notes: "1-year amortizing note at 20% annual rate. ~$1,565/mo over 12 months." },
     ] satisfies DebtPosition[],
     financialHistory: [
       // ── 2022 ────────────────────────────────────────────────────────────────
