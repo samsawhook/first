@@ -172,7 +172,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "managed"]));
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed"]));
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
