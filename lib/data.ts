@@ -177,7 +177,6 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Q2'25", cash:   6_997, totalCurrentAssets: 103_042, totalAssets:   628_653, totalCurrentLiabilities: 275_926, totalLiabilities: 492_352, totalEquity:  136_301 },
       { period: "Q3'25", cash:   5_738, totalCurrentAssets: 198_581, totalAssets:   724_192, totalCurrentLiabilities: 267_871, totalLiabilities: 478_085, totalEquity:  246_107 },
       { period: "Q4'25", cash:  48_804, totalCurrentAssets: 386_603, totalAssets:   912_213, totalCurrentLiabilities: 298_319, totalLiabilities: 633_669, totalEquity:  278_544 },
-      { period: "Q1'26", cash: 271_748, totalCurrentAssets: 652_536, totalAssets: 1_178_146, totalCurrentLiabilities: 369_139, totalLiabilities: 702_595, totalEquity:  475_552 },
     ] satisfies BalanceSheetSnapshot[],
     shareTransactions: [
       { date: "Sep 2021", type: "Common", shares: 16_537_717, amount: 0, certificateNumber: "CS-04" },
