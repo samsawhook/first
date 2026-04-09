@@ -1048,13 +1048,17 @@ export default function Dashboard() {
                     const grandIntrinsic = allRows.reduce((s, { o, pps }) => s + intrinsic(o, pps), 0);
                     const grandTime      = allRows.reduce((s, { o, pps }) => s + timeVal(o, pps), 0);
                     const grandTotal     = grandIntrinsic + grandTime;
+                    const grandBasis     = allRows.reduce((s, { o }) => s + (o.costBasis ?? 0), 0);
+                    const grandMoic      = grandBasis > 0 ? grandTotal / grandBasis : null;
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Options & Warrants" tableKey="options" accent="#F43F5E" stats={[
+                            { label: "Basis",           value: grandBasis > 0 ? fmt(grandBasis) : "—" },
                             { label: "Intrinsic Value", value: fmt(grandIntrinsic) },
                             { label: "Time Value",      value: fmt(grandTime),  color: "#F43F5E" },
                             { label: "Total Value",     value: fmt(grandTotal), color: "#F43F5E" },
+                            { label: "MOIC",            value: grandMoic !== null ? `${grandMoic.toFixed(2)}×` : "—", color: grandMoic && grandMoic >= 1 ? "#10B981" : undefined },
                           ]} />
                         </div>
                         {openInstrumentTables.has("options") && (
@@ -1065,7 +1069,7 @@ export default function Dashboard() {
                                   <tr>
                                     <TH></TH><TH wide>Company</TH><TH>Type</TH>
                                     <TH>Shares</TH><TH>Strike</TH><TH>Curr. PPS</TH>
-                                    <TH>Intrinsic</TH><TH>Variance %</TH><TH>Time Value</TH><TH>Total Value</TH><TH>Expiration</TH>
+                                    <TH>Basis</TH><TH>Intrinsic</TH><TH>Variance %</TH><TH>Time Value</TH><TH>Total Value</TH><TH>MOIC</TH><TH>Expiration</TH>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1098,6 +1102,7 @@ export default function Dashboard() {
                                           <TD className="text-slate-300 tabular-nums font-medium">{(o.shares / 1_000_000).toFixed(1)}M</TD>
                                           <TD className="text-rose-400 tabular-nums">${o.strikePrice.toFixed(4)}</TD>
                                           <TD className="text-slate-400 tabular-nums">{pps > 0 ? `$${pps.toFixed(4)}` : "—"}</TD>
+                                          <TD className="text-slate-500 tabular-nums">{o.costBasis ? fmt(o.costBasis) : "—"}</TD>
                                           <TD className={`tabular-nums font-medium ${iv > 0 ? "text-emerald-400" : "text-slate-600"}`}>{iv > 0 ? fmt(iv) : "—"}</TD>
                                           <td className="py-2 px-3" onClick={e => e.stopPropagation()}>
                                             {isEditing ? (
@@ -1134,6 +1139,7 @@ export default function Dashboard() {
                                           </td>
                                           <TD className="text-rose-400 tabular-nums font-medium">{tv > 0 ? fmt(tv) : "—"}</TD>
                                           <TD className="text-slate-200 tabular-nums font-semibold">{tot > 0 ? fmt(tot) : "—"}</TD>
+                                          <TD className="tabular-nums">{(() => { const m = o.costBasis && tot > 0 ? tot / o.costBasis : null; return m ? <span style={{ color: m >= 1 ? "#10B981" : "#EF4444" }}>{m.toFixed(2)}×</span> : <span className="text-slate-600">—</span>; })()}</TD>
                                           <TD className="text-slate-500">{o.expirationDate ?? <span className="text-emerald-500/60 text-[10px]">No expiry</span>}</TD>
                                         </tr>
                                         {isOpen && o.notes && (
@@ -1150,10 +1156,12 @@ export default function Dashboard() {
                                   <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                     <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                                     <td /><td /><td /><td />
+                                    <td className="py-2 px-3 text-xs text-slate-500 tabular-nums font-semibold">{grandBasis > 0 ? fmt(grandBasis) : "—"}</td>
                                     <td className="py-2 px-3 text-xs tabular-nums font-semibold text-emerald-400">{grandIntrinsic > 0 ? fmt(grandIntrinsic) : "—"}</td>
                                     <td />
                                     <td className="py-2 px-3 text-xs text-rose-400 tabular-nums font-semibold">{grandTime > 0 ? fmt(grandTime) : "—"}</td>
                                     <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{grandTotal > 0 ? fmt(grandTotal) : "—"}</td>
+                                    <td className="py-2 px-3 text-xs tabular-nums font-semibold">{grandMoic !== null ? <span style={{ color: grandMoic >= 1 ? "#10B981" : "#EF4444" }}>{grandMoic.toFixed(2)}×</span> : "—"}</td>
                                     <td />
                                   </tr>
                                 </tbody>

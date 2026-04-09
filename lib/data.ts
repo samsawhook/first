@@ -48,7 +48,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Full-journey transaction advisory and consulting boutique",
     description:
       "Boutique transaction advisory and consulting firm helping founders and families navigate liquidity events, estate planning, and capital allocation with radical alignment.",
-    invested: 0,             // actual cost basis unknown
+    invested: 1,             // nominal $1 founders consideration
     currentValue: 246_542,   // 7,023,990 / 90,000,000 × $3,156,849 implied
     ownership: 7.8,          // 7,023,990 ÷ 90,000,000 adj FD (Pulley 4/9/26)
     votingOwnership: 17.6,   // 7,023,990 ÷ 40,000,000 common (RSUs non-voting until settled)
@@ -160,7 +160,7 @@ export const portfolio: PortfolioCompany[] = [
       ],
     } satisfies CapTableSummary,
     shareTransactions: [
-      { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 0, certificateNumber: "CS-01" },
+      { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 1, certificateNumber: "CS-01" },
     ] satisfies ShareTransaction[],
     news: [
       {
@@ -202,7 +202,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Modern packaging for modern commerce",
     description:
       "Design-led packaging sourcing and fulfillment partner for DTC brands and eCommerce operators. Turns packaging from cost center to brand asset.",
-    invested: 0,             // actual cost basis unknown
+    invested: 1,             // nominal $1 founders consideration
     currentValue: 326_526,   // 6,530,527 shares × est. $0.05/share
     ownership: 8.3,          // 6,530,527 ÷ 78,350,000 fully diluted (Pulley 4/9/26)
     stage: "Pre-Series A",
@@ -246,7 +246,7 @@ export const portfolio: PortfolioCompany[] = [
       ],
     } satisfies CapTableSummary,
     shareTransactions: [
-      { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 0, certificateNumber: "CS-02" },
+      { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 1, certificateNumber: "CS-02" },
     ] satisfies ShareTransaction[],
     news: [
       { source: "LinkedIn", date: "2024", headline: "Merchant Boxes partners with Qwik Tape for factory-direct pricing", snippet: "Merchant Boxes formalized a partnership with Qwik Tape, enabling factory-direct pricing on all Qwik Tape products.", url: "https://www.linkedin.com/company/merchant-boxes" },
@@ -343,7 +343,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Modern same-day delivery infrastructure for local commerce",
     description:
       "Pigeon Service (fka CERTD) builds last-mile delivery infrastructure for local businesses, enabling same-day and scheduled delivery without the complexity of managing a fleet.",
-    invested: 0,             // actual cost basis unknown
+    invested: 1,             // nominal $1 founders consideration
     currentValue: 174_027,   // 4,350,663 shares × est. $0.04/share
     ownership: 14.3,         // 4,350,663 ÷ 30,423,657
     stage: "Seed",
@@ -358,7 +358,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "/logos/pigeon.png",
     accentColor: "#10B981",
     shareTransactions: [
-      { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 0, certificateNumber: "CS-03" },
+      { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 1, certificateNumber: "CS-03" },
     ] satisfies ShareTransaction[],
   },
   {
@@ -370,7 +370,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Audio production for ambitious brands",
     description:
       "Full-service podcast and audio production studio. Audily handles strategy, recording, editing, and distribution for B2B brands that want to own their category conversation.",
-    invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
+    invested: 36_838,     // 9,500,000 shares @ $36,837 (95/245 × $95K) + 7,037,717 shares @ $1
     currentValue: 496_132,   // 16,537,717 shares × est. $0.03/share
     ownership: 13.5,         // 16,537,717 ÷ 122,438,000 (adj FD ex-pool)
     stage: "Seed",
@@ -445,7 +445,8 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Q4'25", cash:  48_804, totalCurrentAssets: 386_603, totalAssets:   912_213, totalCurrentLiabilities: 298_319, totalLiabilities: 633_669, totalEquity:  278_544 },
     ] satisfies BalanceSheetSnapshot[],
     shareTransactions: [
-      { date: "Sep 2021", type: "Common", shares: 16_537_717, amount: 0, certificateNumber: "CS-04" },
+      { date: "Sep 2021", type: "Common", shares: 9_500_000, amount: 36_837, certificateNumber: "CS-04", notes: "95/245 × $95K deal (options + equity)" },
+      { date: "Sep 2021", type: "Common", shares: 7_037_717, amount: 1,      certificateNumber: "CS-04", notes: "Nominal $1 founders consideration" },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "audily-pref-a", date: "Dec 2024", instrument: "Preferred", principal: 115_000,
@@ -463,6 +464,7 @@ export const portfolio: PortfolioCompany[] = [
         instrument: "Option",
         shares: 15_000_000,
         strikePrice: 0.01,
+        costBasis: 58_163,   // 150/245 × $95K
         defaultVariancePct: 100,
         notes: "Option to purchase 15,000,000 shares of Audily common stock at $0.01/share. No expiration date — exercisable in perpetuity.",
       },
@@ -563,7 +565,7 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Niche tech talent for high-growth teams",
     description:
       "Specialized recruiting firm placing senior engineers, product managers, and data professionals at venture-backed companies. Known for speed and signal-to-noise.",
-    invested: 0,          // equity cost basis unknown; debt tracked in debtPositions
+    invested: 1,          // nominal $1 founders consideration
     currentValue: 138_516,   // 4,617,214 shares × $0.03/share (2024 409A per-share)
     ownership: 5.7,          // 4,617,214 ÷ 81,000,000 adj FD (Pulley 4/9/26)
     votingOwnership: 14.9,   // 4,617,214 ÷ 31,000,000 common (RSUs non-voting until settled)
@@ -606,7 +608,7 @@ export const portfolio: PortfolioCompany[] = [
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
     accentColor: "#EC4899",
     shareTransactions: [
-      { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 0, certificateNumber: "CS-05" },
+      { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 1, certificateNumber: "CS-05" },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "sbr2th-note-1", date: "UNK", instrument: "Term Loan", principal: 25_000,
