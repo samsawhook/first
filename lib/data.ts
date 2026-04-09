@@ -405,7 +405,7 @@ export const managedFundPositions: ManagedFundPosition[] = [];
 export const letters: Letter[] = [
   {
     id: "annual-2022",
-    title: "nth Venture 2022 Annual Letter",
+    title: "nth Venture First Annual Letter",
     date: "August 2023",
     period: "FY 2022",
     type: "annual",
