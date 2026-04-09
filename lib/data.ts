@@ -351,7 +351,7 @@ export const portfolio: PortfolioCompany[] = [
     impliedValuation: 1_216_946,  // est. $0.04/share × 30,423,657 total shares
     totalShares: 30_423_657,
     website: "https://pigeonservice.com",
-    logoUrl: "https://logo.clearbit.com/pigeonservice.com",
+    logoUrl: "/logos/pigeon.png",
     accentColor: "#10B981",
     shareTransactions: [
       { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 0, certificateNumber: "CS-03" },
