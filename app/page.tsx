@@ -450,7 +450,7 @@ export default function Dashboard() {
                 <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
                   {[
                     { label: isLpView ? "My Portfolio Value" : "Portfolio Value", value: fmt(displayTotal),                             accent: "#10B981" },
-                    { label: isLpView ? "My NAV Share"       : "NAV (Audited)",   value: fmt(fund.nav * lpMultiplier),                   accent: "#10B981" },
+                    { label: "MOIC", value: LP_TOTAL_UNITS > 0 ? `${(donutTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: donutTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
                     { label: isLpView ? "My LP Basis"        : "LP Basis",        value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
                     { label: "Cash & Equiv.",                                      value: cashBasis > 0 ? fmt(cashBasis * lpMultiplier) : "—", accent: cashBasis > 0 ? "#06B6D4" : null },
                     { label: "Active Co's",                                        value: String(portfolio.filter(c => c.status === "active").length), accent: null },
