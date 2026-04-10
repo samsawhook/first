@@ -173,9 +173,8 @@ export default function Dashboard() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed", "cash"]));
-  const [lpCurrentUnits, setLpCurrentUnits] = useState<string>("");
-  const [lpNewUnits, setLpNewUnits]         = useState<string>("");
-  const [lpViewMode, setLpViewMode]         = useState<"fund" | "current" | "new">("fund");
+  const [lpCurrentUnits, setLpCurrentUnits] = useState<string>("100000");
+  const [lpViewMode, setLpViewMode]         = useState<"fund" | "current">("current");
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -345,12 +344,8 @@ export default function Dashboard() {
             {(() => {
               // ── LP multiplier — compute first so displayItems can use it ────────────
               const lpCurrent    = parseFloat(lpCurrentUnits) || 0;
-              const lpNew        = parseFloat(lpNewUnits) || 0;
               const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
-              const lpNewPct     = lpNew > 0 ? lpNew / (LP_TOTAL_UNITS + lpNew) : 0;
-              const lpMultiplier =
-                lpViewMode === "current" && lpCurrentPct > 0 ? lpCurrentPct :
-                lpViewMode === "new"     && lpNewPct > 0     ? lpNewPct     : 1;
+              const lpMultiplier = lpViewMode === "current" && lpCurrentPct > 0 ? lpCurrentPct : 1;
               const isLpView = lpMultiplier < 1;
 
               // ── Donut: total exposure per company (equity + debt + options) + managed ─
@@ -374,10 +369,6 @@ export default function Dashboard() {
                 ...(() => {
                   const nav = managedFundPositions.reduce((s, p) => s + p.nav, 0);
                   return nav > 0 ? [{ label: "Managed Funds", value: nav, color: "#EC4899", id: "managed" }] : [];
-                })(),
-                ...(() => {
-                  const cash = cashPositions.reduce((s, p) => s + p.balance, 0);
-                  return cash > 0 ? [{ label: "Cash & Equiv.", value: cash, color: "#06B6D4", id: "cash" }] : [];
                 })(),
               ];
               const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
@@ -432,16 +423,20 @@ export default function Dashboard() {
                   return s + intrinsic + timeVal;
                 }, 0);
               }, 0);
-              const cashBasis  = cashPositions.reduce((s, p) => s + p.balance, 0);
-              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis + cashBasis;
+              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis;
               const allocTypes = [
                 { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis   / allocTotal : 0 },
                 { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis   / allocTotal : 0 },
                 { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis  / allocTotal : 0 },
                 { label: "Options",       amount: optionsBasis, color: "#F43F5E", pct: allocTotal > 0 ? optionsBasis  / allocTotal : 0 },
                 { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis  / allocTotal : 0 },
-                { label: "Cash & Equiv.", amount: cashBasis,    color: "#06B6D4", pct: allocTotal > 0 ? cashBasis     / allocTotal : 0 },
               ];
+              // Total positions count across all instrument types
+              const totalPositions =
+                portfolio.filter(c => c.status === "active" && (c.shareTransactions ?? []).some(t => t.type === "Common")).length +
+                portfolio.reduce((s, c) => s + (c.debtPositions ?? []).length, 0) +
+                portfolio.reduce((s, c) => s + (c.optionPositions ?? []).length, 0) +
+                managedFundPositions.length;
 
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
@@ -452,8 +447,8 @@ export default function Dashboard() {
                     { label: isLpView ? "My Portfolio Value" : "Portfolio Value", value: fmt(displayTotal),                             accent: "#10B981" },
                     { label: "MOIC", value: LP_TOTAL_UNITS > 0 ? `${(donutTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: donutTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
                     { label: isLpView ? "My LP Basis"        : "LP Basis",        value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
-                    { label: "Cash & Equiv.",                                      value: cashBasis > 0 ? fmt(cashBasis * lpMultiplier) : "—", accent: cashBasis > 0 ? "#06B6D4" : null },
-                    { label: "Active Co's",                                        value: String(portfolio.filter(c => c.status === "active").length), accent: null },
+                    { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
+                    { label: "Positions",  value: String(totalPositions), accent: null },
                   ].map(({ label, value, accent }) => (
                     <div key={label} className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D] last:border-r-0">
                       <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{label}</p>
@@ -469,16 +464,14 @@ export default function Dashboard() {
 
                     {/* View mode pills */}
                     <div className="flex items-center gap-1">
-                      {([["fund","Fund Total"],["current","My Share"],["new","Pro Forma"]] as const).map(([mode, label]) => (
+                      {([["fund","Fund Total"],["current","My Share"]] as const).map(([mode, label]) => (
                         <button
                           key={mode}
                           onClick={() => setLpViewMode(mode)}
-                          disabled={mode === "current" && lpCurrent === 0 || mode === "new" && lpNew === 0}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${
                             lpViewMode === mode
                               ? mode === "fund" ? "bg-slate-700 text-slate-200"
-                                : mode === "current" ? "bg-emerald-600/30 text-emerald-400 ring-1 ring-emerald-500/40"
-                                : "bg-violet-600/30 text-violet-400 ring-1 ring-violet-500/40"
+                                : "bg-emerald-600/30 text-emerald-400 ring-1 ring-emerald-500/40"
                               : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
                           }`}
                         >
@@ -487,31 +480,19 @@ export default function Dashboard() {
                       ))}
                     </div>
 
-                    {/* Current units input */}
+                    {/* Units input */}
                     <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-slate-500 whitespace-nowrap">Current units</label>
+                      <label className="text-[10px] text-slate-500 whitespace-nowrap">My units</label>
                       <input
-                        type="number" min={0} placeholder="e.g. 10000"
+                        type="number" min={0} placeholder="e.g. 100000"
                         value={lpCurrentUnits}
                         onChange={e => { setLpCurrentUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("current"); }}
                         className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}%</span>}
+                      {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}% of fund · $1.00/unit</span>}
                     </div>
 
-                    {/* Hypothetical new units input */}
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-slate-500 whitespace-nowrap">Hypothetical new</label>
-                      <input
-                        type="number" min={0} placeholder="units to add"
-                        value={lpNewUnits}
-                        onChange={e => { setLpNewUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("new"); }}
-                        className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      {lpNew > 0 && <span className="text-[10px] text-violet-500/80 tabular-nums">{(lpNewPct * 100).toFixed(2)}%</span>}
-                    </div>
-
-                    <span className="text-[10px] text-slate-700 hidden md:inline">{LP_TOTAL_UNITS.toLocaleString()} units outstanding · $1.00 par</span>
+                    <span className="text-[10px] text-slate-700 hidden md:inline">{LP_TOTAL_UNITS.toLocaleString()} units outstanding</span>
                   </div>
                 </div>
 
