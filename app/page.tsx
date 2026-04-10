@@ -430,7 +430,7 @@ export default function Dashboard() {
                   return s + intrinsic + timeVal;
                 }, 0);
               }, 0);
-              const cashBasis   = cashPositions.reduce((s, cp) => s + cp.balance, 0);
+              const cashBasis   = cashPositions.reduce((s, cp) => s + cp.balance, 0) + lpHypo;
               const allocTotal  = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis + cashBasis;
               const allocTypes = [
                 { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis   / allocTotal : 0 },
