@@ -433,13 +433,15 @@ export default function Dashboard() {
                   return s + intrinsic + timeVal;
                 }, 0);
               }, 0);
-              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis;
+              const cashBasis   = cashPositions.reduce((s, cp) => s + cp.balance, 0);
+              const allocTotal  = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis + cashBasis;
               const allocTypes = [
                 { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis   / allocTotal : 0 },
                 { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis   / allocTotal : 0 },
                 { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis  / allocTotal : 0 },
                 { label: "Options",       amount: optionsBasis, color: "#F43F5E", pct: allocTotal > 0 ? optionsBasis  / allocTotal : 0 },
                 { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis  / allocTotal : 0 },
+                { label: "Cash",          amount: cashBasis,    color: "#60A5FA", pct: allocTotal > 0 ? cashBasis     / allocTotal : 0 },
               ];
               // Total positions count across all instrument types
               const totalPositions =
@@ -468,14 +470,17 @@ export default function Dashboard() {
                       {moicDenom > 0 ? `${(netTotal / moicDenom).toFixed(2)}×` : "—"}
                     </p>
                   </div>
-                  {/* LP Basis — shows fraction in My Share mode */}
+                  {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
                     <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isLpView ? "My LP Basis" : "LP Basis"}</p>
                     <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{isLpView ? fmt(lpHypoTotal) : fmt(LP_TOTAL_UNITS)}</p>
                     {isLpView && (
-                      <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">
-                        {lpHypoTotal.toLocaleString()} / {lpHypoDenom.toLocaleString()} = {(lpHypoPct * 100).toFixed(2)}%
-                      </p>
+                      <>
+                        <p className="text-base font-bold tabular-nums mt-0.5" style={{ color: "#34D399" }}>{(lpHypoPct * 100).toFixed(2)}%</p>
+                        <p className="text-[9px] tabular-nums mt-0.5" style={{ color: "#6EE7B7" }}>
+                          {lpHypoTotal.toLocaleString()} / {lpHypoDenom.toLocaleString()}
+                        </p>
+                      </>
                     )}
                   </div>
                   {[
@@ -522,7 +527,6 @@ export default function Dashboard() {
                         onChange={e => { setLpCurrentUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("current"); }}
                         className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}% of fund</span>}
                     </div>
                     )}
 
@@ -536,11 +540,6 @@ export default function Dashboard() {
                           onChange={e => setLpHypotheticalUnits(e.target.value)}
                           className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        {lpHypo > 0 && (
-                          <span className="text-[10px] text-sky-400/80 tabular-nums">
-                            {fmt(netTotal * lpHypoPct)} total
-                          </span>
-                        )}
                       </div>
                     )}
 
@@ -706,9 +705,9 @@ export default function Dashboard() {
                     })()}
                   </div>
 
-                  {/* ③ Allocation by security type */}
+                  {/* ③ Assets by type */}
                   <div className="p-5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">By Security Type <span className="normal-case text-slate-700">(est. value / principal)</span></p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Assets</p>
                     <div className="space-y-3">
                       {allocTypes.map(t => (
                         <div key={t.label}>
@@ -734,53 +733,46 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ④ Fund Structure — waterfall */}
+                  {/* ④ Fund Structure — vertical column chart */}
                   <div className="p-5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Fund Structure</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Fund Structure</p>
                     {(() => {
-                      const grossAssets  = donutTotal;
-                      const leverage     = FUND_LEVERAGE;
-                      const nav          = netTotal;
-                      const lpBasis      = lpHypoDenom;          // total units outstanding at $1
-                      const myBasis      = isLpView ? lpHypoTotal : null;
-                      const myNav        = isLpView ? displayTotal : null;
-
-                      const rows: { label: string; value: number; displayValue: number; color: string; isDeduction?: boolean; dim?: boolean }[] = [
-                        { label: "Gross Assets",  value: grossAssets,       displayValue: grossAssets * lpMultiplier,  color: "#10B981" },
-                        { label: "Leverage",      value: leverage,           displayValue: leverage * lpMultiplier,     color: "#F87171", isDeduction: true },
-                        { label: "Net NAV",       value: nav,                displayValue: nav * lpMultiplier,          color: "#38BDF8" },
-                        { label: "Fund LP Basis", value: lpBasis,            displayValue: lpBasis * lpMultiplier,      color: "#8B5CF6", dim: true },
-                        ...(myBasis !== null ? [
-                          { label: "My Basis",    value: myBasis,            displayValue: myBasis,                     color: "#A78BFA" },
-                          { label: "My NAV Est.", value: myNav ?? 0,         displayValue: myNav ?? 0,                  color: "#34D399" },
-                        ] : []),
-                        ...(lpHypo > 0 ? [
-                          { label: "New Capital", value: lpHypo,             displayValue: lpHypo * lpMultiplier,       color: "#60A5FA" },
-                        ] : []),
+                      const cols = isLpView ? [
+                        { label: "Assets",    val: donutTotal * lpMultiplier,    color: "#10B981" },
+                        { label: "Leverage",  val: FUND_LEVERAGE * lpMultiplier, color: "#F87171" },
+                        { label: "NAV",       val: netTotal * lpMultiplier,      color: "#38BDF8" },
+                        { label: "My Basis",  val: lpHypoTotal,                  color: "#A78BFA" },
+                        { label: "My NAV",    val: displayTotal,                 color: "#34D399" },
+                      ] : [
+                        { label: "Assets",    val: donutTotal,    color: "#10B981" },
+                        { label: "Leverage",  val: FUND_LEVERAGE, color: "#F87171" },
+                        { label: "NAV",       val: netTotal,      color: "#38BDF8" },
+                        { label: "LP Basis",  val: LP_TOTAL_UNITS, color: "#8B5CF6" },
                       ];
-
-                      const maxVal = Math.max(...rows.map(r => r.value), 1);
-
+                      const maxVal = Math.max(...cols.map(c => c.val), 1);
+                      const W3 = 280; const H3 = 130;
+                      const PAD3 = { t: 18, r: 6, b: 28, l: 6 };
+                      const cW3 = W3 - PAD3.l - PAD3.r;
+                      const cH3 = H3 - PAD3.t - PAD3.b;
+                      const n3 = cols.length;
+                      const gap3 = 8;
+                      const bW3 = (cW3 - gap3 * (n3 - 1)) / n3;
+                      const fmtS = (v: number) => v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${Math.round(v)}`;
                       return (
-                        <div className="space-y-2.5">
-                          {rows.map(r => (
-                            <div key={r.label}>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className={`text-[9px] ${r.dim ? "text-slate-600" : "text-slate-400"}`}>{r.label}</span>
-                                <span className={`text-[9px] tabular-nums font-medium ${r.isDeduction ? "text-red-400" : r.dim ? "text-slate-600" : "text-slate-300"}`}>
-                                  {r.isDeduction ? "-" : ""}{fmt(r.displayValue)}
-                                </span>
-                              </div>
-                              <div className="relative h-1.5 bg-[#0A1628] rounded-full overflow-hidden">
-                                <div className="absolute inset-y-0 left-0 rounded-full"
-                                  style={{ width: `${Math.min((r.value / maxVal) * 100, 100)}%`, backgroundColor: r.color, opacity: r.dim ? 0.35 : 0.7 }} />
-                              </div>
-                            </div>
-                          ))}
-                          {lpHypo > 0 && (
-                            <p className="text-[9px] text-sky-500/70 pt-1">+{fmt(lpHypo)} new capital included in assets &amp; NAV</p>
-                          )}
-                        </div>
+                        <svg width="100%" viewBox={`0 0 ${W3} ${H3}`} preserveAspectRatio="xMidYMid meet">
+                          {cols.map((c, i) => {
+                            const x = PAD3.l + i * (bW3 + gap3);
+                            const bh = (c.val / maxVal) * cH3;
+                            const y  = PAD3.t + cH3 - bh;
+                            return (
+                              <g key={c.label}>
+                                <rect x={x} y={y} width={bW3} height={bh} fill={c.color} opacity="0.75" rx="2" />
+                                <text x={x + bW3 / 2} y={y - 3} textAnchor="middle" style={{ fontSize: 7, fill: c.color, fontWeight: 600 }}>{fmtS(c.val)}</text>
+                                <text x={x + bW3 / 2} y={H3 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{c.label}</text>
+                              </g>
+                            );
+                          })}
+                        </svg>
                       );
                     })()}
                   </div>
