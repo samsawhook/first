@@ -176,9 +176,6 @@ export default function Dashboard() {
   const [lpCurrentUnits, setLpCurrentUnits]           = useState<string>("100000");
   const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("fund");
   const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
-  const [selectedFinCoId, setSelectedFinCoId]         = useState<string>(() =>
-    portfolio.find(c => c.status === "active" && (c.financialHistory?.length ?? 0) > 0)?.id ?? ""
-  );
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -529,18 +526,16 @@ export default function Dashboard() {
                     </div>
                     )}
 
-                    {/* Add exposure — only in My Share mode */}
-                    {isLpView && (
-                      <div className="flex items-center gap-2">
-                        <label className="text-[10px] text-slate-500 whitespace-nowrap">+ add exposure</label>
-                        <input
-                          type="number" min={0} placeholder="units"
-                          value={lpHypotheticalUnits}
-                          onChange={e => setLpHypotheticalUnits(e.target.value)}
-                          className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                      </div>
-                    )}
+                    {/* Add exposure — always shown; adds cash to fund assets */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] text-slate-500 whitespace-nowrap">+ add exposure</label>
+                      <input
+                        type="number" min={0} placeholder="units"
+                        value={lpHypotheticalUnits}
+                        onChange={e => setLpHypotheticalUnits(e.target.value)}
+                        className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
 
                     <span className="text-[10px] text-slate-600 hidden md:inline">
                       {lpHypo > 0 ? lpHypoDenom.toLocaleString() : LP_TOTAL_UNITS.toLocaleString()} units outstanding · $1.00/unit
@@ -548,11 +543,11 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* ── Four charts — 2×2 grid ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2">
+                {/* ── Three charts ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
 
                   {/* ① Company allocation donut */}
-                  <div className="p-5 border-b border-r-0 sm:border-r border-[#1E2D3D]">
+                  <div className="p-5">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
                     <div className="flex items-center gap-5">
                       <svg width="160" height="160" viewBox="0 0 160 160" className="shrink-0">
@@ -587,125 +582,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ② Annual Revenue & Earnings — interactive company selector */}
-                  <div className="p-5 border-b border-[#1E2D3D]">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Annual Revenue &amp; Earnings</p>
-                    {(() => {
-                      // Companies with financial history
-                      const finCos = portfolio.filter(c => c.status === "active" && (c.financialHistory?.length ?? 0) > 0);
-                      if (finCos.length === 0) return (
-                        <div className="flex items-center justify-center h-24 border border-dashed border-[#1E2D3D] rounded-lg">
-                          <p className="text-[10px] text-slate-600 italic">No financial history available</p>
-                        </div>
-                      );
-                      const selCo = finCos.find(c => c.id === selectedFinCoId) ?? finCos[0];
 
-                      // Aggregate financialHistory → annual summaries
-                      // Prefer explicit annual periods; otherwise sum monthly by year
-                      const fh = selCo.financialHistory ?? [];
-                      const annualPeriods = fh.filter(p => p.periodType === "annual");
-                      const annuals: { year: string; revenue: number; ebitda: number }[] = annualPeriods.length > 0
-                        ? annualPeriods.map(p => ({ year: p.period.replace("FY ", ""), revenue: p.revenue, ebitda: p.ebitda }))
-                        : (() => {
-                            const byYear: Record<string, { revenue: number; ebitda: number; count: number }> = {};
-                            for (const p of fh) {
-                              if (p.periodType === "quarterly") continue; // skip quarterly to avoid double-count
-                              const m = p.period.match(/\b(20\d{2})\b/);
-                              if (!m) continue;
-                              const yr = m[1];
-                              if (!byYear[yr]) byYear[yr] = { revenue: 0, ebitda: 0, count: 0 };
-                              byYear[yr].revenue += p.revenue;
-                              byYear[yr].ebitda  += p.ebitda;
-                              byYear[yr].count++;
-                            }
-                            return Object.entries(byYear)
-                              .sort(([a], [b]) => a.localeCompare(b))
-                              .map(([yr, v]) => ({ year: yr, revenue: v.revenue, ebitda: v.ebitda }));
-                          })();
-
-                      if (annuals.length === 0) return (
-                        <p className="text-[10px] text-slate-600 italic mt-2">No annual data for {selCo.name}</p>
-                      );
-
-                      // SVG grouped bar chart
-                      const W2 = 340; const H2 = 120; const PAD2 = { t: 8, r: 8, b: 24, l: 48 };
-                      const cW = W2 - PAD2.l - PAD2.r;
-                      const cH = H2 - PAD2.t - PAD2.b;
-                      const maxRev = Math.max(...annuals.map(a => a.revenue), 1);
-                      const minEbitda = Math.min(...annuals.map(a => a.ebitda), 0);
-                      const maxEbitda = Math.max(...annuals.map(a => a.ebitda), 1);
-                      const yMin = Math.min(0, minEbitda * 1.15);
-                      const yMax = maxRev * 1.1;
-                      const yRange = yMax - yMin;
-                      const yS2 = (v: number) => PAD2.t + cH - ((v - yMin) / yRange) * cH;
-                      const zero = yS2(0);
-                      const n = annuals.length;
-                      const groupW = cW / n;
-                      const barW = Math.min(groupW * 0.35, 18);
-                      const fmtK = (v: number) => Math.abs(v) >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : Math.abs(v) >= 1000 ? `${(v/1000).toFixed(0)}K` : String(Math.round(v));
-                      const yTicks2 = [yMin, yMin + yRange * 0.25, yMin + yRange * 0.5, yMin + yRange * 0.75, yMax];
-
-                      return (
-                        <div>
-                          {/* Company pills */}
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {finCos.map(c => (
-                              <button key={c.id}
-                                onClick={() => setSelectedFinCoId(c.id)}
-                                className={`px-2 py-0.5 rounded text-[9px] font-medium transition-colors ${
-                                  c.id === selCo.id
-                                    ? "text-slate-100 ring-1"
-                                    : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
-                                }`}
-                                style={c.id === selCo.id ? { backgroundColor: selCo.accentColor + "30", color: selCo.accentColor, outline: `1px solid ${selCo.accentColor}60` } : {}}
-                              >
-                                {c.name}
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Bar chart */}
-                          <svg width="100%" viewBox={`0 0 ${W2} ${H2}`} preserveAspectRatio="xMidYMid meet">
-                            {/* Y-axis ticks */}
-                            {yTicks2.map((v, i) => (
-                              <g key={i}>
-                                <line x1={PAD2.l} y1={yS2(v)} x2={W2 - PAD2.r} y2={yS2(v)} stroke="#1E2D3D" strokeWidth="0.5" />
-                                <text x={PAD2.l - 3} y={yS2(v) + 3} textAnchor="end" style={{ fontSize: 7, fill: "#475569" }}>{fmtK(v)}</text>
-                              </g>
-                            ))}
-                            {/* Zero line */}
-                            <line x1={PAD2.l} y1={zero} x2={W2 - PAD2.r} y2={zero} stroke="#334155" strokeWidth="1" />
-                            {/* Bars */}
-                            {annuals.map((a, i) => {
-                              const cx = PAD2.l + groupW * i + groupW / 2;
-                              const revH = Math.abs(yS2(a.revenue) - yS2(0));
-                              const ebH  = Math.abs(yS2(a.ebitda) - yS2(0));
-                              const ebY  = a.ebitda >= 0 ? yS2(a.ebitda) : zero;
-                              return (
-                                <g key={a.year}>
-                                  {/* Revenue bar */}
-                                  <rect x={cx - barW - 1} y={yS2(a.revenue)} width={barW} height={revH} fill="#3B82F6" opacity="0.7" rx="1" />
-                                  {/* EBITDA bar */}
-                                  <rect x={cx + 1} y={ebY} width={barW} height={ebH} fill={a.ebitda >= 0 ? "#10B981" : "#F87171"} opacity="0.8" rx="1" />
-                                  {/* X label */}
-                                  <text x={cx} y={H2 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{a.year}</text>
-                                </g>
-                              );
-                            })}
-                          </svg>
-
-                          {/* Legend */}
-                          <div className="flex items-center gap-4 mt-1">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-blue-500/70" /><span className="text-[9px] text-slate-600">Revenue</span></div>
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-emerald-500/80" /><span className="text-[9px] text-slate-600">EBITDA</span></div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* ③ Assets by type */}
-                  <div className="p-5 border-r-0 sm:border-r border-[#1E2D3D]">
+                  {/* ② Assets by type */}
+                  <div className="p-5">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Assets</p>
                     <div className="space-y-3">
                       {allocTypes.map(t => (
@@ -732,7 +611,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ④ Fund Structure — vertical column chart */}
+                  {/* ③ Fund Structure — vertical column chart */}
                   <div className="p-5">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Fund Structure</p>
                     {(() => {
