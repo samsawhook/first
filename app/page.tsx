@@ -547,7 +547,7 @@ export default function Dashboard() {
                     )}
 
                     <span className="text-[10px] text-slate-600 hidden md:inline">
-                      {lpHypo > 0 ? lpHypoDenom.toLocaleString() : LP_TOTAL_UNITS.toLocaleString()} units outstanding · $1.00/unit (current price, not par)
+                      {lpHypo > 0 ? lpHypoDenom.toLocaleString() : LP_TOTAL_UNITS.toLocaleString()} units outstanding · $1.00/unit
                     </span>
                   </div>
                 </div>
