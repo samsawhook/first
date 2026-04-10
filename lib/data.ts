@@ -717,21 +717,36 @@ export const portfolio: PortfolioCompany[] = [
     tagline: "Intelligent compute orchestration for AI workloads",
     description:
       "Galileo Computing (fka PRreact) provides infrastructure orchestration for AI/ML teams — dynamically routing workloads across GPU clusters to minimize cost and latency. Trusted by ML teams at Series A–C companies.",
-    invested: 0,
-    currentValue: 0,
-    ownership: 0,
+    invested: 1,             // nominal $1 founders consideration
+    currentValue: 2_160,     // 125,000 shares × ($1,400,000 / 81,000,000 FD)
+    ownership: 0.15,         // 125,000 ÷ 81,000,000 FD
+    votingOwnership: 0.40,   // 125,000 ÷ 31,000,000 common outstanding
     stage: "Seed",
     founded: 2023,
     employees: 0,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_400_000,  // est. $0.05/share × 28,000,000 total shares (TBD)
-    totalShares: 28_000_000,
+    impliedValuation: 1_400_000,  // placeholder — no customPricePerShare set yet
+    totalShares: 81_000_000,      // 31M common + 0 RSUs (all cancelled) + 50M unissued pool
+    financialsAsOf: "4/10/26",
     website: "https://galileocomputing.com",
     logoUrl: "/logos/galileo.webp",
     accentColor: "#6366F1",
+    capTable: {
+      asOf: "April 10, 2026",
+      source: "Pulley",
+      authorizedCommon: 100_000_000,
+      adjustedFullyDiluted: 81_000_000,
+      classes: [
+        { label: "Common Stock",     shares: 31_000_000, color: "#6366F1",
+          note: "nth venture inc. 87.9% (27.25M) · Co-Owner Fund 0.40% (125K, CS-22) · $48,750 total contribution" },
+        { label: "Unissued Pool",    shares: 50_000_000, color: "#1E2D3D",
+          note: "2022 Incentive Award Plan · 5 RSU grants all cancelled/forfeited · fully available", isPool: true },
+      ],
+    } satisfies CapTableSummary,
     shareTransactions: [
-      // Share count not yet confirmed in fund cap table records
+      { date: "UNK", type: "Common", shares: 125_000, amount: 1, certificateNumber: "CS-22",
+        notes: "0.40% of common outstanding (125,000 ÷ 31,000,000)" },
     ] satisfies ShareTransaction[],
   },
 ];
