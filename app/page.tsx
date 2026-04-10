@@ -465,7 +465,7 @@ export default function Dashboard() {
                   </div>
                   {[
                     { label: "MOIC",       value: LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
-                    { label: isLpView ? "My LP Basis" : "LP Basis", value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
+                    { label: isLpView ? "My LP Basis" : "LP Basis", value: isLpView ? fmt(lpHypoTotal) : fmt(LP_TOTAL_UNITS), accent: null },
                     { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                     { label: "Positions",  value: String(totalPositions), accent: null },
                   ].map(({ label, value, accent }) => (
