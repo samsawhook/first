@@ -383,7 +383,10 @@ export default function Dashboard() {
               // MOIC denominator expands when hypothetical units are outstanding
               const moicDenom   = lpHypoDenom;
               // Scaled display values — apply LP view multiplier to all dollar amounts
-              const displayItems     = donutItems.map(d => ({ ...d, value: d.value * lpMultiplier }));
+              const displayItems = [
+                ...donutItems.map(d => ({ ...d, value: d.value * lpMultiplier })),
+                ...(lpHypo > 0 ? [{ label: "To Deploy", value: lpHypo * lpMultiplier, color: "#94A3B8", id: "to-deploy" }] : []),
+              ];
               const displayItemsTotal = displayItems.reduce((s, d) => s + d.value, 0);
               const displayTotal     = netTotal * lpMultiplier;
 
@@ -551,7 +554,7 @@ export default function Dashboard() {
                             fill={a.color}
                             opacity={0.85}
                             className="cursor-pointer hover:opacity-100 transition-opacity"
-                            onClick={() => { if (a.id !== "managed") setActiveCompanyId(a.id); }}
+                            onClick={() => { if (a.id !== "to-deploy" && a.id !== "cash") setActiveCompanyId(a.id); }}
                           >
                             <title>{a.label}: {fmt(a.value)}</title>
                           </path>
@@ -563,7 +566,7 @@ export default function Dashboard() {
                         {displayItems.map(d => (
                           <button
                             key={d.id}
-                            onClick={() => { if (d.id !== "managed" && d.id !== "cash") setActiveCompanyId(d.id); }}
+                            onClick={() => { if (d.id !== "to-deploy" && d.id !== "cash") setActiveCompanyId(d.id); }}
                             className="flex items-center gap-2 group text-left"
                           >
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
