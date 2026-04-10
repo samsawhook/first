@@ -340,10 +340,29 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* ── Overview Hero ── */}
             {(() => {
-              // ── Donut data (by effective current value) ────────────────────────
-              const donutItems = portfolio
-                .filter(c => c.status === "active")
-                .map(c => ({ label: c.name, value: effectiveCurrVal(c), color: c.accentColor, id: c.id }));
+              // ── Donut: total exposure per company (equity + debt + options) + managed ─
+              const donutItems = [
+                ...portfolio
+                  .filter(c => c.status === "active")
+                  .map(c => {
+                    const pps = c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
+                    const sh  = (c.shareTransactions ?? []).filter(t => t.type === "Common")
+                                  .reduce((s, t) => s + (t.shares ?? 0), 0);
+                    const equityVal = pps > 0 && sh > 0 ? sh * pps : effectiveCurrVal(c);
+                    const debtVal   = (c.debtPositions  ?? []).reduce((s, d) => s + d.currentValue, 0);
+                    const optionVal = (c.optionPositions ?? []).reduce((s, o) => {
+                      const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
+                      const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
+                      return s + intrinsic + timeVal;
+                    }, 0);
+                    return { label: c.name, value: equityVal + debtVal + optionVal, color: c.accentColor, id: c.id };
+                  })
+                  .filter(d => d.value > 0),
+                ...(() => {
+                  const nav = managedFundPositions.reduce((s, p) => s + p.nav, 0);
+                  return nav > 0 ? [{ label: "Managed Funds", value: nav, color: "#EC4899", id: "managed" }] : [];
+                })(),
+              ];
               const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
 
               // Build SVG donut arcs
@@ -407,7 +426,7 @@ export default function Dashboard() {
                 {/* ── Metrics strip ── */}
                 <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
                   {[
-                    { label: "Portfolio Value", value: fmt(portfolio.filter(c => c.status === "active").reduce((s, c) => s + effectiveCurrVal(c), 0) + optionsBasis), accent: "#10B981" },
+                    { label: "Portfolio Value", value: fmt(donutTotal), accent: "#10B981" },
                     { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
                     { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
                     { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
@@ -436,7 +455,7 @@ export default function Dashboard() {
                             fill={a.color}
                             opacity={0.85}
                             className="cursor-pointer hover:opacity-100 transition-opacity"
-                            onClick={() => setActiveCompanyId(a.id)}
+                            onClick={() => { if (a.id !== "managed") setActiveCompanyId(a.id); }}
                           >
                             <title>{a.label}: {fmt(a.value)}</title>
                           </path>
@@ -448,7 +467,7 @@ export default function Dashboard() {
                         {donutItems.map(d => (
                           <button
                             key={d.id}
-                            onClick={() => setActiveCompanyId(d.id)}
+                            onClick={() => { if (d.id !== "managed") setActiveCompanyId(d.id); }}
                             className="flex items-center gap-2 group text-left"
                           >
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
