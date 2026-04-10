@@ -383,22 +383,22 @@ export default function Dashboard() {
                   const nav = managedFundPositions.reduce((s, p) => s + p.nav, 0);
                   return nav > 0 ? [{ label: "Managed Funds", value: nav, color: "#EC4899", id: "managed" }] : [];
                 })(),
-                // Hypothetical new capital sits as uninvested cash in the fund
-                ...(lpHypo > 0 ? [{ label: "New Capital", value: lpHypo, color: "#60A5FA", id: "hypo-cash" }] : []),
               ];
-              const donutTotal  = donutItems.reduce((s, d) => s + d.value, 0);
-              const netTotal    = donutTotal - FUND_LEVERAGE;              // gross minus fund debt
+              const baseDonutTotal = donutItems.reduce((s, d) => s + d.value, 0);
+              const grossTotal  = baseDonutTotal + lpHypo;          // includes hypothetical cash
+              const netTotal    = grossTotal - FUND_LEVERAGE;
               // MOIC denominator expands when hypothetical units are outstanding
-              const moicDenom   = lpHypoDenom;                             // LP_TOTAL_UNITS + lpHypo
+              const moicDenom   = lpHypoDenom;
               // Scaled display values — apply LP view multiplier to all dollar amounts
-              const displayItems = donutItems.map(d => ({ ...d, value: d.value * lpMultiplier }));
-              const displayTotal = netTotal * lpMultiplier;                // pro-rata LP share of net
+              const displayItems     = donutItems.map(d => ({ ...d, value: d.value * lpMultiplier }));
+              const displayItemsTotal = displayItems.reduce((s, d) => s + d.value, 0);
+              const displayTotal     = netTotal * lpMultiplier;
 
               // Build SVG donut arcs
               const cx = 80; const cy = 80; const R = 62; const r = 40;
               let angle = -Math.PI / 2;
               const arcs = displayItems.map(d => {
-                const sweep = (d.value / displayTotal) * 2 * Math.PI;
+                const sweep = (d.value / displayItemsTotal) * 2 * Math.PI;
                 const x1 = cx + R * Math.cos(angle); const y1 = cy + R * Math.sin(angle);
                 angle += sweep;
                 const x2 = cx + R * Math.cos(angle); const y2 = cy + R * Math.sin(angle);
@@ -454,21 +454,14 @@ export default function Dashboard() {
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
                 {/* Metrics strip */}
-                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
+                <div className={`grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
                   {/* Portfolio NAV Est. */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
                     <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio NAV Est.</p>
                     <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(displayTotal)}</p>
-                    <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(donutTotal * lpMultiplier)}</p>
+                    <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossTotal * lpMultiplier)}</p>
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
-                  </div>
-                  {/* MOIC */}
-                  <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
-                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">MOIC</p>
-                    <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: netTotal >= moicDenom ? "#10B981" : "#F87171" }}>
-                      {moicDenom > 0 ? `${(netTotal / moicDenom).toFixed(2)}×` : "—"}
-                    </p>
                   </div>
                   {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
@@ -483,15 +476,21 @@ export default function Dashboard() {
                       </>
                     )}
                   </div>
-                  {[
-                    { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
-                    { label: "Positions",  value: String(totalPositions), accent: null },
-                  ].map(({ label, value, accent }) => (
-                    <div key={label} className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D] last:border-r-0">
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{label}</p>
-                      <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: accent ?? "#e2e8f0" }}>{value}</p>
-                    </div>
-                  ))}
+                  {/* MOIC */}
+                  <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">MOIC</p>
+                    <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: netTotal >= moicDenom ? "#10B981" : "#F87171" }}>
+                      {moicDenom > 0 ? `${(netTotal / moicDenom).toFixed(2)}×` : "—"}
+                    </p>
+                  </div>
+                  {/* Active Co's & Positions — combined */}
+                  <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio</p>
+                    <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">
+                      {portfolio.filter(c => c.status === "active").length} <span className="text-xs font-normal text-slate-500">co's</span>
+                    </p>
+                    <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{totalPositions} positions</p>
+                  </div>
                 </div>
 
                 {/* ── LP Unit Calculator ── */}
@@ -549,11 +548,11 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* ── Four charts ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+                {/* ── Four charts — 2×2 grid ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2">
 
                   {/* ① Company allocation donut */}
-                  <div className="p-5">
+                  <div className="p-5 border-b border-r-0 sm:border-r border-[#1E2D3D]">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
                     <div className="flex items-center gap-5">
                       <svg width="160" height="160" viewBox="0 0 160 160" className="shrink-0">
@@ -589,7 +588,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* ② Annual Revenue & Earnings — interactive company selector */}
-                  <div className="p-5">
+                  <div className="p-5 border-b border-[#1E2D3D]">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Annual Revenue &amp; Earnings</p>
                     {(() => {
                       // Companies with financial history
@@ -706,7 +705,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* ③ Assets by type */}
-                  <div className="p-5">
+                  <div className="p-5 border-r-0 sm:border-r border-[#1E2D3D]">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Assets</p>
                     <div className="space-y-3">
                       {allocTypes.map(t => (
@@ -738,13 +737,13 @@ export default function Dashboard() {
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Fund Structure</p>
                     {(() => {
                       const cols = isLpView ? [
-                        { label: "Assets",    val: donutTotal * lpMultiplier,    color: "#10B981" },
+                        { label: "Assets",    val: grossTotal * lpMultiplier,    color: "#10B981" },
                         { label: "Leverage",  val: FUND_LEVERAGE * lpMultiplier, color: "#F87171" },
                         { label: "NAV",       val: netTotal * lpMultiplier,      color: "#38BDF8" },
                         { label: "My Basis",  val: lpHypoTotal,                  color: "#A78BFA" },
                         { label: "My NAV",    val: displayTotal,                 color: "#34D399" },
                       ] : [
-                        { label: "Assets",    val: donutTotal,    color: "#10B981" },
+                        { label: "Assets",    val: grossTotal,    color: "#10B981" },
                         { label: "Leverage",  val: FUND_LEVERAGE, color: "#F87171" },
                         { label: "NAV",       val: netTotal,      color: "#38BDF8" },
                         { label: "LP Basis",  val: LP_TOTAL_UNITS, color: "#8B5CF6" },
