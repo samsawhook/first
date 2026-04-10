@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle, Check, RotateCcw, Save } from "lucide-react";
 
 // QB_EXPORT_DATE is now per-company via company.financialsAsOf (set in data.ts on each import).
@@ -699,11 +699,23 @@ function ValuationSection({
   onSaveValuation?: (v: number) => void;
   onResetValuation?: () => void;
 }) {
-  if (!company.valuationRefs?.length) return null;
+  const defaultBase =
+    company.customPricePerShare && company.totalShares
+      ? company.customPricePerShare * company.totalShares
+      : company.impliedValuation;
 
-  const [pendingVal, setPendingVal] = useState(savedValuation ?? company.impliedValuation);
-  const isSaved = pendingVal === (savedValuation ?? company.impliedValuation);
-  const hasCustom = savedValuation !== undefined && savedValuation !== company.impliedValuation;
+  if (!company.valuationRefs?.length && !company.customPricePerShare) return null;
+
+  const [pendingVal, setPendingVal] = useState(savedValuation ?? defaultBase);
+  const isSaved = pendingVal === (savedValuation ?? defaultBase);
+  const hasCustom = savedValuation !== undefined && savedValuation !== defaultBase;
+
+  // Sync when overview saves a new value (or resets)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    setPendingVal(savedValuation ?? defaultBase);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedValuation]);
 
   return (
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
@@ -713,7 +725,7 @@ function ValuationSection({
           <div className="flex items-center gap-2">
             {hasCustom && (
               <button
-                onClick={() => { onResetValuation?.(); setPendingVal(company.impliedValuation); }}
+                onClick={() => { onResetValuation?.(); setPendingVal(defaultBase); }}
                 className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-300 border border-[#1E2D3D] hover:border-slate-500 px-2.5 py-1.5 rounded-lg transition-colors"
               >
                 <RotateCcw size={11} /> Reset
