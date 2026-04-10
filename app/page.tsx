@@ -671,7 +671,6 @@ export default function Dashboard() {
                                             {companyLogo(c)}
                                             <div>
                                               <p className="font-semibold text-slate-200">{c.name}</p>
-                                              <p className="text-[10px] text-slate-600">{c.stage}</p>
                                             </div>
                                           </div>
                                         </TD>
@@ -1084,7 +1083,6 @@ export default function Dashboard() {
                                               {companyLogo(c)}
                                               <div>
                                                 <p className="font-semibold text-slate-200">{c.name}</p>
-                                                <p className="text-[10px] text-slate-600">{c.stage}</p>
                                               </div>
                                             </div>
                                           </TD>
