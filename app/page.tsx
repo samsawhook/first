@@ -463,9 +463,24 @@ export default function Dashboard() {
                     <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(displayTotal)}</p>
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                   </div>
+                  {/* MOIC */}
+                  <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">MOIC</p>
+                    <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" }}>
+                      {LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—"}
+                    </p>
+                  </div>
+                  {/* LP Basis — shows fraction in My Share mode */}
+                  <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isLpView ? "My LP Basis" : "LP Basis"}</p>
+                    <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{isLpView ? fmt(lpHypoTotal) : fmt(LP_TOTAL_UNITS)}</p>
+                    {isLpView && (
+                      <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">
+                        {lpHypoTotal.toLocaleString()} / {lpHypoDenom.toLocaleString()} = {(lpHypoPct * 100).toFixed(2)}%
+                      </p>
+                    )}
+                  </div>
                   {[
-                    { label: "MOIC",       value: LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
-                    { label: isLpView ? "My LP Basis" : "LP Basis", value: isLpView ? fmt(lpHypoTotal) : fmt(LP_TOTAL_UNITS), accent: null },
                     { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                     { label: "Positions",  value: String(totalPositions), accent: null },
                   ].map(({ label, value, accent }) => (
@@ -513,19 +528,19 @@ export default function Dashboard() {
                     </div>
                     )}
 
-                    {/* Hypothetical additional units — only in My Share mode */}
+                    {/* Add exposure — only in My Share mode */}
                     {isLpView && (
                       <div className="flex items-center gap-2">
-                        <label className="text-[10px] text-slate-500 whitespace-nowrap">+ hypothetical</label>
+                        <label className="text-[10px] text-slate-500 whitespace-nowrap">+ add exposure</label>
                         <input
-                          type="number" min={0} placeholder="add units"
+                          type="number" min={0} placeholder="units"
                           value={lpHypotheticalUnits}
                           onChange={e => setLpHypotheticalUnits(e.target.value)}
                           className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         {lpHypo > 0 && (
                           <span className="text-[10px] text-sky-400/80 tabular-nums">
-                            {(lpHypoPct * 100).toFixed(2)}% of {lpHypoDenom.toLocaleString()} units · {fmt(netTotal * lpHypoPct)}
+                            {fmt(netTotal * lpHypoPct)} total
                           </span>
                         )}
                       </div>
