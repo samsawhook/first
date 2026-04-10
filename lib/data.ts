@@ -45,7 +45,7 @@ export const FUND_LEVERAGE   = 50_000;   // fund-level debt subtracted from port
 
 // Fund-level cash & cash equivalents
 export const cashPositions: CashPosition[] = [
-  // Add cash/money-market/T-bill positions here as they are confirmed
+  { id: "cash-baf-4785", name: "Business Adv Fundamentals (4785)", institution: "Bank of America", type: "Checking", balance: 2_329.95, asOf: "Apr 2026" },
 ];
 
 export const portfolio: PortfolioCompany[] = [
@@ -172,6 +172,11 @@ export const portfolio: PortfolioCompany[] = [
     shareTransactions: [
       { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 1, certificateNumber: "CS-01" },
     ] satisfies ShareTransaction[],
+    debtPositions: [
+      { id: "falconer-loc-1", date: "Mar 2026", instrument: "Line of Credit", principal: 245,
+        status: "Current", currentValue: 245,
+        notes: "Revolving line of credit. Balance per Apr-26 BS: $245." },
+    ] satisfies DebtPosition[],
     news: [
       {
         source: "Hollywood Reporter",
@@ -480,10 +485,14 @@ export const portfolio: PortfolioCompany[] = [
         interestRate: 20,
         status: "Current", currentValue: 8_000,
         notes: "1-year amortizing note at 20% annual rate. ~$737/mo over 12 months." },
-      { id: "audily-note-2", date: "UNK", instrument: "Term Loan", principal: 17_000,
-        interestRate: 20,
-        status: "Current", currentValue: 17_000,
-        notes: "1-year amortizing note at 20% annual rate. ~$1,565/mo over 12 months." },
+      { id: "audily-note-2", date: "Feb 2026", instrument: "Term Loan", principal: 17_000,
+        interestRate: 20, maturityDate: "Feb 2026",
+        status: "Current", currentValue: 15_708.55,
+        notes: "1-year amortizing note at 20% annual rate. ~$1,565/mo over 12 months. Balance per Apr-26 BS: $15,708.55." },
+      { id: "audily-note-3", date: "Mar 2026", instrument: "Term Loan", principal: 3_500,
+        interestRate: 20, maturityDate: "Mar 2026",
+        status: "Current", currentValue: 3_500,
+        notes: "Short-term note, originated Mar 12, 2026. Balance per Apr-26 BS: $3,500." },
     ] satisfies DebtPosition[],
     optionPositions: [
       {
@@ -638,14 +647,14 @@ export const portfolio: PortfolioCompany[] = [
       { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 1, certificateNumber: "CS-05" },
     ] satisfies ShareTransaction[],
     debtPositions: [
-      { id: "sbr2th-note-1", date: "UNK", instrument: "Term Loan", principal: 8_000,
-        interestRate: 20,
-        status: "Current", currentValue: 8_000,
-        notes: "1-year amortizing note at 20% annual rate. ~$737/mo over 12 months." },
-      { id: "sbr2th-note-2", date: "UNK", instrument: "Term Loan", principal: 17_000,
-        interestRate: 20,
-        status: "Current", currentValue: 17_000,
-        notes: "1-year amortizing note at 20% annual rate. ~$1,565/mo over 12 months." },
+      { id: "sbr2th-note-1", date: "Feb 2026", instrument: "Term Loan", principal: 8_000,
+        interestRate: 20, maturityDate: "Feb 2026",
+        status: "Current", currentValue: 6_774.39,
+        notes: "1-year amortizing note at 20% annual rate. ~$737/mo over 12 months. Balance per Apr-26 BS: $6,774.39." },
+      { id: "sbr2th-note-2", date: "Mar 2026", instrument: "Term Loan", principal: 17_000,
+        interestRate: 20, maturityDate: "Mar 2026",
+        status: "Current", currentValue: 15_708.55,
+        notes: "1-year amortizing note at 20% annual rate. ~$1,565/mo over 12 months. Balance per Apr-26 BS: $15,708.55." },
     ] satisfies DebtPosition[],
     financialHistory: [
       // ── 2022 ────────────────────────────────────────────────────────────────
@@ -758,6 +767,12 @@ export const portfolio: PortfolioCompany[] = [
       { date: "UNK", type: "Common", shares: 125_000, amount: 1, certificateNumber: "CS-22",
         notes: "0.40% of common outstanding (125,000 ÷ 31,000,000)" },
     ] satisfies ShareTransaction[],
+    debtPositions: [
+      { id: "galileo-note-1", date: "Jul 2025", instrument: "Term Loan", principal: 2_500,
+        maturityDate: "Jul 2026",
+        status: "Current", currentValue: 2_500,
+        notes: "Long-term note originated Jul 29, 2025. Balance per Apr-26 BS: $2,500." },
+    ] satisfies DebtPosition[],
   },
 ];
 
