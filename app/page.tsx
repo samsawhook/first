@@ -346,13 +346,17 @@ export default function Dashboard() {
               // ── LP multiplier — compute first so displayItems can use it ────────────
               const lpCurrent    = parseFloat(lpCurrentUnits) || 0;
               const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
-              const lpMultiplier = lpViewMode === "current" && lpCurrentPct > 0 ? lpCurrentPct : 1;
-              const isLpView = lpMultiplier < 1;
               // Hypothetical additional units — expands denominator (dilutive)
-              const lpHypo          = parseFloat(lpHypotheticalUnits) || 0;
-              const lpHypoTotal     = lpCurrent + lpHypo;
-              const lpHypoDenom     = LP_TOTAL_UNITS + lpHypo;           // new total outstanding
-              const lpHypoPct       = lpHypoTotal > 0 ? lpHypoTotal / lpHypoDenom : 0;
+              const lpHypo      = parseFloat(lpHypotheticalUnits) || 0;
+              const lpHypoTotal = lpCurrent + lpHypo;
+              const lpHypoDenom = LP_TOTAL_UNITS + lpHypo;               // new total outstanding
+              const lpHypoPct   = lpHypoTotal > 0 ? lpHypoTotal / lpHypoDenom : 0;
+              // Active pct: prefer hypo-adjusted when hypothetical units are set
+              const activePct    = lpViewMode === "current" && lpCurrentPct > 0
+                ? (lpHypo > 0 ? lpHypoPct : lpCurrentPct)
+                : 1;
+              const lpMultiplier = activePct;
+              const isLpView     = lpMultiplier < 1;
 
               // ── Donut: total exposure per company (equity + debt + options) + managed ─
               const donutItems = [
@@ -495,7 +499,8 @@ export default function Dashboard() {
                       ))}
                     </div>
 
-                    {/* Units input */}
+                    {/* Units input — hidden in Fund Total mode */}
+                    {lpViewMode === "current" && (
                     <div className="flex items-center gap-2">
                       <label className="text-[10px] text-slate-500 whitespace-nowrap">My units</label>
                       <input
@@ -506,6 +511,7 @@ export default function Dashboard() {
                       />
                       {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}% of fund</span>}
                     </div>
+                    )}
 
                     {/* Hypothetical additional units — only in My Share mode */}
                     {isLpView && (
