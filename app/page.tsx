@@ -615,42 +615,87 @@ export default function Dashboard() {
                   <div className="p-5">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Fund Structure</p>
                     {(() => {
-                      const cols = isLpView ? [
-                        { label: "Assets",    val: grossTotal * lpMultiplier,    color: "#10B981" },
-                        { label: "Leverage",  val: FUND_LEVERAGE * lpMultiplier, color: "#F87171" },
-                        { label: "NAV",       val: netTotal * lpMultiplier,      color: "#38BDF8" },
-                        { label: "My Basis",  val: lpHypoTotal,                  color: "#A78BFA" },
-                        { label: "My NAV",    val: displayTotal,                 color: "#34D399" },
-                      ] : [
-                        { label: "Assets",    val: grossTotal,    color: "#10B981" },
-                        { label: "Leverage",  val: FUND_LEVERAGE, color: "#F87171" },
-                        { label: "NAV",       val: netTotal,      color: "#38BDF8" },
-                        { label: "LP Basis",  val: LP_TOTAL_UNITS, color: "#8B5CF6" },
+                      // ── Top: fund-total vertical bars (always, never LP-scaled) ──
+                      const fundCols = [
+                        { label: "Assets",   val: grossTotal,     color: "#10B981" },
+                        { label: "Leverage", val: FUND_LEVERAGE,  color: "#F87171" },
+                        { label: "NAV",      val: netTotal,       color: "#38BDF8" },
+                        { label: "LP Basis", val: LP_TOTAL_UNITS, color: "#8B5CF6" },
                       ];
-                      const maxVal = Math.max(...cols.map(c => c.val), 1);
-                      const W3 = 280; const H3 = 130;
-                      const PAD3 = { t: 18, r: 6, b: 28, l: 6 };
+                      const maxVal = Math.max(...fundCols.map(c => c.val), 1);
+                      const W3 = 280; const H3 = 120;
+                      const PAD3 = { t: 16, r: 6, b: 24, l: 6 };
                       const cW3 = W3 - PAD3.l - PAD3.r;
                       const cH3 = H3 - PAD3.t - PAD3.b;
-                      const n3 = cols.length;
-                      const gap3 = 8;
+                      const n3 = fundCols.length;
+                      const gap3 = 10;
                       const bW3 = (cW3 - gap3 * (n3 - 1)) / n3;
                       const fmtS = (v: number) => v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${Math.round(v)}`;
+
+                      // ── Bottom: My Share line gauges (only in LP view) ──
+                      const myRows = isLpView ? [
+                        { label: "My Basis", val: lpHypoTotal,  total: LP_TOTAL_UNITS, color: "#A78BFA" },
+                        { label: "My NAV",   val: displayTotal, total: netTotal,        color: "#34D399" },
+                      ] : [];
+
                       return (
-                        <svg width="100%" viewBox={`0 0 ${W3} ${H3}`} preserveAspectRatio="xMidYMid meet">
-                          {cols.map((c, i) => {
-                            const x = PAD3.l + i * (bW3 + gap3);
-                            const bh = (c.val / maxVal) * cH3;
-                            const y  = PAD3.t + cH3 - bh;
-                            return (
-                              <g key={c.label}>
-                                <rect x={x} y={y} width={bW3} height={bh} fill={c.color} opacity="0.75" rx="2" />
-                                <text x={x + bW3 / 2} y={y - 3} textAnchor="middle" style={{ fontSize: 7, fill: c.color, fontWeight: 600 }}>{fmtS(c.val)}</text>
-                                <text x={x + bW3 / 2} y={H3 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{c.label}</text>
-                              </g>
-                            );
-                          })}
-                        </svg>
+                        <div>
+                          {/* Vertical bar chart — fund totals */}
+                          <svg width="100%" viewBox={`0 0 ${W3} ${H3}`} preserveAspectRatio="xMidYMid meet">
+                            {fundCols.map((c, i) => {
+                              const x  = PAD3.l + i * (bW3 + gap3);
+                              const bh = (c.val / maxVal) * cH3;
+                              const y  = PAD3.t + cH3 - bh;
+                              return (
+                                <g key={c.label}>
+                                  <rect x={x} y={y} width={bW3} height={bh} fill={c.color} opacity="0.75" rx="2" />
+                                  <text x={x + bW3 / 2} y={y - 3} textAnchor="middle" style={{ fontSize: 7, fill: c.color, fontWeight: 600 }}>{fmtS(c.val)}</text>
+                                  <text x={x + bW3 / 2} y={H3 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{c.label}</text>
+                                </g>
+                              );
+                            })}
+                          </svg>
+
+                          {/* Line gauges — My Share (only when isLpView) */}
+                          {myRows.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-[#1E2D3D] space-y-3">
+                              <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium mb-2">My Share</p>
+                              {myRows.map(row => {
+                                const pct = row.total > 0 ? Math.min(row.val / row.total, 1) : 0;
+                                const pctDisplay = row.total > 0 ? (row.val / row.total * 100).toFixed(1) : "0.0";
+                                return (
+                                  <div key={row.label}>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <span className="text-[9px] text-slate-500">{row.label}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[9px] tabular-nums font-semibold" style={{ color: row.color }}>{fmtS(row.val)}</span>
+                                        <span className="text-[9px] text-slate-600 tabular-nums">{pctDisplay}%</span>
+                                      </div>
+                                    </div>
+                                    {/* Gauge line */}
+                                    <div className="relative">
+                                      <svg width="100%" viewBox="0 0 280 14" preserveAspectRatio="none">
+                                        {/* Track */}
+                                        <rect x="0" y="5" width="280" height="2" fill="#1E2D3D" rx="1" />
+                                        {/* Fill */}
+                                        <rect x="0" y="5" width={280 * pct} height="2" fill={row.color} opacity="0.7" rx="1" />
+                                        {/* Start tick */}
+                                        <line x1="0" y1="3" x2="0" y2="9" stroke="#1E2D3D" strokeWidth="1.5" />
+                                        {/* End tick */}
+                                        <line x1="280" y1="3" x2="280" y2="9" stroke="#1E2D3D" strokeWidth="1.5" />
+                                        {/* Marker dot */}
+                                        <circle cx={280 * pct} cy="6" r="4" fill={row.color} />
+                                        <circle cx={280 * pct} cy="6" r="2" fill="#0D1421" />
+                                        {/* End label */}
+                                        <text x="280" y="14" textAnchor="end" style={{ fontSize: 6, fill: "#475569" }}>{fmtS(row.total)}</text>
+                                      </svg>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       );
                     })()}
                   </div>
