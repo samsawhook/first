@@ -175,6 +175,7 @@ export default function Dashboard() {
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed", "cash"]));
   const [lpCurrentUnits, setLpCurrentUnits] = useState<string>("");
   const [lpNewUnits, setLpNewUnits]         = useState<string>("");
+  const [lpViewMode, setLpViewMode]         = useState<"fund" | "current" | "new">("fund");
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -342,6 +343,16 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* ── Overview Hero ── */}
             {(() => {
+              // ── LP multiplier — compute first so displayItems can use it ────────────
+              const lpCurrent    = parseFloat(lpCurrentUnits) || 0;
+              const lpNew        = parseFloat(lpNewUnits) || 0;
+              const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
+              const lpNewPct     = lpNew > 0 ? lpNew / (LP_TOTAL_UNITS + lpNew) : 0;
+              const lpMultiplier =
+                lpViewMode === "current" && lpCurrentPct > 0 ? lpCurrentPct :
+                lpViewMode === "new"     && lpNewPct > 0     ? lpNewPct     : 1;
+              const isLpView = lpMultiplier < 1;
+
               // ── Donut: total exposure per company (equity + debt + options) + managed ─
               const donutItems = [
                 ...portfolio
@@ -370,12 +381,15 @@ export default function Dashboard() {
                 })(),
               ];
               const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
+              // Scaled display values — apply LP view multiplier to all dollar amounts
+              const displayItems = donutItems.map(d => ({ ...d, value: d.value * lpMultiplier }));
+              const displayTotal = donutTotal * lpMultiplier;
 
               // Build SVG donut arcs
               const cx = 80; const cy = 80; const R = 62; const r = 40;
               let angle = -Math.PI / 2;
-              const arcs = donutItems.map(d => {
-                const sweep = (d.value / donutTotal) * 2 * Math.PI;
+              const arcs = displayItems.map(d => {
+                const sweep = (d.value / displayTotal) * 2 * Math.PI;
                 const x1 = cx + R * Math.cos(angle); const y1 = cy + R * Math.sin(angle);
                 angle += sweep;
                 const x2 = cx + R * Math.cos(angle); const y2 = cy + R * Math.sin(angle);
@@ -429,22 +443,17 @@ export default function Dashboard() {
                 { label: "Cash & Equiv.", amount: cashBasis,    color: "#06B6D4", pct: allocTotal > 0 ? cashBasis     / allocTotal : 0 },
               ];
 
-              // LP calculator derived values
-              const lpCurrent = parseFloat(lpCurrentUnits) || 0;
-              const lpNew     = parseFloat(lpNewUnits) || 0;
-              const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
-              const lpNewPct     = lpNew > 0 ? lpNew / (LP_TOTAL_UNITS + lpNew) : 0;
-
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D]">
+                {/* Metrics strip */}
+                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
                   {[
-                    { label: "Portfolio Value", value: fmt(donutTotal),         accent: "#10B981" },
-                    { label: "NAV (Audited)",   value: fmt(fund.nav),           accent: "#10B981" },
-                    { label: "LP Basis",        value: fmt(LP_TOTAL_UNITS),     accent: null },
-                    { label: "Cash & Equiv.",   value: cashBasis > 0 ? fmt(cashBasis) : "—", accent: cashBasis > 0 ? "#06B6D4" : null },
-                    { label: "Active Co's",     value: String(portfolio.filter(c => c.status === "active").length), accent: null },
+                    { label: isLpView ? "My Portfolio Value" : "Portfolio Value", value: fmt(displayTotal),                             accent: "#10B981" },
+                    { label: isLpView ? "My NAV Share"       : "NAV (Audited)",   value: fmt(fund.nav * lpMultiplier),                   accent: "#10B981" },
+                    { label: isLpView ? "My LP Basis"        : "LP Basis",        value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
+                    { label: "Cash & Equiv.",                                      value: cashBasis > 0 ? fmt(cashBasis * lpMultiplier) : "—", accent: cashBasis > 0 ? "#06B6D4" : null },
+                    { label: "Active Co's",                                        value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                   ].map(({ label, value, accent }) => (
                     <div key={label} className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D] last:border-r-0">
                       <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{label}</p>
@@ -455,48 +464,54 @@ export default function Dashboard() {
 
                 {/* ── LP Unit Calculator ── */}
                 <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-3 bg-[#080E1A]">
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium shrink-0">My LP View</p>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium shrink-0">LP View</p>
 
-                    {/* Current units */}
+                    {/* View mode pills */}
+                    <div className="flex items-center gap-1">
+                      {([["fund","Fund Total"],["current","My Share"],["new","Pro Forma"]] as const).map(([mode, label]) => (
+                        <button
+                          key={mode}
+                          onClick={() => setLpViewMode(mode)}
+                          disabled={mode === "current" && lpCurrent === 0 || mode === "new" && lpNew === 0}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                            lpViewMode === mode
+                              ? mode === "fund" ? "bg-slate-700 text-slate-200"
+                                : mode === "current" ? "bg-emerald-600/30 text-emerald-400 ring-1 ring-emerald-500/40"
+                                : "bg-violet-600/30 text-violet-400 ring-1 ring-violet-500/40"
+                              : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Current units input */}
                     <div className="flex items-center gap-2">
                       <label className="text-[10px] text-slate-500 whitespace-nowrap">Current units</label>
                       <input
-                        type="number"
-                        min={0}
-                        placeholder="e.g. 10000"
+                        type="number" min={0} placeholder="e.g. 10000"
                         value={lpCurrentUnits}
-                        onChange={e => setLpCurrentUnits(e.target.value)}
+                        onChange={e => { setLpCurrentUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("current"); }}
                         className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <span className="text-[10px] text-slate-600">× $1/unit</span>
-                      {lpCurrent > 0 && (
-                        <span className="text-[11px] font-medium text-emerald-400 tabular-nums">
-                          → {fmt(lpCurrentPct * donutTotal)} ({(lpCurrentPct * 100).toFixed(2)}% of portfolio)
-                        </span>
-                      )}
+                      {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}%</span>}
                     </div>
 
-                    {/* Hypothetical new units */}
+                    {/* Hypothetical new units input */}
                     <div className="flex items-center gap-2">
                       <label className="text-[10px] text-slate-500 whitespace-nowrap">Hypothetical new</label>
                       <input
-                        type="number"
-                        min={0}
-                        placeholder="units to add"
+                        type="number" min={0} placeholder="units to add"
                         value={lpNewUnits}
-                        onChange={e => setLpNewUnits(e.target.value)}
+                        onChange={e => { setLpNewUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("new"); }}
                         className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <span className="text-[10px] text-slate-600">× $1/unit</span>
-                      {lpNew > 0 && (
-                        <span className="text-[11px] font-medium text-violet-400 tabular-nums">
-                          → {fmt(lpNewPct * donutTotal)} ({(lpNewPct * 100).toFixed(2)}% pro forma)
-                        </span>
-                      )}
+                      {lpNew > 0 && <span className="text-[10px] text-violet-500/80 tabular-nums">{(lpNewPct * 100).toFixed(2)}%</span>}
                     </div>
 
-                    <span className="text-[10px] text-slate-700 hidden sm:inline">Total LP units: {LP_TOTAL_UNITS.toLocaleString()} · $1.00 par</span>
+                    <span className="text-[10px] text-slate-700 hidden md:inline">{LP_TOTAL_UNITS.toLocaleString()} units outstanding · $1.00 par</span>
                   </div>
                 </div>
 
@@ -520,19 +535,19 @@ export default function Dashboard() {
                             <title>{a.label}: {fmt(a.value)}</title>
                           </path>
                         ))}
-                        <text x="80" y="76" textAnchor="middle" className="fill-slate-200 text-xs font-bold" style={{ fontSize: 12, fontWeight: 700, fill: "#e2e8f0" }}>{fmt(donutTotal)}</text>
-                        <text x="80" y="91" textAnchor="middle" style={{ fontSize: 9, fill: "#64748b" }}>total value</text>
+                        <text x="80" y="76" textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: "#e2e8f0" }}>{fmt(displayTotal)}</text>
+                        <text x="80" y="91" textAnchor="middle" style={{ fontSize: 9, fill: "#64748b" }}>{isLpView ? "my share" : "total value"}</text>
                       </svg>
                       <div className="flex flex-col gap-1.5 min-w-0">
-                        {donutItems.map(d => (
+                        {displayItems.map(d => (
                           <button
                             key={d.id}
-                            onClick={() => { if (d.id !== "managed") setActiveCompanyId(d.id); }}
+                            onClick={() => { if (d.id !== "managed" && d.id !== "cash") setActiveCompanyId(d.id); }}
                             className="flex items-center gap-2 group text-left"
                           >
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                             <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors truncate">{d.label}</span>
-                            <span className="text-[11px] text-slate-600 tabular-nums ml-auto pl-2">{((d.value / donutTotal) * 100).toFixed(0)}%</span>
+                            <span className="text-[11px] text-slate-600 tabular-nums ml-auto pl-2">{fmt(d.value)}</span>
                           </button>
                         ))}
                       </div>
@@ -579,7 +594,7 @@ export default function Dashboard() {
                               <span className="text-xs text-slate-300 font-medium">{t.label}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs tabular-nums text-slate-400">{fmt(t.amount)}</span>
+                              <span className="text-xs tabular-nums text-slate-400">{fmt(t.amount * lpMultiplier)}</span>
                               <span className="text-[10px] tabular-nums text-slate-600 w-8 text-right">{(t.pct * 100).toFixed(0)}%</span>
                             </div>
                           </div>
@@ -589,8 +604,8 @@ export default function Dashboard() {
                         </div>
                       ))}
                       <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
-                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total Deployed</span>
-                        <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotal)}</span>
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total{isLpView ? " (My Share)" : " Deployed"}</span>
+                        <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotal * lpMultiplier)}</span>
                       </div>
                     </div>
                   </div>
