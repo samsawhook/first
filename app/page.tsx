@@ -405,10 +405,13 @@ export default function Dashboard() {
 
               // ── Allocation by security type ────────────────────────────────────
               const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
-              // Equity cost basis unknown — use est. current value as size proxy
               let equityBasis = 0, creditBasis = 0, convertBasis = 0;
               for (const c of portfolio) {
-                if (c.status === "active") equityBasis += effectiveCurrVal(c);
+                if (c.status === "active") {
+                  const eqPps = c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
+                  const eqSh  = (c.shareTransactions ?? []).filter(t => t.type === "Common" || t.type === "Preferred").reduce((s, t) => s + (t.shares ?? 0), 0);
+                  equityBasis += eqPps > 0 && eqSh > 0 ? eqSh * eqPps : effectiveCurrVal(c);
+                }
                 for (const d of (c.debtPositions ?? [])) {
                   if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditBasis += d.principal;
                   else convertBasis += d.principal;
