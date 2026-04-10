@@ -176,6 +176,9 @@ export default function Dashboard() {
   const [lpCurrentUnits, setLpCurrentUnits]           = useState<string>("100000");
   const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("fund");
   const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
+  const [selectedFinCoId, setSelectedFinCoId]         = useState<string>(() =>
+    portfolio.find(c => c.status === "active" && (c.financialHistory?.length ?? 0) > 0)?.id ?? ""
+  );
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -446,12 +449,13 @@ export default function Dashboard() {
                 {/* ── Metrics strip ── */}
                 {/* Metrics strip */}
                 <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
-                  {/* Portfolio NAV Est. — with fund total + leverage sub-lines */}
+                  {/* Portfolio NAV Est. */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
                     <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio NAV Est.</p>
                     <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(displayTotal)}</p>
-                    {isLpView && <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">Fund {fmt(netTotal)}</p>}
-                    <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
+                    <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(donutTotal * lpMultiplier)}</p>
+                    <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
+                    {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
                   </div>
                   {/* MOIC */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
@@ -581,46 +585,117 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ② Invested vs. NAV Est. — dynamic bar chart */}
+                  {/* ② Annual Revenue & Earnings — interactive company selector */}
                   <div className="p-5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Invested vs. NAV Est.</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Annual Revenue &amp; Earnings</p>
                     {(() => {
-                      const managedInvested = managedFundPositions.reduce((s, p) => s + p.called, 0);
-                      const managedNav      = managedFundPositions.reduce((s, p) => s + p.nav, 0);
-                      const rows = [
-                        ...donutItems
-                          .filter(d => d.id !== "managed")
-                          .map(d => {
-                            const co = portfolio.find(c => c.id === d.id)!;
-                            return { label: d.label, color: d.color, invested: co.invested, nav: d.value };
-                          }),
-                        ...(managedNav > 0 ? [{ label: "Managed Funds", color: "#EC4899", invested: managedInvested, nav: managedNav }] : []),
-                      ].sort((a, b) => b.nav - a.nav);
-                      const maxVal = Math.max(...rows.map(r => Math.max(r.invested, r.nav)), 1);
+                      // Companies with financial history
+                      const finCos = portfolio.filter(c => c.status === "active" && (c.financialHistory?.length ?? 0) > 0);
+                      if (finCos.length === 0) return (
+                        <div className="flex items-center justify-center h-24 border border-dashed border-[#1E2D3D] rounded-lg">
+                          <p className="text-[10px] text-slate-600 italic">No financial history available</p>
+                        </div>
+                      );
+                      const selCo = finCos.find(c => c.id === selectedFinCoId) ?? finCos[0];
+
+                      // Aggregate financialHistory → annual summaries
+                      // Prefer explicit annual periods; otherwise sum monthly by year
+                      const fh = selCo.financialHistory ?? [];
+                      const annualPeriods = fh.filter(p => p.periodType === "annual");
+                      const annuals: { year: string; revenue: number; ebitda: number }[] = annualPeriods.length > 0
+                        ? annualPeriods.map(p => ({ year: p.period.replace("FY ", ""), revenue: p.revenue, ebitda: p.ebitda }))
+                        : (() => {
+                            const byYear: Record<string, { revenue: number; ebitda: number; count: number }> = {};
+                            for (const p of fh) {
+                              if (p.periodType === "quarterly") continue; // skip quarterly to avoid double-count
+                              const m = p.period.match(/\b(20\d{2})\b/);
+                              if (!m) continue;
+                              const yr = m[1];
+                              if (!byYear[yr]) byYear[yr] = { revenue: 0, ebitda: 0, count: 0 };
+                              byYear[yr].revenue += p.revenue;
+                              byYear[yr].ebitda  += p.ebitda;
+                              byYear[yr].count++;
+                            }
+                            return Object.entries(byYear)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([yr, v]) => ({ year: yr, revenue: v.revenue, ebitda: v.ebitda }));
+                          })();
+
+                      if (annuals.length === 0) return (
+                        <p className="text-[10px] text-slate-600 italic mt-2">No annual data for {selCo.name}</p>
+                      );
+
+                      // SVG grouped bar chart
+                      const W2 = 340; const H2 = 120; const PAD2 = { t: 8, r: 8, b: 24, l: 48 };
+                      const cW = W2 - PAD2.l - PAD2.r;
+                      const cH = H2 - PAD2.t - PAD2.b;
+                      const maxRev = Math.max(...annuals.map(a => a.revenue), 1);
+                      const minEbitda = Math.min(...annuals.map(a => a.ebitda), 0);
+                      const maxEbitda = Math.max(...annuals.map(a => a.ebitda), 1);
+                      const yMin = Math.min(0, minEbitda * 1.15);
+                      const yMax = maxRev * 1.1;
+                      const yRange = yMax - yMin;
+                      const yS2 = (v: number) => PAD2.t + cH - ((v - yMin) / yRange) * cH;
+                      const zero = yS2(0);
+                      const n = annuals.length;
+                      const groupW = cW / n;
+                      const barW = Math.min(groupW * 0.35, 18);
+                      const fmtK = (v: number) => Math.abs(v) >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : Math.abs(v) >= 1000 ? `${(v/1000).toFixed(0)}K` : String(Math.round(v));
+                      const yTicks2 = [yMin, yMin + yRange * 0.25, yMin + yRange * 0.5, yMin + yRange * 0.75, yMax];
+
                       return (
-                        <div className="space-y-2.5">
-                          {rows.map(r => {
-                            const moic = r.invested > 0 ? r.nav / r.invested : 0;
-                            const isGain = r.nav >= r.invested;
-                            return (
-                              <div key={r.label}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{r.label}</span>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <span className="text-[9px] tabular-nums text-slate-600">{fmt(r.nav * lpMultiplier)}</span>
-                                    <span className={`text-[9px] tabular-nums font-semibold w-10 text-right ${isGain ? "text-emerald-500" : "text-red-400"}`}>{moic.toFixed(2)}×</span>
-                                  </div>
-                                </div>
-                                <div className="relative h-1.5 bg-[#0A1628] rounded-full overflow-hidden">
-                                  <div className="absolute inset-y-0 left-0 bg-slate-700 rounded-full" style={{ width: `${(r.invested / maxVal) * 100}%` }} />
-                                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(r.nav / maxVal) * 100}%`, backgroundColor: r.color, opacity: 0.75 }} />
-                                </div>
-                              </div>
-                            );
-                          })}
-                          <div className="flex items-center gap-4 pt-1">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-slate-700" /><span className="text-[9px] text-slate-600">Cost basis</span></div>
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-emerald-500/70" /><span className="text-[9px] text-slate-600">NAV est.</span></div>
+                        <div>
+                          {/* Company pills */}
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {finCos.map(c => (
+                              <button key={c.id}
+                                onClick={() => setSelectedFinCoId(c.id)}
+                                className={`px-2 py-0.5 rounded text-[9px] font-medium transition-colors ${
+                                  c.id === selCo.id
+                                    ? "text-slate-100 ring-1"
+                                    : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
+                                }`}
+                                style={c.id === selCo.id ? { backgroundColor: selCo.accentColor + "30", ringColor: selCo.accentColor + "60", color: selCo.accentColor } : {}}
+                              >
+                                {c.initials}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Bar chart */}
+                          <svg width="100%" viewBox={`0 0 ${W2} ${H2}`} preserveAspectRatio="xMidYMid meet">
+                            {/* Y-axis ticks */}
+                            {yTicks2.map((v, i) => (
+                              <g key={i}>
+                                <line x1={PAD2.l} y1={yS2(v)} x2={W2 - PAD2.r} y2={yS2(v)} stroke="#1E2D3D" strokeWidth="0.5" />
+                                <text x={PAD2.l - 3} y={yS2(v) + 3} textAnchor="end" style={{ fontSize: 7, fill: "#475569" }}>{fmtK(v)}</text>
+                              </g>
+                            ))}
+                            {/* Zero line */}
+                            <line x1={PAD2.l} y1={zero} x2={W2 - PAD2.r} y2={zero} stroke="#334155" strokeWidth="1" />
+                            {/* Bars */}
+                            {annuals.map((a, i) => {
+                              const cx = PAD2.l + groupW * i + groupW / 2;
+                              const revH = Math.abs(yS2(a.revenue) - yS2(0));
+                              const ebH  = Math.abs(yS2(a.ebitda) - yS2(0));
+                              const ebY  = a.ebitda >= 0 ? yS2(a.ebitda) : zero;
+                              return (
+                                <g key={a.year}>
+                                  {/* Revenue bar */}
+                                  <rect x={cx - barW - 1} y={yS2(a.revenue)} width={barW} height={revH} fill="#3B82F6" opacity="0.7" rx="1" />
+                                  {/* EBITDA bar */}
+                                  <rect x={cx + 1} y={ebY} width={barW} height={ebH} fill={a.ebitda >= 0 ? "#10B981" : "#F87171"} opacity="0.8" rx="1" />
+                                  {/* X label */}
+                                  <text x={cx} y={H2 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{a.year}</text>
+                                </g>
+                              );
+                            })}
+                          </svg>
+
+                          {/* Legend */}
+                          <div className="flex items-center gap-4 mt-1">
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-blue-500/70" /><span className="text-[9px] text-slate-600">Revenue</span></div>
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-emerald-500/80" /><span className="text-[9px] text-slate-600">EBITDA</span></div>
                           </div>
                         </div>
                       );
