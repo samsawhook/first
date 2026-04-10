@@ -173,8 +173,9 @@ export default function Dashboard() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed", "cash"]));
-  const [lpCurrentUnits, setLpCurrentUnits] = useState<string>("100000");
-  const [lpViewMode, setLpViewMode]         = useState<"fund" | "current">("current");
+  const [lpCurrentUnits, setLpCurrentUnits]           = useState<string>("100000");
+  const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("current");
+  const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -347,6 +348,10 @@ export default function Dashboard() {
               const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
               const lpMultiplier = lpViewMode === "current" && lpCurrentPct > 0 ? lpCurrentPct : 1;
               const isLpView = lpMultiplier < 1;
+              // Hypothetical additional units
+              const lpHypo       = parseFloat(lpHypotheticalUnits) || 0;
+              const lpHypoTotal  = lpCurrent + lpHypo;
+              const lpHypoPct    = lpHypoTotal > 0 ? lpHypoTotal / LP_TOTAL_UNITS : 0;
 
               // ── Donut: total exposure per company (equity + debt + options) + managed ─
               const donutItems = [
@@ -446,12 +451,16 @@ export default function Dashboard() {
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
                 {/* Metrics strip */}
-                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
+                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
+                  {/* Portfolio Value — with leverage sub-line */}
+                  <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isLpView ? "My Portfolio Value" : "Portfolio Value"}</p>
+                    <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(displayTotal)}</p>
+                    <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
+                  </div>
                   {[
-                    { label: "Leverage",                                           value: `-${fmt(FUND_LEVERAGE * lpMultiplier)}`,       accent: "#F87171" },
-                    { label: isLpView ? "My Portfolio Value" : "Portfolio Value",  value: fmt(displayTotal),                             accent: "#10B981" },
-                    { label: "MOIC",                                               value: LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
-                    { label: isLpView ? "My LP Basis"        : "LP Basis",        value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
+                    { label: "MOIC",       value: LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
+                    { label: isLpView ? "My LP Basis" : "LP Basis", value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
                     { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                     { label: "Positions",  value: String(totalPositions), accent: null },
                   ].map(({ label, value, accent }) => (
@@ -496,6 +505,24 @@ export default function Dashboard() {
                       />
                       {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}% of fund · $1.00/unit</span>}
                     </div>
+
+                    {/* Hypothetical additional units — only in My Share mode */}
+                    {isLpView && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] text-slate-500 whitespace-nowrap">+ hypothetical</label>
+                        <input
+                          type="number" min={0} placeholder="add units"
+                          value={lpHypotheticalUnits}
+                          onChange={e => setLpHypotheticalUnits(e.target.value)}
+                          className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        {lpHypo > 0 && (
+                          <span className="text-[10px] text-sky-400/80 tabular-nums">
+                            {(lpHypoPct * 100).toFixed(2)}% · {fmt(netTotal * lpHypoPct)}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     <span className="text-[10px] text-slate-700 hidden md:inline">{LP_TOTAL_UNITS.toLocaleString()} units outstanding</span>
                   </div>
