@@ -20,6 +20,7 @@ import type {
   ManagedFundPosition,
   ManagedFundTransaction,
   CapTableSummary,
+  CashPosition,
 } from "./types";
 
 export const fund: FundMetrics = {
@@ -37,6 +38,14 @@ export const fund: FundMetrics = {
   unrealized: 7,
   asOf: "March 31, 2026",
 };
+
+// Total LP units outstanding — $1.00 par value per unit
+export const LP_TOTAL_UNITS = 215_100;
+
+// Fund-level cash & cash equivalents
+export const cashPositions: CashPosition[] = [
+  // Add cash/money-market/T-bill positions here as they are confirmed
+];
 
 export const portfolio: PortfolioCompany[] = [
   {

@@ -21,7 +21,7 @@ import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
-import { portfolio, navHistory, fund, managedFundPositions } from "@/lib/data";
+import { portfolio, navHistory, fund, managedFundPositions, cashPositions, LP_TOTAL_UNITS } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction } from "@/lib/types";
 
@@ -172,7 +172,9 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed"]));
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed", "cash"]));
+  const [lpCurrentUnits, setLpCurrentUnits] = useState<string>("");
+  const [lpNewUnits, setLpNewUnits]         = useState<string>("");
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -362,6 +364,10 @@ export default function Dashboard() {
                   const nav = managedFundPositions.reduce((s, p) => s + p.nav, 0);
                   return nav > 0 ? [{ label: "Managed Funds", value: nav, color: "#EC4899", id: "managed" }] : [];
                 })(),
+                ...(() => {
+                  const cash = cashPositions.reduce((s, p) => s + p.balance, 0);
+                  return cash > 0 ? [{ label: "Cash & Equiv.", value: cash, color: "#06B6D4", id: "cash" }] : [];
+                })(),
               ];
               const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
 
@@ -412,32 +418,86 @@ export default function Dashboard() {
                   return s + intrinsic + timeVal;
                 }, 0);
               }, 0);
-              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis;
+              const cashBasis  = cashPositions.reduce((s, p) => s + p.balance, 0);
+              const allocTotal = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis + cashBasis;
               const allocTypes = [
                 { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis   / allocTotal : 0 },
                 { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis   / allocTotal : 0 },
                 { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis  / allocTotal : 0 },
                 { label: "Options",       amount: optionsBasis, color: "#F43F5E", pct: allocTotal > 0 ? optionsBasis  / allocTotal : 0 },
                 { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis  / allocTotal : 0 },
+                { label: "Cash & Equiv.", amount: cashBasis,    color: "#06B6D4", pct: allocTotal > 0 ? cashBasis     / allocTotal : 0 },
               ];
+
+              // LP calculator derived values
+              const lpCurrent = parseFloat(lpCurrentUnits) || 0;
+              const lpNew     = parseFloat(lpNewUnits) || 0;
+              const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
+              const lpNewPct     = lpNew > 0 ? lpNew / (LP_TOTAL_UNITS + lpNew) : 0;
 
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
-                <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D]">
                   {[
-                    { label: "Portfolio Value", value: fmt(donutTotal), accent: "#10B981" },
-                    { label: "TVPI",  value: `${fund.tvpi}×`,  accent: "#10B981" },
-                    { label: "DPI",   value: `${fund.dpi}×`,   accent: null },
-                    { label: "RVPI",  value: `${fund.rvpi}×`,  accent: null },
-                    { label: "IRR",   value: `${fund.irr}%`,   accent: null },
-                    { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
+                    { label: "Portfolio Value", value: fmt(donutTotal),         accent: "#10B981" },
+                    { label: "NAV (Audited)",   value: fmt(fund.nav),           accent: "#10B981" },
+                    { label: "LP Basis",        value: fmt(LP_TOTAL_UNITS),     accent: null },
+                    { label: "Cash & Equiv.",   value: cashBasis > 0 ? fmt(cashBasis) : "—", accent: cashBasis > 0 ? "#06B6D4" : null },
+                    { label: "Active Co's",     value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                   ].map(({ label, value, accent }) => (
                     <div key={label} className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D] last:border-r-0">
                       <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{label}</p>
                       <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: accent ?? "#e2e8f0" }}>{value}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* ── LP Unit Calculator ── */}
+                <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-3 bg-[#080E1A]">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium shrink-0">My LP View</p>
+
+                    {/* Current units */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] text-slate-500 whitespace-nowrap">Current units</label>
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="e.g. 10000"
+                        value={lpCurrentUnits}
+                        onChange={e => setLpCurrentUnits(e.target.value)}
+                        className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] text-slate-600">× $1/unit</span>
+                      {lpCurrent > 0 && (
+                        <span className="text-[11px] font-medium text-emerald-400 tabular-nums">
+                          → {fmt(lpCurrentPct * donutTotal)} ({(lpCurrentPct * 100).toFixed(2)}% of portfolio)
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Hypothetical new units */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] text-slate-500 whitespace-nowrap">Hypothetical new</label>
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="units to add"
+                        value={lpNewUnits}
+                        onChange={e => setLpNewUnits(e.target.value)}
+                        className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] text-slate-600">× $1/unit</span>
+                      {lpNew > 0 && (
+                        <span className="text-[11px] font-medium text-violet-400 tabular-nums">
+                          → {fmt(lpNewPct * donutTotal)} ({(lpNewPct * 100).toFixed(2)}% pro forma)
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] text-slate-700 hidden sm:inline">Total LP units: {LP_TOTAL_UNITS.toLocaleString()} · $1.00 par</span>
+                  </div>
                 </div>
 
                 {/* ── Three charts ── */}
@@ -1166,7 +1226,64 @@ export default function Dashboard() {
                   })()}
                 </div>
 
-                {/* ══ 5. MANAGED FUNDS ═════════════════════════════════════════════ */}
+                {/* ══ 5. CASH & EQUIVALENTS ════════════════════════════════════════ */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  {(() => {
+                    const totalCash = cashPositions.reduce((s, p) => s + p.balance, 0);
+                    return (
+                      <>
+                        <div className="border-b border-[#1E2D3D]">
+                          <SectionHeader label="Cash & Equivalents" tableKey="cash" accent="#06B6D4" stats={[
+                            { label: "Total Balance", value: totalCash > 0 ? fmt(totalCash) : "—", color: "#06B6D4" },
+                            { label: "Positions",     value: String(cashPositions.length) },
+                          ]} />
+                        </div>
+                        {openInstrumentTables.has("cash") && (
+                          cashPositions.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                                  <tr>
+                                    <TH wide>Account</TH><TH>Institution</TH><TH>Type</TH>
+                                    <TH>Balance</TH><TH>Yield</TH><TH>As Of</TH>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {cashPositions.map(p => (
+                                    <tr key={p.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40">
+                                      <TD>
+                                        <div>
+                                          <p className="font-semibold text-slate-200">{p.name}</p>
+                                          {p.notes && <p className="text-[10px] text-slate-600 mt-0.5">{p.notes}</p>}
+                                        </div>
+                                      </TD>
+                                      <TD className="text-slate-400">{p.institution}</TD>
+                                      <TD className="text-slate-400">{p.type}</TD>
+                                      <TD className="tabular-nums font-medium text-cyan-400">{fmt(p.balance)}</TD>
+                                      <TD className="tabular-nums text-slate-400">{p.yieldPct != null ? `${p.yieldPct.toFixed(2)}%` : "—"}</TD>
+                                      <TD className="text-slate-500">{p.asOf ?? "—"}</TD>
+                                    </tr>
+                                  ))}
+                                  <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                                    <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                                    <td /><td /><td className="py-2 px-3 text-xs text-cyan-400 tabular-nums font-semibold">{fmt(totalCash)}</td>
+                                    <td /><td />
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="px-5 py-8 text-center">
+                              <p className="text-xs text-slate-600 italic">No cash positions on record — add accounts to <code className="font-mono text-[10px]">lib/data.ts → cashPositions</code></p>
+                            </div>
+                          )
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* ══ 6. MANAGED FUNDS ═════════════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
                     const totalLpBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
