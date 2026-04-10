@@ -174,7 +174,7 @@ export default function Dashboard() {
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
   const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed", "cash"]));
   const [lpCurrentUnits, setLpCurrentUnits]           = useState<string>("100000");
-  const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("current");
+  const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("fund");
   const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
@@ -348,10 +348,11 @@ export default function Dashboard() {
               const lpCurrentPct = lpCurrent > 0 ? lpCurrent / LP_TOTAL_UNITS : 0;
               const lpMultiplier = lpViewMode === "current" && lpCurrentPct > 0 ? lpCurrentPct : 1;
               const isLpView = lpMultiplier < 1;
-              // Hypothetical additional units
-              const lpHypo       = parseFloat(lpHypotheticalUnits) || 0;
-              const lpHypoTotal  = lpCurrent + lpHypo;
-              const lpHypoPct    = lpHypoTotal > 0 ? lpHypoTotal / LP_TOTAL_UNITS : 0;
+              // Hypothetical additional units — expands denominator (dilutive)
+              const lpHypo          = parseFloat(lpHypotheticalUnits) || 0;
+              const lpHypoTotal     = lpCurrent + lpHypo;
+              const lpHypoDenom     = LP_TOTAL_UNITS + lpHypo;           // new total outstanding
+              const lpHypoPct       = lpHypoTotal > 0 ? lpHypoTotal / lpHypoDenom : 0;
 
               // ── Donut: total exposure per company (equity + debt + options) + managed ─
               const donutItems = [
@@ -503,7 +504,7 @@ export default function Dashboard() {
                         onChange={e => { setLpCurrentUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("current"); }}
                         className="w-28 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}% of fund · $1.00/unit</span>}
+                      {lpCurrent > 0 && <span className="text-[10px] text-emerald-500/80 tabular-nums">{(lpCurrentPct * 100).toFixed(2)}% of fund</span>}
                     </div>
 
                     {/* Hypothetical additional units — only in My Share mode */}
@@ -518,13 +519,15 @@ export default function Dashboard() {
                         />
                         {lpHypo > 0 && (
                           <span className="text-[10px] text-sky-400/80 tabular-nums">
-                            {(lpHypoPct * 100).toFixed(2)}% · {fmt(netTotal * lpHypoPct)}
+                            {(lpHypoPct * 100).toFixed(2)}% of {lpHypoDenom.toLocaleString()} units · {fmt(netTotal * lpHypoPct)}
                           </span>
                         )}
                       </div>
                     )}
 
-                    <span className="text-[10px] text-slate-700 hidden md:inline">{LP_TOTAL_UNITS.toLocaleString()} units outstanding</span>
+                    <span className="text-[10px] text-slate-600 hidden md:inline">
+                      {lpHypo > 0 ? lpHypoDenom.toLocaleString() : LP_TOTAL_UNITS.toLocaleString()} units outstanding · $1.00/unit (current price, not par)
+                    </span>
                   </div>
                 </div>
 
