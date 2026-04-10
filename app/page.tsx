@@ -401,17 +401,6 @@ export default function Dashboard() {
                 return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
               });
 
-              // ── NAV time chart ─────────────────────────────────────────────────
-              const W = 360; const H = 130; const PAD = { t: 10, r: 10, b: 28, l: 44 };
-              const chartW = W - PAD.l - PAD.r; const chartH = H - PAD.t - PAD.b;
-              const hasNavHistory = navHistory.length >= 2;
-              const maxY = hasNavHistory ? Math.max(...navHistory.map(d => d.nav)) * 1.08 : 1;
-              const xS = (i: number) => PAD.l + (i / Math.max(navHistory.length - 1, 1)) * chartW;
-              const yS = (v: number) => PAD.t + chartH - (v / maxY) * chartH;
-              const navLine  = navHistory.map((d, i) => `${i === 0 ? "M" : "L"}${xS(i).toFixed(1)},${yS(d.nav).toFixed(1)}`).join(" ");
-              const navFill = hasNavHistory ? navLine + ` L${xS(navHistory.length - 1)},${(PAD.t + chartH).toFixed(1)} L${xS(0)},${(PAD.t + chartH).toFixed(1)} Z` : "";
-              const yTicks = hasNavHistory ? [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY] : [];
-              const xLabels = navHistory.filter((_, i) => i % 4 === 0);
 
               // ── Allocation by security type ────────────────────────────────────
               const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
@@ -457,10 +446,11 @@ export default function Dashboard() {
                 {/* ── Metrics strip ── */}
                 {/* Metrics strip */}
                 <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
-                  {/* Portfolio Value — with leverage sub-line */}
+                  {/* Portfolio NAV Est. — with fund total + leverage sub-lines */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
-                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isLpView ? "My Portfolio Value" : "Portfolio Value"}</p>
+                    <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio NAV Est.</p>
                     <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(displayTotal)}</p>
+                    {isLpView && <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">Fund {fmt(netTotal)}</p>}
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                   </div>
                   {/* MOIC */}
@@ -591,32 +581,50 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* ② Value over time */}
+                  {/* ② Invested vs. NAV Est. — dynamic bar chart */}
                   <div className="p-5">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Value Over Time</p>
-                    {!hasNavHistory ? (
-                      <div className="flex items-center justify-center h-[102px] border border-dashed border-[#1E2D3D] rounded-lg">
-                        <p className="text-[10px] text-slate-600 italic">Historical data pending</p>
-                      </div>
-                    ) : (
-                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
-                        {yTicks.map((v, i) => (
-                          <g key={i}>
-                            <line x1={PAD.l} y1={yS(v)} x2={W - PAD.r} y2={yS(v)} stroke="#1E2D3D" strokeWidth="1" />
-                            <text x={PAD.l - 4} y={yS(v) + 3} textAnchor="end" style={{ fontSize: 8, fill: "#475569" }}>
-                              {v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(0)}M` : v > 0 ? `$${(v / 1000).toFixed(0)}K` : "$0"}
-                            </text>
-                          </g>
-                        ))}
-                        {xLabels.map((d, i) => {
-                          const idx = navHistory.indexOf(d);
-                          return <text key={i} x={xS(idx)} y={H - 4} textAnchor="middle" style={{ fontSize: 8, fill: "#475569" }}>{d.quarter}</text>;
-                        })}
-                        <path d={navFill} fill="#10B981" opacity="0.07" />
-                        <path d={navLine} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
-                        <circle cx={xS(navHistory.length - 1)} cy={yS(navHistory[navHistory.length - 1].nav)} r="3" fill="#10B981" />
-                      </svg>
-                    )}
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Invested vs. NAV Est.</p>
+                    {(() => {
+                      const managedInvested = managedFundPositions.reduce((s, p) => s + p.called, 0);
+                      const managedNav      = managedFundPositions.reduce((s, p) => s + p.nav, 0);
+                      const rows = [
+                        ...donutItems
+                          .filter(d => d.id !== "managed")
+                          .map(d => {
+                            const co = portfolio.find(c => c.id === d.id)!;
+                            return { label: d.label, color: d.color, invested: co.invested, nav: d.value };
+                          }),
+                        ...(managedNav > 0 ? [{ label: "Managed Funds", color: "#EC4899", invested: managedInvested, nav: managedNav }] : []),
+                      ].sort((a, b) => b.nav - a.nav);
+                      const maxVal = Math.max(...rows.map(r => Math.max(r.invested, r.nav)), 1);
+                      return (
+                        <div className="space-y-2.5">
+                          {rows.map(r => {
+                            const moic = r.invested > 0 ? r.nav / r.invested : 0;
+                            const isGain = r.nav >= r.invested;
+                            return (
+                              <div key={r.label}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{r.label}</span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[9px] tabular-nums text-slate-600">{fmt(r.nav * lpMultiplier)}</span>
+                                    <span className={`text-[9px] tabular-nums font-semibold w-10 text-right ${isGain ? "text-emerald-500" : "text-red-400"}`}>{moic.toFixed(2)}×</span>
+                                  </div>
+                                </div>
+                                <div className="relative h-1.5 bg-[#0A1628] rounded-full overflow-hidden">
+                                  <div className="absolute inset-y-0 left-0 bg-slate-700 rounded-full" style={{ width: `${(r.invested / maxVal) * 100}%` }} />
+                                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(r.nav / maxVal) * 100}%`, backgroundColor: r.color, opacity: 0.75 }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="flex items-center gap-4 pt-1">
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-slate-700" /><span className="text-[9px] text-slate-600">Cost basis</span></div>
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded-full bg-emerald-500/70" /><span className="text-[9px] text-slate-600">NAV est.</span></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* ③ Allocation by security type */}
