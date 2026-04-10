@@ -21,7 +21,7 @@ import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
-import { portfolio, navHistory, fund, managedFundPositions, cashPositions, LP_TOTAL_UNITS } from "@/lib/data";
+import { portfolio, navHistory, fund, managedFundPositions, cashPositions, LP_TOTAL_UNITS, FUND_LEVERAGE } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction } from "@/lib/types";
 
@@ -374,7 +374,8 @@ export default function Dashboard() {
               const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
               // Scaled display values — apply LP view multiplier to all dollar amounts
               const displayItems = donutItems.map(d => ({ ...d, value: d.value * lpMultiplier }));
-              const displayTotal = donutTotal * lpMultiplier;
+              const netTotal     = donutTotal - FUND_LEVERAGE;            // gross minus fund debt
+              const displayTotal = netTotal * lpMultiplier;                // pro-rata LP share of net
 
               // Build SVG donut arcs
               const cx = 80; const cy = 80; const R = 62; const r = 40;
@@ -442,10 +443,11 @@ export default function Dashboard() {
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                 {/* ── Metrics strip ── */}
                 {/* Metrics strip */}
-                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
+                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D] ${isLpView ? "bg-[#080E1A]" : ""}`}>
                   {[
-                    { label: isLpView ? "My Portfolio Value" : "Portfolio Value", value: fmt(displayTotal),                             accent: "#10B981" },
-                    { label: "MOIC", value: LP_TOTAL_UNITS > 0 ? `${(donutTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: donutTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
+                    { label: "Leverage",                                           value: `-${fmt(FUND_LEVERAGE * lpMultiplier)}`,       accent: "#F87171" },
+                    { label: isLpView ? "My Portfolio Value" : "Portfolio Value",  value: fmt(displayTotal),                             accent: "#10B981" },
+                    { label: "MOIC",                                               value: LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—", accent: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" },
                     { label: isLpView ? "My LP Basis"        : "LP Basis",        value: isLpView ? fmt(LP_TOTAL_UNITS * lpMultiplier) : fmt(LP_TOTAL_UNITS), accent: null },
                     { label: "Active Co's", value: String(portfolio.filter(c => c.status === "active").length), accent: null },
                     { label: "Positions",  value: String(totalPositions), accent: null },

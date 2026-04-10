@@ -40,7 +40,8 @@ export const fund: FundMetrics = {
 };
 
 // Total LP units outstanding — $1.00 par value per unit
-export const LP_TOTAL_UNITS = 215_100;
+export const LP_TOTAL_UNITS  = 215_100;
+export const FUND_LEVERAGE   = 50_000;   // fund-level debt subtracted from portfolio value
 
 // Fund-level cash & cash equivalents
 export const cashPositions: CashPosition[] = [
