@@ -383,11 +383,15 @@ export default function Dashboard() {
                   const nav = managedFundPositions.reduce((s, p) => s + p.nav, 0);
                   return nav > 0 ? [{ label: "Managed Funds", value: nav, color: "#EC4899", id: "managed" }] : [];
                 })(),
+                // Hypothetical new capital sits as uninvested cash in the fund
+                ...(lpHypo > 0 ? [{ label: "New Capital", value: lpHypo, color: "#60A5FA", id: "hypo-cash" }] : []),
               ];
-              const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
+              const donutTotal  = donutItems.reduce((s, d) => s + d.value, 0);
+              const netTotal    = donutTotal - FUND_LEVERAGE;              // gross minus fund debt
+              // MOIC denominator expands when hypothetical units are outstanding
+              const moicDenom   = lpHypoDenom;                             // LP_TOTAL_UNITS + lpHypo
               // Scaled display values — apply LP view multiplier to all dollar amounts
               const displayItems = donutItems.map(d => ({ ...d, value: d.value * lpMultiplier }));
-              const netTotal     = donutTotal - FUND_LEVERAGE;            // gross minus fund debt
               const displayTotal = netTotal * lpMultiplier;                // pro-rata LP share of net
 
               // Build SVG donut arcs
@@ -460,8 +464,8 @@ export default function Dashboard() {
                   {/* MOIC */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
                     <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">MOIC</p>
-                    <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: netTotal >= LP_TOTAL_UNITS ? "#10B981" : "#F87171" }}>
-                      {LP_TOTAL_UNITS > 0 ? `${(netTotal / LP_TOTAL_UNITS).toFixed(2)}×` : "—"}
+                    <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: netTotal >= moicDenom ? "#10B981" : "#F87171" }}>
+                      {moicDenom > 0 ? `${(netTotal / moicDenom).toFixed(2)}×` : "—"}
                     </p>
                   </div>
                   {/* LP Basis — shows fraction in My Share mode */}
@@ -546,8 +550,8 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* ── Three charts ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+                {/* ── Four charts ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
 
                   {/* ① Company allocation donut */}
                   <div className="p-5">
@@ -657,7 +661,7 @@ export default function Dashboard() {
                                 }`}
                                 style={c.id === selCo.id ? { backgroundColor: selCo.accentColor + "30", color: selCo.accentColor, outline: `1px solid ${selCo.accentColor}60` } : {}}
                               >
-                                {c.initials}
+                                {c.name}
                               </button>
                             ))}
                           </div>
@@ -728,6 +732,57 @@ export default function Dashboard() {
                         <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotal * lpMultiplier)}</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* ④ Fund Structure — waterfall */}
+                  <div className="p-5">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Fund Structure</p>
+                    {(() => {
+                      const grossAssets  = donutTotal;
+                      const leverage     = FUND_LEVERAGE;
+                      const nav          = netTotal;
+                      const lpBasis      = lpHypoDenom;          // total units outstanding at $1
+                      const myBasis      = isLpView ? lpHypoTotal : null;
+                      const myNav        = isLpView ? displayTotal : null;
+
+                      const rows: { label: string; value: number; displayValue: number; color: string; isDeduction?: boolean; dim?: boolean }[] = [
+                        { label: "Gross Assets",  value: grossAssets,       displayValue: grossAssets * lpMultiplier,  color: "#10B981" },
+                        { label: "Leverage",      value: leverage,           displayValue: leverage * lpMultiplier,     color: "#F87171", isDeduction: true },
+                        { label: "Net NAV",       value: nav,                displayValue: nav * lpMultiplier,          color: "#38BDF8" },
+                        { label: "Fund LP Basis", value: lpBasis,            displayValue: lpBasis * lpMultiplier,      color: "#8B5CF6", dim: true },
+                        ...(myBasis !== null ? [
+                          { label: "My Basis",    value: myBasis,            displayValue: myBasis,                     color: "#A78BFA" },
+                          { label: "My NAV Est.", value: myNav ?? 0,         displayValue: myNav ?? 0,                  color: "#34D399" },
+                        ] : []),
+                        ...(lpHypo > 0 ? [
+                          { label: "New Capital", value: lpHypo,             displayValue: lpHypo * lpMultiplier,       color: "#60A5FA" },
+                        ] : []),
+                      ];
+
+                      const maxVal = Math.max(...rows.map(r => r.value), 1);
+
+                      return (
+                        <div className="space-y-2.5">
+                          {rows.map(r => (
+                            <div key={r.label}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-[9px] ${r.dim ? "text-slate-600" : "text-slate-400"}`}>{r.label}</span>
+                                <span className={`text-[9px] tabular-nums font-medium ${r.isDeduction ? "text-red-400" : r.dim ? "text-slate-600" : "text-slate-300"}`}>
+                                  {r.isDeduction ? "-" : ""}{fmt(r.displayValue)}
+                                </span>
+                              </div>
+                              <div className="relative h-1.5 bg-[#0A1628] rounded-full overflow-hidden">
+                                <div className="absolute inset-y-0 left-0 rounded-full"
+                                  style={{ width: `${Math.min((r.value / maxVal) * 100, 100)}%`, backgroundColor: r.color, opacity: r.dim ? 0.35 : 0.7 }} />
+                              </div>
+                            </div>
+                          ))}
+                          {lpHypo > 0 && (
+                            <p className="text-[9px] text-sky-500/70 pt-1">+{fmt(lpHypo)} new capital included in assets &amp; NAV</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                 </div>
