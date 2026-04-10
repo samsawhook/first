@@ -344,19 +344,32 @@ export const portfolio: PortfolioCompany[] = [
     description:
       "Pigeon Service (fka CERTD) builds last-mile delivery infrastructure for local businesses, enabling same-day and scheduled delivery without the complexity of managing a fleet.",
     invested: 1,             // nominal $1 founders consideration
-    currentValue: 174_027,   // 4,350,663 shares × est. $0.04/share
-    ownership: 14.3,         // 4,350,663 ÷ 30,423,657
+    currentValue: 43_507,    // 4,350,663 shares × $0.01/share (customPricePerShare)
+    ownership: 5.37,         // 4,350,663 ÷ 81,000,000 FD
+    votingOwnership: 14.03,  // 4,350,663 ÷ 31,000,000 common outstanding
     stage: "Seed",
     founded: 2022,
     employees: 0,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 1_216_946,  // est. $0.04/share × 30,423,657 total shares
+    impliedValuation: 810_000,      // $0.01/sh × 81,000,000 FD shares
     customPricePerShare: 0.01,
-    totalShares: 30_423_657,
+    totalShares: 81_000_000,        // 31M common + 29.25M RSUs + 20.75M pool (as of 2026-04-10)
+    financialsAsOf: "4/10/26",
     website: "https://pigeonservice.com",
     logoUrl: "/logos/pigeon.png",
     accentColor: "#10B981",
+    capTable: {
+      asOf: "April 10, 2026",
+      source: "Pulley",
+      authorizedCommon: 100_000_000,
+      adjustedFullyDiluted: 81_000_000,
+      classes: [
+        { label: "Common Stock",     shares: 31_000_000, color: "#10B981",  note: "$48,750 total capital contribution" },
+        { label: "RSUs Outstanding", shares: 29_250_000, color: "#F59E0B",  note: "2023 Incentive Award Plan" },
+        { label: "Unissued Pool",    shares: 20_750_000, color: "#1E2D3D",  note: "Available for grant · 2023 Incentive Award Plan", isPool: true },
+      ],
+    } satisfies CapTableSummary,
     shareTransactions: [
       { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 1, certificateNumber: "CS-03" },
     ] satisfies ShareTransaction[],
