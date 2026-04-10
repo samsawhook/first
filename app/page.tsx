@@ -21,7 +21,7 @@ import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
-import { portfolio, navHistory, fund, managedFundPositions, cashPositions, LP_TOTAL_UNITS, FUND_LEVERAGE } from "@/lib/data";
+import { portfolio, navHistory, fund, cashPositions, LP_TOTAL_UNITS, FUND_LEVERAGE } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction } from "@/lib/types";
 
@@ -172,7 +172,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string>("fund");
-  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "managed", "cash"]));
+  const [openInstrumentTables, setOpenInstrumentTables] = useState<Set<string>>(new Set(["common", "credit", "convertibles", "options", "cash"]));
   const [lpCurrentUnits, setLpCurrentUnits]           = useState<string>("100000");
   const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("fund");
   const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
@@ -376,10 +376,6 @@ export default function Dashboard() {
                     return { label: c.name, value: equityVal + debtVal + optionVal, color: c.accentColor, id: c.id };
                   })
                   .filter(d => d.value > 0),
-                ...(() => {
-                  const nav = managedFundPositions.reduce((s, p) => s + p.nav, 0);
-                  return nav > 0 ? [{ label: "Managed Funds", value: nav, color: "#EC4899", id: "managed" }] : [];
-                })(),
               ];
               const baseDonutTotal = donutItems.reduce((s, d) => s + d.value, 0);
               const grossTotal  = baseDonutTotal + lpHypo;          // includes hypothetical cash
@@ -420,7 +416,6 @@ export default function Dashboard() {
                   else convertBasis += d.principal;
                 }
               }
-              const managedBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
               // Option total value: intrinsic + time value (variance-weighted)
               const optionsBasis = portfolio.reduce((sum, c) => {
                 const pps = c.totalShares ? effectiveImplied(c) / c.totalShares : 0;
@@ -431,21 +426,19 @@ export default function Dashboard() {
                 }, 0);
               }, 0);
               const cashBasis   = cashPositions.reduce((s, cp) => s + cp.balance, 0) + lpHypo;
-              const allocTotal  = equityBasis + creditBasis + convertBasis + managedBasis + optionsBasis + cashBasis;
+              const allocTotal  = equityBasis + creditBasis + convertBasis + optionsBasis + cashBasis;
               const allocTypes = [
-                { label: "Equity",        amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis   / allocTotal : 0 },
-                { label: "Credit",        amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis   / allocTotal : 0 },
-                { label: "Convertibles",  amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis  / allocTotal : 0 },
-                { label: "Options",       amount: optionsBasis, color: "#F43F5E", pct: allocTotal > 0 ? optionsBasis  / allocTotal : 0 },
-                { label: "Managed Funds", amount: managedBasis, color: "#EC4899", pct: allocTotal > 0 ? managedBasis  / allocTotal : 0 },
-                { label: "Cash",          amount: cashBasis,    color: "#60A5FA", pct: allocTotal > 0 ? cashBasis     / allocTotal : 0 },
+                { label: "Equity",       amount: equityBasis,  color: "#10B981", pct: allocTotal > 0 ? equityBasis  / allocTotal : 0 },
+                { label: "Credit",       amount: creditBasis,  color: "#6366F1", pct: allocTotal > 0 ? creditBasis  / allocTotal : 0 },
+                { label: "Convertibles", amount: convertBasis, color: "#F59E0B", pct: allocTotal > 0 ? convertBasis / allocTotal : 0 },
+                { label: "Options",      amount: optionsBasis, color: "#F43F5E", pct: allocTotal > 0 ? optionsBasis / allocTotal : 0 },
+                { label: "Cash",         amount: cashBasis,    color: "#60A5FA", pct: allocTotal > 0 ? cashBasis    / allocTotal : 0 },
               ];
               // Total positions count across all instrument types
               const totalPositions =
                 portfolio.filter(c => c.status === "active" && (c.shareTransactions ?? []).some(t => t.type === "Common")).length +
                 portfolio.reduce((s, c) => s + (c.debtPositions ?? []).length, 0) +
-                portfolio.reduce((s, c) => s + (c.optionPositions ?? []).length, 0) +
-                managedFundPositions.length;
+                portfolio.reduce((s, c) => s + (c.optionPositions ?? []).length, 0);
 
               return (
               <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
@@ -463,7 +456,7 @@ export default function Dashboard() {
                   {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
                     <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isLpView ? "My LP Basis" : "LP Basis"}</p>
-                    <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{isLpView ? fmt(lpHypoTotal) : fmt(LP_TOTAL_UNITS)}</p>
+                    <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{isLpView ? fmt(lpHypoTotal) : fmt(lpHypoDenom)}</p>
                     {isLpView && (
                       <>
                         <p className="text-base font-bold tabular-nums mt-0.5" style={{ color: "#34D399" }}>{(lpHypoPct * 100).toFixed(2)}%</p>
@@ -617,10 +610,10 @@ export default function Dashboard() {
                     {(() => {
                       // ── Top: fund-total vertical bars (always, never LP-scaled) ──
                       const fundCols = [
-                        { label: "Assets",   val: grossTotal,     color: "#10B981" },
-                        { label: "Leverage", val: FUND_LEVERAGE,  color: "#F87171" },
-                        { label: "NAV",      val: netTotal,       color: "#38BDF8" },
-                        { label: "LP Basis", val: LP_TOTAL_UNITS, color: "#8B5CF6" },
+                        { label: "Assets",   val: grossTotal,    color: "#10B981" },
+                        { label: "Leverage", val: FUND_LEVERAGE, color: "#F87171" },
+                        { label: "NAV",      val: netTotal,      color: "#38BDF8" },
+                        { label: "LP Basis", val: lpHypoDenom,   color: "#8B5CF6" },
                       ];
                       const maxVal = Math.max(...fundCols.map(c => c.val), 1);
                       const W3 = 280; const H3 = 120;
@@ -633,9 +626,10 @@ export default function Dashboard() {
                       const fmtS = (v: number) => v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${Math.round(v)}`;
 
                       // ── Bottom: My Share line gauges (only in LP view) ──
+                      // Gauges use the same maxVal scale as the bars above so widths are proportional
                       const myRows = isLpView ? [
-                        { label: "My Basis", val: lpHypoTotal,  total: LP_TOTAL_UNITS, color: "#A78BFA" },
-                        { label: "My NAV",   val: displayTotal, total: netTotal,        color: "#34D399" },
+                        { label: "My Basis", val: lpHypoTotal,  color: "#A78BFA" },
+                        { label: "My NAV",   val: displayTotal, color: "#34D399" },
                       ] : [];
 
                       return (
@@ -661,18 +655,14 @@ export default function Dashboard() {
                             <div className="mt-3 pt-3 border-t border-[#1E2D3D] space-y-3">
                               <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium mb-2">My Share</p>
                               {myRows.map(row => {
-                                const pct = row.total > 0 ? Math.min(row.val / row.total, 1) : 0;
-                                const pctDisplay = row.total > 0 ? (row.val / row.total * 100).toFixed(1) : "0.0";
+                                const pct = Math.min(row.val / maxVal, 1);
                                 return (
                                   <div key={row.label}>
                                     <div className="flex items-center justify-between mb-1.5">
                                       <span className="text-[9px] text-slate-500">{row.label}</span>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[9px] tabular-nums font-semibold" style={{ color: row.color }}>{fmtS(row.val)}</span>
-                                        <span className="text-[9px] text-slate-600 tabular-nums">{pctDisplay}%</span>
-                                      </div>
+                                      <span className="text-[9px] tabular-nums font-semibold" style={{ color: row.color }}>{fmtS(row.val)}</span>
                                     </div>
-                                    {/* Gauge line */}
+                                    {/* Gauge line — same scale as top bars */}
                                     <div className="relative">
                                       <svg width="100%" viewBox="0 0 280 14" preserveAspectRatio="none">
                                         {/* Track */}
@@ -686,8 +676,8 @@ export default function Dashboard() {
                                         {/* Marker dot */}
                                         <circle cx={280 * pct} cy="6" r="4" fill={row.color} />
                                         <circle cx={280 * pct} cy="6" r="2" fill="#0D1421" />
-                                        {/* End label */}
-                                        <text x="280" y="14" textAnchor="end" style={{ fontSize: 6, fill: "#475569" }}>{fmtS(row.total)}</text>
+                                        {/* End label — shared scale max */}
+                                        <text x="280" y="14" textAnchor="end" style={{ fontSize: 6, fill: "#475569" }}>{fmtS(maxVal)}</text>
                                       </svg>
                                     </div>
                                   </div>
@@ -1381,103 +1371,6 @@ export default function Dashboard() {
                             <div className="px-5 py-8 text-center">
                               <p className="text-xs text-slate-600 italic">No cash positions on record — add accounts to <code className="font-mono text-[10px]">lib/data.ts → cashPositions</code></p>
                             </div>
-                          )
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* ══ 6. MANAGED FUNDS ═════════════════════════════════════════════ */}
-                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-                  {(() => {
-                    const totalLpBasis = managedFundPositions.reduce((s, p) => s + p.called, 0);
-                    const totalNav     = managedFundPositions.reduce((s, p) => s + p.nav, 0);
-                    const totalDistrib = managedFundPositions.reduce((s, p) => s + p.distributions, 0);
-                    const wtdTvpi      = totalLpBasis > 0 ? (totalNav + totalDistrib) / totalLpBasis : null;
-                    const wtdDpi       = totalLpBasis > 0 ? totalDistrib / totalLpBasis : null;
-                    const { irrNum, irrDen } = managedFundPositions.reduce<{ irrNum: number; irrDen: number }>((acc, p) => {
-                      acc.irrNum += p.called * p.irr; acc.irrDen += p.called; return acc;
-                    }, { irrNum: 0, irrDen: 0 });
-                    const wtdIrr = irrDen > 0 ? irrNum / irrDen : null;
-                    return (
-                      <>
-                        <div className="border-b border-[#1E2D3D]">
-                          <SectionHeader label="Managed Funds" tableKey="managed" accent="#EC4899" stats={[
-                            { label: "LP Basis", value: totalLpBasis > 0 ? fmt(totalLpBasis) : "—" },
-                            { label: "NAV",      value: totalNav > 0 ? fmt(totalNav) : "—", color: "#EC4899" },
-                            { label: "DPI",      value: wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—" },
-                            { label: "TVPI",     value: wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—", color: "#EC4899" },
-                            { label: "IRR",      value: wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—", color: "#10B981" },
-                          ]} />
-                        </div>
-                        {openInstrumentTables.has("managed") && (
-                          managedFundPositions.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-xs">
-                                <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
-                                  <tr>
-                                    <TH></TH><TH wide>Fund</TH><TH>Vintage</TH>
-                                    <TH>Unit Price</TH><TH>LP Basis</TH>
-                                    <TH>NAV</TH><TH>DPI</TH><TH>TVPI</TH><TH>IRR</TH>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {managedFundPositions.map((p) => {
-                                    const rowKey = `fund-${p.id}`;
-                                    const isOpen = expandedRows.has(rowKey);
-                                    return (
-                                      <>
-                                        <tr key={p.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
-                                          <TD><ChevronDown size={12} className={`text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} /></TD>
-                                          <TD>
-                                            <div>
-                                              <p className="font-semibold text-slate-200">{p.fundName}</p>
-                                              <p className="text-[10px] text-slate-600">As of {p.asOf}</p>
-                                            </div>
-                                          </TD>
-                                          <TD className="text-slate-400 tabular-nums">{p.vintage}</TD>
-                                          <TD className="text-slate-400 tabular-nums">${p.unitPrice.toFixed(2)}</TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(p.called)}</TD>
-                                          <TD className="text-pink-400 tabular-nums font-semibold">{fmt(p.nav)}</TD>
-                                          <TD className="text-slate-300 tabular-nums">{p.dpi.toFixed(2)}×</TD>
-                                          <TD className="text-pink-400 tabular-nums font-medium">{p.tvpi.toFixed(2)}×</TD>
-                                          <TD className="text-emerald-400 tabular-nums">{p.irr.toFixed(1)}%</TD>
-                                        </tr>
-                                        {isOpen && (p.transactions ?? []).map((t, i) => (
-                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                            <td className="py-2 px-3 w-6" />
-                                            <td className="py-2 px-3 pl-11">
-                                              <p className="text-[11px] text-slate-400 font-medium">{t.type}</p>
-                                              {t.notes && <p className="text-[10px] text-slate-600">{t.notes}</p>}
-                                            </td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-500">{t.date}</td>
-                                            <td />
-                                            <td className="py-2 px-3 text-[11px] tabular-nums font-medium">
-                                              <span className={t.type === "Distribution" ? "text-emerald-400" : "text-slate-300"}>
-                                                {t.type === "Distribution" ? "+" : ""}{fmt(t.amount)}
-                                              </span>
-                                            </td>
-                                            <td colSpan={4} />
-                                          </tr>
-                                        ))}
-                                      </>
-                                    );
-                                  })}
-                                  <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
-                                    <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
-                                    <td /><td />
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalLpBasis)}</td>
-                                    <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{fmt(totalNav)}</td>
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{wtdDpi !== null ? `${wtdDpi.toFixed(2)}×` : "—"}</td>
-                                    <td className="py-2 px-3 text-xs text-pink-400 tabular-nums font-semibold">{wtdTvpi !== null ? `${wtdTvpi.toFixed(2)}×` : "—"}</td>
-                                    <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{wtdIrr !== null ? `${wtdIrr.toFixed(1)}%` : "—"}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <div className="px-5 py-8 text-center text-xs text-slate-600">No managed fund positions in this portfolio.</div>
                           )
                         )}
                       </>
