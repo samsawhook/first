@@ -655,7 +655,7 @@ export default function Dashboard() {
                                     ? "text-slate-100 ring-1"
                                     : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
                                 }`}
-                                style={c.id === selCo.id ? { backgroundColor: selCo.accentColor + "30", ringColor: selCo.accentColor + "60", color: selCo.accentColor } : {}}
+                                style={c.id === selCo.id ? { backgroundColor: selCo.accentColor + "30", color: selCo.accentColor, outline: `1px solid ${selCo.accentColor}60` } : {}}
                               >
                                 {c.initials}
                               </button>
