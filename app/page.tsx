@@ -418,8 +418,9 @@ export default function Dashboard() {
                   equityBasis += eqPps > 0 && eqSh > 0 ? eqSh * eqPps : effectiveCurrVal(c);
                 }
                 for (const d of (c.debtPositions ?? [])) {
-                  if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditBasis += d.principal;
-                  else convertBasis += d.principal;
+                  if (d.status === "Repaid") continue;
+                  if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditBasis += d.currentValue;
+                  else convertBasis += d.currentValue;
                 }
               }
               // Option total value: intrinsic + time value (variance-weighted)
