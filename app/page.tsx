@@ -574,7 +574,8 @@ export default function Dashboard() {
                           >
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                             <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors truncate">{d.label}</span>
-                            <span className="text-[11px] text-slate-600 tabular-nums ml-auto pl-2">{fmt(d.value)}</span>
+                            <span className="text-[10px] text-slate-600 tabular-nums ml-auto pl-2">{displayItemsTotal > 0 ? `${((d.value / displayItemsTotal) * 100).toFixed(1)}%` : "—"}</span>
+                            <span className="text-[11px] text-slate-500 tabular-nums w-12 text-right">{fmt(d.value)}</span>
                           </button>
                         ))}
                       </div>
