@@ -102,7 +102,8 @@ export interface DebtPosition {
   date: string;
   instrument: "Convertible Note" | "SAFE" | "Term Loan" | "Line of Credit" | "Revenue Based Financing" | "Preferred";
   principal: number;
-  interestRate?: number;                // annual %; undefined for SAFEs
+  interestRate?: number;                // annual %; undefined for SAFEs or variable
+  termMonths?: number;                  // loan term in months; undefined = 12 (standard)
   maturityDate?: string;               // "Jun 2026"; undefined for open-ended SAFEs
   valuationCap?: number;               // conversion cap ($)
   discountRate?: number;               // SAFE discount %
