@@ -543,13 +543,13 @@ export default function Dashboard() {
                 </div>
 
                 {/* ── Three charts ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-5 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
 
-                  {/* ① Company allocation donut — wider */}
-                  <div className="p-5 lg:col-span-3">
+                  {/* ① Company allocation donut */}
+                  <div className="p-5">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
-                    <div className="flex items-center gap-5">
-                      <svg width="160" height="160" viewBox="0 0 160 160" className="shrink-0">
+                    <div className="flex justify-center mb-3">
+                      <svg width="140" height="140" viewBox="0 0 160 160" className="shrink-0">
                         {arcs.map((a, i) => (
                           <path
                             key={i}
@@ -565,21 +565,21 @@ export default function Dashboard() {
                         <text x="80" y="76" textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: "#e2e8f0" }}>{fmt(displayTotal)}</text>
                         <text x="80" y="91" textAnchor="middle" style={{ fontSize: 9, fill: "#64748b" }}>{isLpView ? "my share" : "total value"}</text>
                       </svg>
-                      <div className="flex flex-col gap-1.5 flex-1">
-                        {displayItems.map(d => (
-                          <button
-                            key={d.id}
-                            onClick={() => { if (d.id !== "to-deploy" && d.id !== "cash") setActiveCompanyId(d.id); }}
-                            className="grid items-center gap-x-2 group text-left w-full"
-                            style={{ gridTemplateColumns: "8px 1fr 32px 44px" }}
-                          >
-                            <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                            <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">{d.label}</span>
-                            <span className="text-[10px] text-slate-600 tabular-nums text-right">{displayItemsTotal > 0 ? `${((d.value / displayItemsTotal) * 100).toFixed(1)}%` : "—"}</span>
-                            <span className="text-[11px] text-slate-500 tabular-nums text-right">{fmt(d.value)}</span>
-                          </button>
-                        ))}
-                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {displayItems.map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => { if (d.id !== "to-deploy" && d.id !== "cash") setActiveCompanyId(d.id); }}
+                          className="grid items-center gap-x-2 group text-left w-full"
+                          style={{ gridTemplateColumns: "8px 1fr 32px 44px" }}
+                        >
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
+                          <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">{d.label}</span>
+                          <span className="text-[10px] text-slate-600 tabular-nums text-right">{displayItemsTotal > 0 ? `${((d.value / displayItemsTotal) * 100).toFixed(1)}%` : "—"}</span>
+                          <span className="text-[11px] text-slate-500 tabular-nums text-right">{fmt(d.value)}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
