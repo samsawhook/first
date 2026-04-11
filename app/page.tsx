@@ -952,29 +952,21 @@ export default function Dashboard() {
                 {/* ══ 2. CREDIT ════════════════════════════════════════════════════ */}
                 <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
                   {(() => {
-                    const monthlyPmt = (principal: number, annualRate: number, months = 12) => {
-                      const r = annualRate / 100 / 12;
-                      return r > 0 ? principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1) : principal / months;
-                    };
                     const allCreditPos = companiesWithCredit.flatMap(c =>
                       (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument))
                     );
-                    const totalPrincipal = allCreditPos.reduce((s, d) => s + d.principal, 0);
-                    const totalCurrVal   = allCreditPos.reduce((s, d) => s + d.currentValue, 0);
-                    const ratedPos = allCreditPos.filter(d => d.interestRate !== undefined);
+                    const activeCreditPos = allCreditPos.filter(d => d.status !== "Repaid");
+                    const workingPrincipal = activeCreditPos.reduce((s, d) => s + d.currentValue, 0);
+                    const ratedPos = activeCreditPos.filter(d => d.interestRate !== undefined && d.currentValue > 0);
                     const wtdRate = ratedPos.length > 0
-                      ? ratedPos.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.principal, 0)
+                      ? ratedPos.reduce((s, d) => s + d.currentValue * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.currentValue, 0)
                       : null;
-                    const totalMonthly = allCreditPos.reduce((s, d) =>
-                      d.interestRate !== undefined ? s + monthlyPmt(d.principal, d.interestRate) : s, 0);
                     return (
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Credit" tableKey="credit" accent="#6366F1" stats={[
-                            { label: "Total Principal",   value: fmt(totalPrincipal) },
-                            { label: "Current Value",     value: fmt(totalCurrVal), color: "#6366F1" },
+                            { label: "Working Principal", value: fmt(workingPrincipal), color: "#6366F1" },
                             { label: "Wtd Rate",          value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
-                            { label: "Monthly Payments",  value: totalMonthly > 0 ? `~${fmt(totalMonthly)}/mo` : "—" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("credit") && (
@@ -984,22 +976,23 @@ export default function Dashboard() {
                                 <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                   <tr>
                                     <TH></TH><TH wide>Company</TH><TH>Type</TH>
-                                    <TH>Principal</TH><TH>Rate</TH><TH>Monthly Pmt</TH><TH>Status</TH>
+                                    <TH>Working Principal</TH><TH>Rate</TH>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {companiesWithCredit.map((c) => {
                                     const positions = (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument));
-                                    const principal = positions.reduce((s, d) => s + d.principal, 0);
-                                    const ratedP = positions.filter(d => d.interestRate !== undefined);
+                                    const activePos  = positions.filter(d => d.status !== "Repaid");
+                                    const repaidPos  = positions.filter(d => d.status === "Repaid");
+                                    const compWorking = activePos.reduce((s, d) => s + d.currentValue, 0);
+                                    const ratedP = activePos.filter(d => d.interestRate !== undefined && d.currentValue > 0);
                                     const compRate = ratedP.length > 0
-                                      ? ratedP.reduce((s, d) => s + d.principal * d.interestRate!, 0) / ratedP.reduce((s, d) => s + d.principal, 0)
+                                      ? ratedP.reduce((s, d) => s + d.currentValue * d.interestRate!, 0) / ratedP.reduce((s, d) => s + d.currentValue, 0)
                                       : null;
-                                    const totalMo = positions.reduce((s, d) =>
-                                      d.interestRate !== undefined ? s + monthlyPmt(d.principal, d.interestRate) : s, 0);
                                     const rowKey = `credit-${c.id}`;
                                     const isOpen = expandedRows.has(rowKey);
-                                    const instrType = positions.length === 1 ? positions[0].instrument : `${positions.length} instruments`;
+                                    const activeInstrTypes = activePos.map(d => d.instrument).filter((v, i, a) => a.indexOf(v) === i);
+                                    const instrType = activeInstrTypes.length === 1 ? activeInstrTypes[0] : `${activePos.length} instruments`;
                                     return (
                                       <>
                                         <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/40 cursor-pointer" onClick={() => toggleRow(rowKey)}>
@@ -1009,54 +1002,60 @@ export default function Dashboard() {
                                               {companyLogo(c)}
                                               <div>
                                                 <p className="font-semibold text-slate-200">{c.name}</p>
-                                                <p className="text-[10px] text-slate-600">{positions.length} instrument{positions.length !== 1 ? "s" : ""}</p>
+                                                <p className="text-[10px] text-slate-600">{activePos.length} active{repaidPos.length > 0 ? `, ${repaidPos.length} repaid` : ""}</p>
                                               </div>
                                             </div>
                                           </TD>
                                           <TD>
                                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-medium">{instrType}</span>
                                           </TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(principal)}</TD>
+                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(compWorking)}</TD>
                                           <TD className="text-indigo-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : <span className="text-slate-500">—</span>}</TD>
-                                          <TD className="text-slate-300 tabular-nums">{totalMo > 0 ? `~${fmt(totalMo)}/mo` : "—"}</TD>
-                                          <TD>
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${positions[0]?.status === "Current" ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"}`}>
-                                              {positions[0]?.status ?? "—"}
-                                            </span>
-                                          </TD>
                                         </tr>
-                                        {isOpen && positions.map((d, i) => (
-                                          <tr key={i} className="border-t border-[#0D1421] bg-[#080E1A]">
-                                            <td className="py-2 px-3 w-6" />
-                                            <td className="py-2 px-3 pl-11">
-                                              <p className="text-[11px] text-slate-500">{d.date}</p>
-                                              {d.notes && <p className="text-[10px] text-slate-600 max-w-xs">{d.notes}</p>}
-                                            </td>
-                                            <td className="py-2 px-3">
-                                              <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{d.instrument}</span>
-                                            </td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
-                                            <td className="py-2 px-3 text-[11px] text-indigo-400 tabular-nums">
-                                              {d.interestRate !== undefined ? `${d.interestRate}%` : "—"}
-                                            </td>
-                                            <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">
-                                              {d.interestRate !== undefined ? `~${fmt(monthlyPmt(d.principal, d.interestRate))}/mo` : "—"}
-                                            </td>
-                                            <td className="py-2 px-3">
-                                              <span className={`text-[10px] px-1 py-0.5 rounded ${d.status === "Current" ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"}`}>{d.status}</span>
-                                            </td>
-                                          </tr>
-                                        ))}
+                                        {isOpen && (
+                                          <>
+                                            {activePos.map((d, i) => (
+                                              <tr key={`a-${i}`} className="border-t border-[#0D1421] bg-[#080E1A]">
+                                                <td className="py-2 px-3 w-6" />
+                                                <td className="py-2 px-3 pl-11">
+                                                  <p className="text-[11px] text-slate-500">{d.date}{d.maturityDate ? ` → ${d.maturityDate}` : ""}</p>
+                                                  {d.notes && <p className="text-[10px] text-slate-600 max-w-xs">{d.notes}</p>}
+                                                </td>
+                                                <td className="py-2 px-3">
+                                                  <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{d.instrument}</span>
+                                                </td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-300 tabular-nums font-medium">{fmt(d.currentValue)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-indigo-400 tabular-nums">
+                                                  {d.interestRate !== undefined ? `${d.interestRate}%` : "—"}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                            {repaidPos.map((d, i) => (
+                                              <tr key={`r-${i}`} className="border-t border-[#0D1421] bg-[#080E1A] opacity-40">
+                                                <td className="py-2 px-3 w-6" />
+                                                <td className="py-2 px-3 pl-11">
+                                                  <p className="text-[11px] text-slate-500 line-through">{d.date}</p>
+                                                  {d.notes && <p className="text-[10px] text-slate-600 max-w-xs">{d.notes}</p>}
+                                                </td>
+                                                <td className="py-2 px-3">
+                                                  <span className="text-[10px] px-1 py-0.5 rounded bg-slate-500/10 text-slate-500">{d.instrument}</span>
+                                                </td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums line-through">{fmt(d.principal)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-600 tabular-nums">
+                                                  {d.interestRate !== undefined ? `${d.interestRate}%` : "—"}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </>
+                                        )}
                                       </>
                                     );
                                   })}
                                   <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                     <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
                                     <td />
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(totalPrincipal)}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(workingPrincipal)}</td>
                                     <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—"}</td>
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalMonthly > 0 ? `~${fmt(totalMonthly)}/mo` : "—"}</td>
-                                    <td />
                                   </tr>
                                 </tbody>
                               </table>
