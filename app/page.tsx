@@ -964,14 +964,14 @@ export default function Dashboard() {
                     const calcPmt = (d: typeof allCreditPos[0]): number | null => {
                       if (d.interestRate === undefined || d.instrument === "Line of Credit") return null;
                       return d.termMonths === 1
-                        ? Math.round(d.principal * d.interestRate / 1200)        // flat fee for bullets
-                        : Math.round(monthlyPmt(d.principal, d.interestRate, 12)); // P&I for amortizing
+                        ? Math.round(d.principal * d.interestRate / 1200)
+                        : Math.round(monthlyPmt(d.principal, d.interestRate, 12));
                     };
                     const allCreditPos = companiesWithCredit.flatMap(c =>
                       (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument))
                     );
                     const activeCreditPos = allCreditPos.filter(d => d.status !== "Repaid");
-                    const workingPrincipal = activeCreditPos.reduce((s, d) => s + d.currentValue, 0);
+                    const totalOutstanding = activeCreditPos.reduce((s, d) => s + d.currentValue, 0);
                     const ratedPos = activeCreditPos.filter(d => d.interestRate !== undefined && d.currentValue > 0);
                     const wtdRate = ratedPos.length > 0
                       ? ratedPos.reduce((s, d) => s + d.currentValue * d.interestRate!, 0) / ratedPos.reduce((s, d) => s + d.currentValue, 0)
@@ -981,9 +981,9 @@ export default function Dashboard() {
                       <>
                         <div className="border-b border-[#1E2D3D]">
                           <SectionHeader label="Credit" tableKey="credit" accent="#6366F1" stats={[
-                            { label: "Working Principal", value: fmt(workingPrincipal), color: "#6366F1" },
-                            { label: "Wtd Rate",          value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
-                            { label: "Monthly",           value: totalMonthly > 0 ? fmt(totalMonthly) : "—" },
+                            { label: "Outstanding",  value: fmt(totalOutstanding), color: "#6366F1" },
+                            { label: "Wtd Rate",     value: wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—" },
+                            { label: "Monthly",      value: totalMonthly > 0 ? fmt(totalMonthly) : "—" },
                           ]} />
                         </div>
                         {openInstrumentTables.has("credit") && (
@@ -993,29 +993,31 @@ export default function Dashboard() {
                                 <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                                   <tr>
                                     <TH></TH><TH wide>Company</TH><TH>Type</TH>
-                                    <TH>Working Principal</TH><TH>Rate</TH><TH>Monthly</TH><TH></TH>
+                                    <TH>Original</TH><TH>Repaid</TH><TH>Outstanding</TH><TH>Rate</TH><TH>Monthly</TH><TH></TH>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {companiesWithCredit.map((c) => {
-                                    const positions = (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument));
-                                    const activePos   = positions.filter(d => d.status !== "Repaid");
-                                    const repaidPos   = positions.filter(d => d.status === "Repaid");
-                                    const compWorking = activePos.reduce((s, d) => s + d.currentValue, 0);
-                                    const ratedP = activePos.filter(d => d.interestRate !== undefined && d.currentValue > 0);
-                                    const compRate = ratedP.length > 0
+                                    const positions  = (c.debtPositions ?? []).filter(d => CREDIT_INSTRUMENTS.includes(d.instrument));
+                                    const activePos  = positions.filter(d => d.status !== "Repaid");
+                                    const repaidPos  = positions.filter(d => d.status === "Repaid");
+                                    const compOrig   = positions.reduce((s, d) => s + d.principal, 0);
+                                    const compRepaid = positions.reduce((s, d) => s + (d.principal - d.currentValue), 0);
+                                    const compOut    = activePos.reduce((s, d) => s + d.currentValue, 0);
+                                    const ratedP     = activePos.filter(d => d.interestRate !== undefined && d.currentValue > 0);
+                                    const compRate   = ratedP.length > 0
                                       ? ratedP.reduce((s, d) => s + d.currentValue * d.interestRate!, 0) / ratedP.reduce((s, d) => s + d.currentValue, 0)
                                       : null;
-                                    const compMonthly = activePos.reduce((s, d) => { const p = calcPmt(d); return p !== null ? s + p : s; }, 0);
-                                    const hasVariable = activePos.some(d => d.instrument === "Line of Credit" && d.interestRate === undefined);
-                                    const rowKey = `credit-${c.id}`;
-                                    const isOpen = expandedRows.has(rowKey);
-                                    const activeInstrTypes = activePos.map(d => d.instrument).filter((v, i, a) => a.indexOf(v) === i);
-                                    const instrType = activeInstrTypes.length === 1 ? activeInstrTypes[0] : `${activePos.length} instruments`;
-                                    const rateLabel = (d: typeof positions[0]) =>
+                                    const compMonthly  = activePos.reduce((s, d) => { const p = calcPmt(d); return p !== null ? s + p : s; }, 0);
+                                    const hasVariable  = activePos.some(d => d.instrument === "Line of Credit" && d.interestRate === undefined);
+                                    const rowKey       = `credit-${c.id}`;
+                                    const isOpen       = expandedRows.has(rowKey);
+                                    const activeTypes  = activePos.map(d => d.instrument).filter((v, i, a) => a.indexOf(v) === i);
+                                    const instrType    = activeTypes.length === 1 ? activeTypes[0] : `${activePos.length} instruments`;
+                                    const rateLabel    = (d: typeof positions[0]) =>
                                       d.interestRate !== undefined ? `${d.interestRate}%`
                                         : d.instrument === "Line of Credit" ? "Variable" : "—";
-                                    const pmtLabel = (d: typeof positions[0]) => {
+                                    const pmtLabel     = (d: typeof positions[0]) => {
                                       if (d.instrument === "Line of Credit" && d.interestRate === undefined) return "Variable";
                                       const p = calcPmt(d); return p !== null ? fmt(p) : "—";
                                     };
@@ -1032,10 +1034,10 @@ export default function Dashboard() {
                                               </div>
                                             </div>
                                           </TD>
-                                          <TD>
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-medium">{instrType}</span>
-                                          </TD>
-                                          <TD className="text-slate-300 tabular-nums font-medium">{fmt(compWorking)}</TD>
+                                          <TD><span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-medium">{instrType}</span></TD>
+                                          <TD className="text-slate-500 tabular-nums">{fmt(compOrig)}</TD>
+                                          <TD className="text-slate-500 tabular-nums">{fmt(compRepaid)}</TD>
+                                          <TD className="text-slate-200 tabular-nums font-semibold">{fmt(compOut)}</TD>
                                           <TD className="text-indigo-400 tabular-nums">{compRate !== null ? `${compRate.toFixed(1)}%` : hasVariable ? <span className="text-slate-400 italic text-[10px]">Variable</span> : <span className="text-slate-500">—</span>}</TD>
                                           <TD className="text-slate-300 tabular-nums">{compMonthly > 0 ? fmt(compMonthly) : hasVariable ? <span className="text-slate-400 italic text-[10px]">+Variable</span> : "—"}</TD>
                                           <td />
@@ -1052,7 +1054,9 @@ export default function Dashboard() {
                                                 <td className="py-2 px-3">
                                                   <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400">{d.instrument}</span>
                                                 </td>
-                                                <td className="py-2 px-3 text-[11px] text-slate-300 tabular-nums font-medium">{fmt(d.currentValue)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums">{fmt(d.principal)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums">{fmt(d.principal - d.currentValue)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-200 tabular-nums font-medium">{fmt(d.currentValue)}</td>
                                                 <td className="py-2 px-3 text-[11px] text-indigo-400 tabular-nums">{rateLabel(d)}</td>
                                                 <td className="py-2 px-3 text-[11px] text-slate-300 tabular-nums">{pmtLabel(d)}</td>
                                                 <td className="py-2 px-3">
@@ -1070,7 +1074,9 @@ export default function Dashboard() {
                                                 <td className="py-2 px-3">
                                                   <span className="text-[10px] px-1 py-0.5 rounded bg-slate-500/10 text-slate-500">{d.instrument}</span>
                                                 </td>
-                                                <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums line-through">{fmt(d.principal)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-500 tabular-nums">{fmt(d.principal)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{fmt(d.principal)}</td>
+                                                <td className="py-2 px-3 text-[11px] text-slate-600 tabular-nums">—</td>
                                                 <td className="py-2 px-3 text-[11px] text-slate-600 tabular-nums">{rateLabel(d)}</td>
                                                 <td className="py-2 px-3 text-[11px] text-slate-600 tabular-nums">—</td>
                                                 <td className="py-2 px-3">
@@ -1086,7 +1092,9 @@ export default function Dashboard() {
                                   <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                                     <td /><td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total / Wtd Avg</td>
                                     <td />
-                                    <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{fmt(workingPrincipal)}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-500 tabular-nums font-semibold">{fmt(allCreditPos.reduce((s, d) => s + d.principal, 0))}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-500 tabular-nums font-semibold">{fmt(allCreditPos.reduce((s, d) => s + (d.principal - d.currentValue), 0))}</td>
+                                    <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(totalOutstanding)}</td>
                                     <td className="py-2 px-3 text-xs text-indigo-400 tabular-nums font-semibold">{wtdRate !== null ? `${wtdRate.toFixed(1)}%` : "—"}</td>
                                     <td className="py-2 px-3 text-xs text-slate-300 tabular-nums font-semibold">{totalMonthly > 0 ? fmt(totalMonthly) : "—"}</td>
                                     <td />
