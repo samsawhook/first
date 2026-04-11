@@ -543,12 +543,12 @@ export default function Dashboard() {
                 </div>
 
                 {/* ── Three charts ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+                <div className="grid grid-cols-1 lg:grid-cols-5 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
 
-                  {/* ① Company allocation donut */}
-                  <div className="p-5">
+                  {/* ① Company allocation donut — wider */}
+                  <div className="p-5 lg:col-span-3">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
-                    <div className="flex flex-wrap items-center gap-5">
+                    <div className="flex items-center gap-5">
                       <svg width="160" height="160" viewBox="0 0 160 160" className="shrink-0">
                         {arcs.map((a, i) => (
                           <path
@@ -574,7 +574,7 @@ export default function Dashboard() {
                             style={{ gridTemplateColumns: "8px 1fr 32px 44px" }}
                           >
                             <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                            <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors break-words">{d.label}</span>
+                            <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">{d.label}</span>
                             <span className="text-[10px] text-slate-600 tabular-nums text-right">{displayItemsTotal > 0 ? `${((d.value / displayItemsTotal) * 100).toFixed(1)}%` : "—"}</span>
                             <span className="text-[11px] text-slate-500 tabular-nums text-right">{fmt(d.value)}</span>
                           </button>
