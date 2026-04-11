@@ -570,12 +570,13 @@ export default function Dashboard() {
                           <button
                             key={d.id}
                             onClick={() => { if (d.id !== "to-deploy" && d.id !== "cash") setActiveCompanyId(d.id); }}
-                            className="flex items-center gap-2 group text-left"
+                            className="grid items-center gap-x-2 group text-left w-full"
+                            style={{ gridTemplateColumns: "8px 1fr 32px 44px" }}
                           >
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
+                            <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
                             <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors truncate">{d.label}</span>
-                            <span className="text-[10px] text-slate-600 tabular-nums ml-auto pl-2">{displayItemsTotal > 0 ? `${((d.value / displayItemsTotal) * 100).toFixed(1)}%` : "—"}</span>
-                            <span className="text-[11px] text-slate-500 tabular-nums w-12 text-right">{fmt(d.value)}</span>
+                            <span className="text-[10px] text-slate-600 tabular-nums text-right">{displayItemsTotal > 0 ? `${((d.value / displayItemsTotal) * 100).toFixed(1)}%` : "—"}</span>
+                            <span className="text-[11px] text-slate-500 tabular-nums text-right">{fmt(d.value)}</span>
                           </button>
                         ))}
                       </div>
