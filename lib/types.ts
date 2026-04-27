@@ -325,14 +325,11 @@ export interface Letter {
 
 export type IOIPayload = {
   company: string;
-  side: "buy" | "sell";
-  amount: string;
-  impliedValuation: string;
+  side?: "buy" | "sell";  // context only (pre-filled for secondary market)
   name: string;
   email: string;
   phone: string;
   accredited: boolean;
-  notes: string;
 };
 
 // ─── Investor Holdings ────────────────────────────────────────────────────────

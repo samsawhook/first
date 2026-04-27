@@ -16,7 +16,7 @@ const DEAL_TYPE_LABELS: Record<PrivateDeal["dealType"], string> = {
   equity_option: "Equity Option",
 };
 
-// ── Interest modal (NDA or IOI) ───────────────────────────────────────────────
+// ── NDA request modal ─────────────────────────────────────────────────────────
 
 function NDAModal({ deal, onClose }: { deal: PrivateDeal; onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false);
@@ -87,175 +87,128 @@ function NDAModal({ deal, onClose }: { deal: PrivateDeal; onClose: () => void })
 
 function DealCard({
   deal,
-  onNDA,
   onIOI,
   onCompanyClick,
 }: {
   deal: PrivateDeal;
-  onNDA: () => void;
   onIOI: () => void;
   onCompanyClick?: (id: string) => void;
 }) {
+  const [showNDA, setShowNDA] = useState(false);
+
   const linkedPortco = deal.linkedPortcoId
     ? portfolio.find((c) => c.id === deal.linkedPortcoId)
     : null;
 
-  const hasEquityUpside =
-    deal.yieldScenarios.length === 1 && deal.yieldScenarios[0].annualizedReturn === 0;
-
   return (
-    <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-      {/* Accent bar */}
-      <div className="h-1" style={{ background: deal.accentColor }} />
+    <>
+      <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+        {/* Accent bar */}
+        <div className="h-1" style={{ background: deal.accentColor }} />
 
-      <div className="p-5">
-        {/* Header row */}
-        <div className="flex items-start gap-4 mb-4">
-          {linkedPortco?.logoUrl ? (
-            <button
-              onClick={() => linkedPortco && onCompanyClick?.(linkedPortco.id)}
-              className="w-12 h-12 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shrink-0 hover:opacity-80 transition-opacity"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={linkedPortco.logoUrl} alt={linkedPortco.name} className="w-full h-full object-contain" />
-            </button>
-          ) : (
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
-              style={{ background: `${deal.accentColor}18`, color: deal.accentColor, border: `1px solid ${deal.accentColor}30` }}>
-              {deal.initials}
-            </div>
-          )}
+        <div className="p-5">
+          {/* Header row */}
+          <div className="flex items-start gap-4 mb-4">
+            {linkedPortco?.logoUrl ? (
+              <button
+                onClick={() => linkedPortco && onCompanyClick?.(linkedPortco.id)}
+                className="w-12 h-12 rounded-xl overflow-hidden bg-white flex items-center justify-center p-1 shrink-0 hover:opacity-80 transition-opacity"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={linkedPortco.logoUrl} alt={linkedPortco.name} className="w-full h-full object-contain" />
+              </button>
+            ) : (
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+                style={{ background: `${deal.accentColor}18`, color: deal.accentColor, border: `1px solid ${deal.accentColor}30` }}>
+                {deal.initials}
+              </div>
+            )}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
-                style={{ background: `${deal.accentColor}15`, color: deal.accentColor }}>
-                {DEAL_TYPE_LABELS[deal.dealType]}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] bg-slate-500/10 text-slate-500 border border-slate-500/20 px-2 py-0.5 rounded-full">
-                <Lock size={8} /> NDA Required
-              </span>
-              {deal.yearsInBusiness && (
-                <span className="text-[10px] text-slate-600">{deal.yearsInBusiness} yrs in business</span>
-              )}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+                  style={{ background: `${deal.accentColor}15`, color: deal.accentColor }}>
+                  {DEAL_TYPE_LABELS[deal.dealType]}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] bg-slate-500/10 text-slate-500 border border-slate-500/20 px-2 py-0.5 rounded-full">
+                  <Lock size={8} /> NDA Required
+                </span>
+                {deal.yearsInBusiness && (
+                  <span className="text-[10px] text-slate-600">{deal.yearsInBusiness} yrs in business</span>
+                )}
+              </div>
+              <h3 className="text-base font-semibold text-slate-100 leading-snug">{deal.name}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{deal.sector}</p>
             </div>
-            <h3 className="text-base font-semibold text-slate-100 leading-snug">{deal.name}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{deal.sector}</p>
           </div>
-        </div>
 
-        {/* Tagline — always visible */}
-        <p className="text-sm text-slate-400 leading-relaxed mb-4 italic">&ldquo;{deal.tagline}&rdquo;</p>
+          {/* Tagline */}
+          <p className="text-sm text-slate-400 leading-relaxed mb-4 italic">&ldquo;{deal.tagline}&rdquo;</p>
 
-        {/* Teaser highlight — first bullet shown freely */}
-        {deal.highlights[0] && (
-          <ul className="space-y-1.5 mb-4">
-            <li className="flex items-start gap-2 text-xs text-slate-400">
-              <span className="mt-0.5 shrink-0 text-[8px]" style={{ color: deal.accentColor }}>◆</span>
-              {deal.highlights[0]}
-            </li>
-          </ul>
-        )}
-
-        {/* ── Paywall section ── */}
-        <div className="relative rounded-xl overflow-hidden mb-5">
-          {/* Blurred content beneath */}
-          <div className="blur-sm pointer-events-none select-none opacity-70 px-0 pb-2">
-            {/* Remaining highlights */}
-            <ul className="space-y-1.5 mb-4">
-              {(deal.highlights.length > 1 ? deal.highlights.slice(1) : ["Additional highlights available under NDA", "Detailed operating metrics and projections"]).map((h, i) => (
+          {/* Teaser highlights — first 2 shown freely */}
+          {deal.highlights.slice(0, 2).length > 0 && (
+            <ul className="space-y-1.5 mb-5">
+              {deal.highlights.slice(0, 2).map((h, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-slate-400">
                   <span className="mt-0.5 shrink-0 text-[8px]" style={{ color: deal.accentColor }}>◆</span>
                   {h}
                 </li>
               ))}
             </ul>
-            {/* Description */}
-            <p className="text-sm text-slate-400 leading-relaxed mb-4">{deal.description}</p>
-            {/* Metrics strip */}
-            <div className="flex flex-wrap gap-3 mb-4 pt-3 border-t border-[#1E2D3D]">
-              {[
-                deal.revenue         && { label: "Revenue",     val: "$ ● ● ●", color: "text-slate-200" },
-                deal.cashFlow != null && { label: deal.cashFlowLabel ?? "Cash Flow", val: "$ ● ● ●", color: "text-emerald-400" },
-                deal.assets          && { label: "Hard Assets",  val: "$ ● ● ●", color: "text-slate-200" },
-                deal.askingPrice     && { label: deal.dealType === "energy" ? "Total CAPEX" : "Asking Price", val: "$ ● ● ●", color: "text-slate-200" },
-                deal.minimumInvestment && { label: "Min Investment", val: "$ ● ● ●", color: "text-slate-200" },
-              ].filter(Boolean).map((m, i) => (
-                <div key={i} className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">{(m as {label:string;val:string;color:string}).label}</p>
-                  <p className={`text-sm font-semibold tabular-nums ${(m as {label:string;val:string;color:string}).color}`}>{(m as {label:string;val:string;color:string}).val}</p>
-                </div>
-              ))}
+          )}
+
+          {/* Paywall — clean lock with no fake data */}
+          <div className="rounded-xl border border-[#1E2D3D] bg-[#080E1A]/60 px-5 py-6 text-center mb-5">
+            <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#0D1421] border border-[#1E2D3D] mb-3">
+              <Lock size={15} className="text-slate-500" />
             </div>
-            {/* Yield scenarios */}
-            <div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-2">
-                {hasEquityUpside ? "Return Profile" : "Yield Targets"}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {deal.yieldScenarios.map((scenario) => (
-                  <div key={scenario.label} className="bg-[#111D2E] border border-[#1E2D3D] rounded-xl px-4 py-3 flex-1 min-w-[120px]">
-                    <p className="text-2xl font-bold tabular-nums text-slate-600">●●%</p>
-                    <p className="text-xs font-semibold text-slate-500 mt-0.5">{scenario.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <p className="text-sm font-semibold text-slate-200 mb-1">Full details under NDA</p>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+              Revenue, cash flow, asking price, return targets, and the complete deal brief are released after a signed NDA.
+            </p>
           </div>
 
-          {/* Gradient + paywall CTA overlay */}
-          <div className="absolute inset-0 flex flex-col items-center justify-end"
-            style={{ background: "linear-gradient(to bottom, transparent 0%, #0D1421 55%)" }}>
-            <div className="w-full text-center px-4 pb-4 pt-10">
-              <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#0D1421] border border-[#1E2D3D] mb-2.5">
-                <Lock size={15} className="text-slate-500" />
-              </div>
-              <p className="text-sm font-semibold text-slate-200 mb-1">Full details locked</p>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4 leading-relaxed">
-                Revenue, cash flow, return targets, and the complete deal brief are shared under NDA.
-              </p>
-              <button onClick={onNDA}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-300 hover:text-slate-100 rounded-lg transition-colors">
-                <FileText size={12} /> Request NDA &amp; Full Details →
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2 pt-4 border-t border-[#1E2D3D]">
-          <button onClick={onNDA}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-300 hover:text-slate-100 rounded-lg transition-colors">
-            <FileText size={12} /> Request NDA
-          </button>
-          <button onClick={onIOI}
-            className="flex items-center gap-1.5 flex-1 justify-center px-4 py-2.5 text-xs font-semibold rounded-lg transition-colors"
+          {/* Single CTA */}
+          <button
+            onClick={onIOI}
+            className="w-full flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-semibold rounded-lg transition-colors"
             style={{ background: `${deal.accentColor}18`, color: deal.accentColor, border: `1px solid ${deal.accentColor}30` }}
             onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = `${deal.accentColor}28`; }}
             onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = `${deal.accentColor}18`; }}
           >
-            <Zap size={12} /> Express Interest →
+            <Zap size={13} /> Express Interest →
           </button>
-          {linkedPortco && onCompanyClick && (
-            <button onClick={() => onCompanyClick(linkedPortco.id)}
-              className="flex items-center gap-1.5 px-3 py-2.5 text-xs text-slate-400 hover:text-slate-200 bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-600 rounded-lg transition-colors">
-              <ExternalLink size={11} /> View Company
-            </button>
-          )}
-        </div>
 
-        {deal.deadline && (
-          <p className="text-[10px] text-slate-600 mt-2 text-center">{deal.deadline} · For accredited investors</p>
-        )}
+          <div className="flex items-center justify-between mt-2">
+            {deal.deadline && (
+              <p className="text-[10px] text-slate-600">{deal.deadline} · Accredited investors only</p>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => setShowNDA(true)}
+                className="text-[10px] text-slate-600 hover:text-slate-400 underline underline-offset-2 transition-colors"
+              >
+                Request NDA &amp; deal details
+              </button>
+              {linkedPortco && onCompanyClick && (
+                <button onClick={() => onCompanyClick(linkedPortco.id)}
+                  className="flex items-center gap-1 text-[10px] text-slate-600 hover:text-slate-400 transition-colors">
+                  <ExternalLink size={9} /> View company
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+
+      {showNDA && <NDAModal deal={deal} onClose={() => setShowNDA(false)} />}
+    </>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function DealPipeline({ onCompanyClick }: { onCompanyClick?: (id: string) => void }) {
-  const [ndaDeal, setNdaDeal] = useState<PrivateDeal | null>(null);
   const [ioiDeal, setIoiDeal] = useState<string | null>(null);
   const dealNames = privateDealPipeline.map((d) => d.name);
 
@@ -289,7 +242,6 @@ export default function DealPipeline({ onCompanyClick }: { onCompanyClick?: (id:
             <DealCard
               key={deal.id}
               deal={deal}
-              onNDA={() => setNdaDeal(deal)}
               onIOI={() => setIoiDeal(deal.name)}
               onCompanyClick={onCompanyClick}
             />
@@ -299,9 +251,9 @@ export default function DealPipeline({ onCompanyClick }: { onCompanyClick?: (id:
         {/* Co-Owner Fund CTA */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-[#0D1421] border border-[#1E2D3D] rounded-xl">
           <div>
-            <p className="text-sm font-semibold text-slate-100 mb-1">Chef&apos;s Choice — Co-Owner Fund, LP</p>
+            <p className="text-sm font-semibold text-slate-100 mb-1">Prefer a managed allocation?</p>
             <p className="text-sm text-slate-400 leading-relaxed max-w-xl">
-              Prefer a managed allocation across the full deal set? LP spots in Co-Owner Fund are available. The fund provides diversified exposure to the nth portfolio managed by the team.
+              LP spots in Co-Owner Fund are available. The fund provides diversified exposure to the nth portfolio managed by the team.
             </p>
           </div>
           <button onClick={() => setIoiDeal("Co-Owner Fund, LP")}
@@ -325,13 +277,10 @@ export default function DealPipeline({ onCompanyClick }: { onCompanyClick?: (id:
         </div>
       </div>
 
-      {/* Modals */}
-      {ndaDeal && <NDAModal deal={ndaDeal} onClose={() => setNdaDeal(null)} />}
       <IOIModal
         isOpen={!!ioiDeal}
         onClose={() => setIoiDeal(null)}
         defaultCompany={ioiDeal ?? ""}
-        defaultSide="buy"
         companies={dealNames}
       />
     </>

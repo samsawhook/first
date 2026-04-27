@@ -907,32 +907,6 @@ export const privateDealPipeline: PrivateDeal[] = [
     isFeatured: true,
     accentColor: "#06B6D4",
   },
-  {
-    id: "audily-option",
-    name: "Audily — Option to Buy Additional Shares",
-    initials: "AU",
-    sector: "Media / Podcasting",
-    dealType: "equity_option",
-    tagline: "Co-Owner Fund option: 15M Audily shares (~11%) at 1.32× revenue vs. 2.2× M&A comps",
-    description:
-      "Co-Owner Fund holds an option to purchase 15 million additional Audily shares — approximately 11% of the company — for $150,000. Entry is at 1.32× trailing revenue. Comparable M&A transactions in the B2B audio production market are pricing at 2.2× revenue, implying a meaningful discount on entry. Audily grew revenue 52% in 2025 with zero client churn.",
-    highlights: [
-      "15M shares (~11% stake) for $150K — fund option, available to co-investors",
-      "Entry at 1.32× revenue vs. 2.2× M&A comps — meaningful discount",
-      "$480K ARR, +52% YoY, zero client churn in 2025",
-      "19 active B2B brand clients across fintech, SaaS, healthcare",
-      "All 6 employees are equity owners — aligned incentive structure",
-    ],
-    askingPrice: 150_000,
-    minimumInvestment: 25_000,
-    yieldScenarios: [
-      { label: "Equity Upside", annualizedReturn: 0, notes: "Returns tied to Audily exit; entering at material discount to M&A comps" },
-    ],
-    requiresNDA: false,
-    deadline: "First come, first served",
-    linkedPortcoId: "audily",
-    accentColor: "#8B5CF6",
-  },
 ];
 
 export const secondaryLots: SecondaryLot[] = [
