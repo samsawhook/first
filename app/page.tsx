@@ -21,17 +21,19 @@ import DealPipeline from "@/components/DealPipeline";
 import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
-import { portfolio, navHistory, fund, cashPositions, LP_TOTAL_UNITS, FUND_LEVERAGE } from "@/lib/data";
+import InvestorPortal from "@/components/InvestorPortal";
+import { portfolio, navHistory, fund, cashPositions, LP_TOTAL_UNITS, FUND_LEVERAGE, managedFundPositions } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction } from "@/lib/types";
 
-type Tab = "overview" | "pipeline" | "secondary" | "letters";
+type Tab = "overview" | "pipeline" | "secondary" | "letters" | "investor";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "pipeline",  label: "Pipeline",  icon: <Zap size={15} /> },
   { id: "secondary", label: "Secondary", icon: <ArrowLeftRight size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
+  { id: "investor",  label: "My Portfolio", icon: <User size={15} /> },
 ];
 
 const fmt = (n: number) =>
@@ -1509,6 +1511,10 @@ export default function Dashboard() {
             </div>
             <LettersSection />
           </div>
+        )}
+
+        {!activeCompany && activeTab === "investor" && (
+          <InvestorPortal />
         )}
       </main>
 

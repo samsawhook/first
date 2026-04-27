@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
-import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle, Check, RotateCcw, Save } from "lucide-react";
+import { ExternalLink, Linkedin, Newspaper, Play, ChevronDown, ChevronUp, Database, AlertCircle, Check, RotateCcw, Save, Mail, X, Loader2, CheckCircle2 } from "lucide-react";
 
 // QB_EXPORT_DATE is now per-company via company.financialsAsOf (set in data.ts on each import).
 import FootballField from "@/components/FootballField";
@@ -62,14 +62,101 @@ function KpiChip({ label, value, sub, color }: { label: string; value: string; s
   );
 }
 
+// ── Contact Modal ─────────────────────────────────────────────────────────────
+
+function ContactModal({ company, onClose }: { company: PortfolioCompany; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/contact-company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: company.name,
+          companyContact: company.contact,
+          senderName: name,
+          senderEmail: email,
+          message,
+        }),
+      });
+      if (!res.ok) throw new Error("Send failed");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again or email invest@nthventure.com.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-[#1E2D3D]">
+          <div>
+            <h2 className="text-base font-semibold text-slate-100">Contact {company.name}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Message goes to the founding team + nth Venture</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        {submitted ? (
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 size={22} className="text-emerald-400" />
+            </div>
+            <h3 className="text-slate-100 font-semibold mb-2">Message sent</h3>
+            <p className="text-sm text-slate-400 max-w-xs mx-auto">
+              Your message has been forwarded to the {company.name} team. Expect a response within a few business days.
+            </p>
+            <button onClick={onClose} className="mt-6 px-4 py-2 text-sm bg-[#111D2E] border border-[#1E2D3D] rounded-lg text-slate-300 hover:text-slate-100 transition-colors">
+              Close
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <input required type="text" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600" />
+              <input required type="email" placeholder="Your email" value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600" />
+            </div>
+            <textarea required rows={4} placeholder={`Message for the ${company.name} team…`} value={message} onChange={(e) => setMessage(e.target.value)}
+              className="w-full bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600 resize-none" />
+            {error && <p className="text-xs text-rose-400">{error}</p>}
+            <button type="submit" disabled={sending}
+              className="w-full py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              {sending ? <><Loader2 size={13} className="animate-spin" /> Sending…</> : <><Mail size={13} /> Send Message</>}
+            </button>
+            <p className="text-[10px] text-slate-600 text-center">Forwarded to {company.contact} and copied to the nth Venture team</p>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
 function HeroSection({ company }: { company: PortfolioCompany }) {
+  const [showContact, setShowContact] = useState(false);
   const gm = company.incomeStatement
     ? pct(company.incomeStatement.grossProfit, company.incomeStatement.revenue)
     : null;
 
   return (
+    <>
+    {showContact && <ContactModal company={company} onClose={() => setShowContact(false)} />}
     <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
       <div className="h-1" style={{ background: company.accentColor }} />
       <div className="p-5">
@@ -85,12 +172,20 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
               {company.initials}
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-semibold text-slate-100">{company.name}</h1>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
                 Invested
               </span>
+              {company.contact && (
+                <button
+                  onClick={() => setShowContact(true)}
+                  className="ml-auto flex items-center gap-1.5 px-3 py-1 text-xs font-medium bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-300 hover:text-slate-100 rounded-lg transition-colors"
+                >
+                  <Mail size={11} /> Contact
+                </button>
+              )}
             </div>
             <p className="text-sm text-slate-400 mt-0.5">{company.tagline}</p>
             {company.legalName && (
@@ -143,6 +238,7 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

@@ -23,6 +23,15 @@ import type {
   CashPosition,
 } from "./types";
 
+// Total LP units outstanding — $1.00 par value per unit
+export const LP_TOTAL_UNITS = 215_100;
+export const FUND_LEVERAGE  = 50_000;   // fund-level debt subtracted from portfolio value
+
+// Fund-level cash & cash equivalents
+export const cashPositions: CashPosition[] = [
+  { id: "cash-baf-4785", name: "Business Adv Fundamentals (4785)", institution: "Bank of America", type: "Checking", balance: 2_329.95, asOf: "Apr 2026" },
+];
+
 export const fund: FundMetrics = {
   name: "nth Venture Fund I",
   vintage: 2021,
@@ -38,15 +47,6 @@ export const fund: FundMetrics = {
   unrealized: 7,
   asOf: "March 31, 2026",
 };
-
-// Total LP units outstanding — $1.00 par value per unit
-export const LP_TOTAL_UNITS  = 215_100;
-export const FUND_LEVERAGE   = 50_000;   // fund-level debt subtracted from portfolio value
-
-// Fund-level cash & cash equivalents
-export const cashPositions: CashPosition[] = [
-  { id: "cash-baf-4785", name: "Business Adv Fundamentals (4785)", institution: "Bank of America", type: "Checking", balance: 2_329.95, asOf: "Apr 2026" },
-];
 
 export const portfolio: PortfolioCompany[] = [
   {
@@ -73,6 +73,7 @@ export const portfolio: PortfolioCompany[] = [
     website: "https://falconer.io",
     linkedInUrl: "https://www.linkedin.com/company/falconerco",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
+    contact: "sam@falconer.io",
     accentColor: "#3B82F6",
     revenue: 110_523,        // FY 2025
     revenueGrowth: 5.9,      // FY 2024 ($104.4K) → FY 2025 ($110.5K)
@@ -247,6 +248,7 @@ export const portfolio: PortfolioCompany[] = [
     website: "https://www.merchantboxes.com",
     linkedInUrl: "https://www.linkedin.com/company/merchant-boxes",
     logoUrl: "/logos/merchant-boxes.png",
+    contact: "doug@merchantboxes.com",
     accentColor: "#F59E0B",
     votingOwnership: 16.3,    // 6,530,527 ÷ 40,000,000 common (RSUs non-voting until settled)
     valuationRefs: [
@@ -428,6 +430,7 @@ export const portfolio: PortfolioCompany[] = [
     website: "https://audily.com",
     linkedInUrl: "https://www.linkedin.com/company/audily-linkedin",
     logoUrl: "/logos/audily.png",
+    contact: "markowitz@audily.com",
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,   // 16,537,717 ÷ 53,000,000 common (non-voting RSUs excluded)
     capTable: {
@@ -669,6 +672,7 @@ export const portfolio: PortfolioCompany[] = [
     ] satisfies NewsItem[],
     linkedInUrl: "https://www.linkedin.com/company/sbr2th-recruiting",
     logoUrl: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
+    contact: "john@sbr2th.com",
     accentColor: "#EC4899",
     shareTransactions: [
       { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 1, certificateNumber: "CS-05" },
@@ -777,6 +781,7 @@ export const portfolio: PortfolioCompany[] = [
     financialsAsOf: "4/10/26",
     website: "https://galileocomputing.com",
     logoUrl: "/logos/galileo.webp",
+    contact: "sam@nthventure.com",
     accentColor: "#6366F1",
     capTable: {
       asOf: "April 10, 2026",

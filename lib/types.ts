@@ -205,6 +205,7 @@ export interface PortfolioCompany {
   linkedInUrl?: string;
   logoUrl?: string;
   dataRoomUrl?: string;
+  contact?: string;           // primary contact email for the company
   accentColor: string;
   valuationRefs?: ValuationRef[];
   ebitda?: number;               // trailing EBITDA ($); negative = loss
