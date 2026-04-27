@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FileText, Zap, CheckCircle2, Star, Lock, Loader2, ExternalLink } from "lucide-react";
+import { FileText, Zap, CheckCircle2, Lock, Loader2, ExternalLink } from "lucide-react";
 import { privateDealPipeline } from "@/lib/data";
 import { portfolio } from "@/lib/data";
 import type { PrivateDeal } from "@/lib/types";
@@ -111,7 +111,6 @@ function DealCard({
       <div className="p-5">
         {/* Header row */}
         <div className="flex items-start gap-4 mb-4">
-          {/* Logo / initials */}
           {linkedPortco?.logoUrl ? (
             <button
               onClick={() => linkedPortco && onCompanyClick?.(linkedPortco.id)}
@@ -133,16 +132,9 @@ function DealCard({
                 style={{ background: `${deal.accentColor}15`, color: deal.accentColor }}>
                 {DEAL_TYPE_LABELS[deal.dealType]}
               </span>
-              {deal.isFeatured && (
-                <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  <Star size={8} /> nth Pick
-                </span>
-              )}
-              {deal.requiresNDA && (
-                <span className="inline-flex items-center gap-1 text-[10px] bg-slate-500/10 text-slate-500 border border-slate-500/20 px-2 py-0.5 rounded-full">
-                  <Lock size={8} /> NDA Required
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1 text-[10px] bg-slate-500/10 text-slate-500 border border-slate-500/20 px-2 py-0.5 rounded-full">
+                <Lock size={8} /> NDA Required
+              </span>
               {deal.yearsInBusiness && (
                 <span className="text-[10px] text-slate-600">{deal.yearsInBusiness} yrs in business</span>
               )}
@@ -152,96 +144,90 @@ function DealCard({
           </div>
         </div>
 
-        {/* Tagline */}
+        {/* Tagline — always visible */}
         <p className="text-sm text-slate-400 leading-relaxed mb-4 italic">&ldquo;{deal.tagline}&rdquo;</p>
 
-        {/* Description */}
-        <p className="text-sm text-slate-400 leading-relaxed mb-4">{deal.description}</p>
-
-        {/* Highlights */}
-        <ul className="space-y-1.5 mb-5">
-          {deal.highlights.map((h) => (
-            <li key={h} className="flex items-start gap-2 text-xs text-slate-400">
+        {/* Teaser highlight — first bullet shown freely */}
+        {deal.highlights[0] && (
+          <ul className="space-y-1.5 mb-4">
+            <li className="flex items-start gap-2 text-xs text-slate-400">
               <span className="mt-0.5 shrink-0 text-[8px]" style={{ color: deal.accentColor }}>◆</span>
-              {h}
+              {deal.highlights[0]}
             </li>
-          ))}
-        </ul>
+          </ul>
+        )}
 
-        {/* Metrics strip */}
-        <div className="flex flex-wrap gap-3 mb-5 pt-4 border-t border-[#1E2D3D]">
-          {deal.revenue && (
-            <div className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Revenue</p>
-              <p className="text-sm font-semibold text-slate-200 tabular-nums">{fmt(deal.revenue)}</p>
+        {/* ── Paywall section ── */}
+        <div className="relative rounded-xl overflow-hidden mb-5">
+          {/* Blurred content beneath */}
+          <div className="blur-sm pointer-events-none select-none opacity-70 px-0 pb-2">
+            {/* Remaining highlights */}
+            <ul className="space-y-1.5 mb-4">
+              {(deal.highlights.length > 1 ? deal.highlights.slice(1) : ["Additional highlights available under NDA", "Detailed operating metrics and projections"]).map((h, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-slate-400">
+                  <span className="mt-0.5 shrink-0 text-[8px]" style={{ color: deal.accentColor }}>◆</span>
+                  {h}
+                </li>
+              ))}
+            </ul>
+            {/* Description */}
+            <p className="text-sm text-slate-400 leading-relaxed mb-4">{deal.description}</p>
+            {/* Metrics strip */}
+            <div className="flex flex-wrap gap-3 mb-4 pt-3 border-t border-[#1E2D3D]">
+              {[
+                deal.revenue         && { label: "Revenue",     val: "$ ● ● ●", color: "text-slate-200" },
+                deal.cashFlow != null && { label: deal.cashFlowLabel ?? "Cash Flow", val: "$ ● ● ●", color: "text-emerald-400" },
+                deal.assets          && { label: "Hard Assets",  val: "$ ● ● ●", color: "text-slate-200" },
+                deal.askingPrice     && { label: deal.dealType === "energy" ? "Total CAPEX" : "Asking Price", val: "$ ● ● ●", color: "text-slate-200" },
+                deal.minimumInvestment && { label: "Min Investment", val: "$ ● ● ●", color: "text-slate-200" },
+              ].filter(Boolean).map((m, i) => (
+                <div key={i} className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">{(m as {label:string;val:string;color:string}).label}</p>
+                  <p className={`text-sm font-semibold tabular-nums ${(m as {label:string;val:string;color:string}).color}`}>{(m as {label:string;val:string;color:string}).val}</p>
+                </div>
+              ))}
             </div>
-          )}
-          {deal.cashFlow !== undefined && (
-            <div className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">{deal.cashFlowLabel ?? "Cash Flow"}</p>
-              <p className="text-sm font-semibold text-emerald-400 tabular-nums">{fmt(deal.cashFlow)}</p>
-            </div>
-          )}
-          {deal.assets && (
-            <div className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Hard Assets</p>
-              <p className="text-sm font-semibold text-slate-200 tabular-nums">{fmt(deal.assets)}+</p>
-            </div>
-          )}
-          {deal.askingPrice && (
-            <div className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">
-                {deal.dealType === "energy" ? "Total CAPEX" : deal.dealType === "equity_option" ? "Option Price" : "Asking Price"}
+            {/* Yield scenarios */}
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-2">
+                {hasEquityUpside ? "Return Profile" : "Yield Targets"}
               </p>
-              <p className="text-sm font-semibold tabular-nums" style={{ color: deal.accentColor }}>{fmt(deal.askingPrice)}</p>
-            </div>
-          )}
-          {deal.minimumInvestment && (
-            <div className="bg-[#111D2E] rounded-lg px-3 py-2 min-w-[90px]">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Min Investment</p>
-              <p className="text-sm font-semibold text-slate-200 tabular-nums">{fmt(deal.minimumInvestment)}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Yield scenarios */}
-        <div className="mb-5">
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">
-            {hasEquityUpside ? "Return Profile" : "Yield Targets"}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {deal.yieldScenarios.map((scenario) => (
-              <div key={scenario.label} className="bg-[#111D2E] border border-[#1E2D3D] rounded-xl px-4 py-3 flex-1 min-w-[140px]">
-                {hasEquityUpside ? (
-                  <p className="text-lg font-bold" style={{ color: deal.accentColor }}>Equity Upside</p>
-                ) : (
-                  <p className="text-2xl font-bold tabular-nums" style={{ color: deal.accentColor }}>
-                    {scenario.annualizedReturn}%
-                    <span className="text-sm font-normal text-slate-500 ml-1">target</span>
-                  </p>
-                )}
-                <p className="text-xs font-semibold text-slate-300 mt-0.5">{scenario.label}</p>
-                {scenario.notes && (
-                  <p className="text-[10px] text-slate-600 mt-1 leading-relaxed">{scenario.notes}</p>
-                )}
+              <div className="flex flex-wrap gap-3">
+                {deal.yieldScenarios.map((scenario) => (
+                  <div key={scenario.label} className="bg-[#111D2E] border border-[#1E2D3D] rounded-xl px-4 py-3 flex-1 min-w-[120px]">
+                    <p className="text-2xl font-bold tabular-nums text-slate-600">●●%</p>
+                    <p className="text-xs font-semibold text-slate-500 mt-0.5">{scenario.label}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Gradient + paywall CTA overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-end"
+            style={{ background: "linear-gradient(to bottom, transparent 0%, #0D1421 55%)" }}>
+            <div className="w-full text-center px-4 pb-4 pt-10">
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#0D1421] border border-[#1E2D3D] mb-2.5">
+                <Lock size={15} className="text-slate-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-200 mb-1">Full details locked</p>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto mb-4 leading-relaxed">
+                Revenue, cash flow, return targets, and the complete deal brief are shared under NDA.
+              </p>
+              <button onClick={onNDA}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-300 hover:text-slate-100 rounded-lg transition-colors">
+                <FileText size={12} /> Request NDA &amp; Full Details →
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Assets note */}
-        {deal.assetsNote && (
-          <p className="text-[10px] text-slate-600 italic mb-4 leading-relaxed">{deal.assetsNote}</p>
-        )}
-
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-4 border-t border-[#1E2D3D]">
-          {deal.requiresNDA && (
-            <button onClick={onNDA}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-300 hover:text-slate-100 rounded-lg transition-colors">
-              <FileText size={12} /> Request Details + NDA
-            </button>
-          )}
+          <button onClick={onNDA}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-300 hover:text-slate-100 rounded-lg transition-colors">
+            <FileText size={12} /> Request NDA
+          </button>
           <button onClick={onIOI}
             className="flex items-center gap-1.5 flex-1 justify-center px-4 py-2.5 text-xs font-semibold rounded-lg transition-colors"
             style={{ background: `${deal.accentColor}18`, color: deal.accentColor, border: `1px solid ${deal.accentColor}30` }}

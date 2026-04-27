@@ -33,7 +33,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "pipeline",  label: "Pipeline",  icon: <Zap size={15} /> },
   { id: "secondary", label: "Secondary", icon: <ArrowLeftRight size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
-  { id: "investor",  label: "My Portfolio", icon: <User size={15} /> },
+  { id: "investor",  label: "Co-Owner", icon: <User size={15} /> },
 ];
 
 const fmt = (n: number) =>
@@ -1514,7 +1514,11 @@ export default function Dashboard() {
         )}
 
         {!activeCompany && activeTab === "investor" && (
-          <InvestorPortal />
+          <InvestorPortal
+            userValuations={userValuations}
+            setUserValuations={setUserValuations}
+            onOpenValuationModal={(c, v) => setValuationModal({ company: c, pendingVal: v })}
+          />
         )}
       </main>
 
