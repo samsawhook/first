@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import type { IOIPayload } from "@/lib/types";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const body: IOIPayload = await req.json();
 
   const { company, side, amount, impliedValuation, name, email, phone, notes } = body;

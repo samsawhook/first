@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const dynamic = "force-dynamic";
 
 interface NDAPayload {
   dealName: string;
@@ -10,6 +10,7 @@ interface NDAPayload {
 }
 
 export async function POST(req: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const body: NDAPayload = await req.json();
   const { dealName, name, email } = body;
 
