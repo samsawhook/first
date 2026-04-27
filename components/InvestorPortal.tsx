@@ -10,10 +10,30 @@ interface DirectHolding {
   costBasis: number;
 }
 
+interface CreditEntry {
+  id: string;
+  name: string;
+  instrument: "Term Loan" | "Line of Credit" | "Revenue Based Financing" | "SAFE" | "Convertible Note" | "Preferred";
+  principal: number;
+  outstanding: number;
+  interestRate: number;
+}
+
+interface CashEntry {
+  id: string;
+  account: string;
+  institution: string;
+  type: "Checking" | "Savings" | "Money Market" | "CD" | "Treasury";
+  balance: number;
+  yieldPct: number;
+}
+
 interface PortalState {
   lpUnits: number;
   lpCostBasis: number;
   directHoldings: DirectHolding[];
+  creditEntries: CreditEntry[];
+  cashEntries: CashEntry[];
 }
 
 export interface InvestorPortalProps {
@@ -24,7 +44,13 @@ export interface InvestorPortalProps {
 
 const STORAGE_KEY = "nth-investor-portal";
 
-const DEFAULT_STATE: PortalState = { lpUnits: 0, lpCostBasis: 0, directHoldings: [] };
+const DEFAULT_STATE: PortalState = {
+  lpUnits: 0,
+  lpCostBasis: 0,
+  directHoldings: [],
+  creditEntries: [],
+  cashEntries: [],
+};
 
 const fmt = (n: number) =>
   n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M`
@@ -57,7 +83,19 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
   const [addingId, setAddingId] = useState("");
 
   useEffect(() => {
-    try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) setStateRaw(JSON.parse(raw)); } catch {}
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setStateRaw({
+          lpUnits: parsed.lpUnits ?? 0,
+          lpCostBasis: parsed.lpCostBasis ?? 0,
+          directHoldings: parsed.directHoldings ?? [],
+          creditEntries: parsed.creditEntries ?? [],
+          cashEntries: parsed.cashEntries ?? [],
+        });
+      }
+    } catch {}
     setLoaded(true);
   }, []);
 
@@ -94,10 +132,21 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
   const directCost = state.directHoldings.reduce((s, h) => s + h.costBasis, 0);
   const directMoic = directCost > 0 ? directValue / directCost : null;
 
-  const totalValue = lpValue + directValue;
-  const totalCost = state.lpCostBasis + directCost;
-  const totalGain = totalValue - totalCost;
-  const totalMoic = totalCost > 0 ? totalValue / totalCost : 0;
+  const creditPrincipal   = state.creditEntries.reduce((s, c) => s + c.principal, 0);
+  const creditOutstanding = state.creditEntries.reduce((s, c) => s + c.outstanding, 0);
+  const wtdCreditRate     = creditOutstanding > 0
+    ? state.creditEntries.reduce((s, c) => s + c.outstanding * c.interestRate, 0) / creditOutstanding
+    : null;
+
+  const cashTotal = state.cashEntries.reduce((s, c) => s + c.balance, 0);
+  const wtdCashYield = cashTotal > 0
+    ? state.cashEntries.reduce((s, c) => s + c.balance * c.yieldPct, 0) / cashTotal
+    : null;
+
+  const totalValue = lpValue + directValue + creditOutstanding + cashTotal;
+  const totalCost  = state.lpCostBasis + directCost + creditPrincipal + cashTotal;
+  const totalGain  = totalValue - totalCost;
+  const totalMoic  = totalCost > 0 ? totalValue / totalCost : 0;
 
   const availableCompanies = portfolio
     .filter(c => c.status !== "written-off" && c.totalShares)
@@ -115,6 +164,38 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
 
   const removeHolding = (idx: number) => {
     setState({ ...state, directHoldings: state.directHoldings.filter((_, i) => i !== idx) });
+  };
+
+  const addCredit = () => {
+    setState({
+      ...state,
+      creditEntries: [...state.creditEntries, {
+        id: `c-${Date.now()}`, name: "", instrument: "Term Loan",
+        principal: 0, outstanding: 0, interestRate: 0,
+      }],
+    });
+  };
+  const updateCredit = <K extends keyof CreditEntry>(idx: number, field: K, value: CreditEntry[K]) => {
+    setState({ ...state, creditEntries: state.creditEntries.map((c, i) => i === idx ? { ...c, [field]: value } : c) });
+  };
+  const removeCredit = (idx: number) => {
+    setState({ ...state, creditEntries: state.creditEntries.filter((_, i) => i !== idx) });
+  };
+
+  const addCash = () => {
+    setState({
+      ...state,
+      cashEntries: [...state.cashEntries, {
+        id: `cash-${Date.now()}`, account: "", institution: "", type: "Checking",
+        balance: 0, yieldPct: 0,
+      }],
+    });
+  };
+  const updateCash = <K extends keyof CashEntry>(idx: number, field: K, value: CashEntry[K]) => {
+    setState({ ...state, cashEntries: state.cashEntries.map((c, i) => i === idx ? { ...c, [field]: value } : c) });
+  };
+  const removeCash = (idx: number) => {
+    setState({ ...state, cashEntries: state.cashEntries.filter((_, i) => i !== idx) });
   };
 
   if (!loaded) return null;
@@ -186,9 +267,9 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Co-Owner</h1>
+          <h1 className="text-xl font-semibold text-slate-100">My Portfolio</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Enter your holdings to calculate current value, gain/loss, and MOIC using fund pricing.
+            Add your own holdings — equity, credit, and cash — to track current value, gain/loss, and MOIC. Mirrors the overview structure; nothing is pre-filled.
             {totalValue > 0 && <span className="text-emerald-400 ml-2 font-medium">Total: {fmt(totalValue)}</span>}
           </p>
         </div>

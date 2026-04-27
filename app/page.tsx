@@ -31,9 +31,9 @@ type Tab = "overview" | "pipeline" | "secondary" | "letters" | "investor";
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "pipeline",  label: "Pipeline",  icon: <Zap size={15} /> },
-  { id: "secondary", label: "Secondary", icon: <ArrowLeftRight size={15} /> },
+  { id: "secondary", label: "Bulletin Board", icon: <ArrowLeftRight size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
-  { id: "investor",  label: "Co-Owner", icon: <User size={15} /> },
+  { id: "investor",  label: "My Portfolio", icon: <User size={15} /> },
 ];
 
 const fmt = (n: number) =>
@@ -1491,10 +1491,10 @@ export default function Dashboard() {
         {!activeCompany && activeTab === "secondary" && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-xl font-semibold text-slate-100">Secondary Market</h1>
+              <h1 className="text-xl font-semibold text-slate-100">Bulletin Board</h1>
               <p className="text-sm text-slate-500 mt-1">
-                Non-binding indications of interest for secondary transfers in nth Venture portfolio companies.
-                All transactions occur bilaterally — this platform does not intermediate.
+                Non-binding indications of interest posted by accredited co-owners and portfolio company employees.
+                nth Venture does not facilitate, match, or intermediate any transaction.
               </p>
             </div>
             <SecondaryMarket />
