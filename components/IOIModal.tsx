@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, AlertTriangle, ExternalLink } from "lucide-react";
+import { X, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import type { IOIPayload } from "@/lib/types";
 
 interface Props {
@@ -30,36 +30,29 @@ export default function IOIModal({
     notes: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.accredited) return;
-
-    const subject = encodeURIComponent(
-      `[IOI] ${form.side === "buy" ? "Buy" : "Sell"} Indication — ${form.company}`
-    );
-    const body = encodeURIComponent(
-      `INDICATION OF INTEREST (NON-BINDING)\n` +
-        `===========================================\n\n` +
-        `Company: ${form.company}\n` +
-        `Side: ${form.side.toUpperCase()}\n` +
-        `Target Amount: $${form.amount}\n` +
-        `Implied Valuation: $${form.impliedValuation || "open"}\n\n` +
-        `Contact Information:\n` +
-        `Name: ${form.name}\n` +
-        `Email: ${form.email}\n` +
-        `Phone: ${form.phone || "not provided"}\n\n` +
-        `Notes: ${form.notes || "none"}\n\n` +
-        `---\n` +
-        `Submitted via nth Venture Investor Portal\n` +
-        `This is a non-binding indication only. No transaction will occur through this platform.\n` +
-        `Submitter confirms they are an accredited investor under SEC Rule 501 of Regulation D.`
-    );
-
-    window.location.href = `mailto:invest@nthventure.com?subject=${subject}&body=${body}`;
-    setSubmitted(true);
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/express-interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error("Send failed");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again or email invest@nthventure.com.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const set = (field: keyof IOIPayload, value: string | boolean) =>
@@ -94,13 +87,13 @@ export default function IOIModal({
         {submitted ? (
           <div className="p-8 text-center">
             <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-              <ExternalLink size={20} className="text-emerald-400" />
+              <CheckCircle2 size={22} className="text-emerald-400" />
             </div>
-            <h3 className="text-slate-100 font-semibold mb-2">Your email client should open</h3>
+            <h3 className="text-slate-100 font-semibold mb-2">IOI submitted</h3>
             <p className="text-sm text-slate-400 max-w-sm mx-auto">
-              Your IOI has been drafted in your email client. Review and send to{" "}
-              <span className="text-slate-300">invest@nthventure.com</span>. The
-              nth Venture team will follow up within 2 business days.
+              Your indication of interest has been sent to{" "}
+              <span className="text-slate-300">invest@nthventure.com</span>.
+              A confirmation has been sent to {form.email}. We'll follow up within 2 business days.
             </p>
             <button
               onClick={onClose}
@@ -264,18 +257,22 @@ export default function IOIModal({
               </span>
             </label>
 
+            {error && (
+              <p className="text-xs text-rose-400 text-center">{error}</p>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={!form.accredited}
+              disabled={!form.accredited || sending}
               className="w-full py-3 rounded-lg text-sm font-semibold transition-all
                 bg-emerald-600 hover:bg-emerald-500 text-white
-                disabled:opacity-30 disabled:cursor-not-allowed"
+                disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Draft IOI Email →
+              {sending ? <><Loader2 size={14} className="animate-spin" /> Sending…</> : "Submit IOI →"}
             </button>
             <p className="text-center text-xs text-slate-600">
-              Opens your email client — no data is stored by this portal
+              A confirmation will be sent to your email address
             </p>
           </form>
         )}

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FileText, Zap, CheckCircle2, ExternalLink, Star, Lock } from "lucide-react";
+import { FileText, Zap, CheckCircle2, Star, Lock, Loader2, ExternalLink } from "lucide-react";
 import { privateDealPipeline } from "@/lib/data";
 import { portfolio } from "@/lib/data";
 import type { PrivateDeal } from "@/lib/types";
@@ -20,17 +20,28 @@ const DEAL_TYPE_LABELS: Record<PrivateDeal["dealType"], string> = {
 
 function NDAModal({ deal, onClose }: { deal: PrivateDeal; onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`[NDA Request] ${deal.name}`);
-    const body = encodeURIComponent(
-      `NDA REQUEST\n===========\n\nDeal: ${deal.name}\nName: ${name}\nEmail: ${email}\n\nPlease send NDA and offering details.\n\n---\nSubmitted via nth Venture Investor Portal`
-    );
-    window.location.href = `mailto:invest@nthventure.com?subject=${subject}&body=${body}`;
-    setSubmitted(true);
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/nda-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dealName: deal.name, name, email }),
+      });
+      if (!res.ok) throw new Error("Send failed");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again or email invest@nthventure.com.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -41,8 +52,8 @@ function NDAModal({ deal, onClose }: { deal: PrivateDeal; onClose: () => void })
         {submitted ? (
           <div className="text-center py-4">
             <CheckCircle2 size={36} className="text-emerald-400 mx-auto mb-3" />
-            <h3 className="text-slate-100 font-semibold mb-2">Email client opened</h3>
-            <p className="text-sm text-slate-400">Review and send to <span className="text-slate-200">invest@nthventure.com</span>. The nth Venture team will send the NDA within one business day.</p>
+            <h3 className="text-slate-100 font-semibold mb-2">Request sent</h3>
+            <p className="text-sm text-slate-400">Your NDA request for <strong className="text-slate-200">{deal.name}</strong> has been submitted. A confirmation has been sent to {email}. Expect the NDA within one business day.</p>
             <button onClick={onClose} className="mt-5 px-4 py-2 text-sm bg-[#111D2E] border border-[#1E2D3D] rounded-lg text-slate-300 hover:text-slate-100 transition-colors">Close</button>
           </div>
         ) : (
@@ -59,9 +70,10 @@ function NDAModal({ deal, onClose }: { deal: PrivateDeal; onClose: () => void })
               <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
                 By requesting details you confirm you are an accredited investor and agree to keep all information received under NDA confidential.
               </p>
-              <button type="submit"
-                className="w-full py-2.5 text-sm font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-200 rounded-lg transition-colors flex items-center justify-center gap-2">
-                <FileText size={13} /> Draft NDA Request Email →
+              {error && <p className="text-xs text-rose-400 text-center">{error}</p>}
+              <button type="submit" disabled={sending}
+                className="w-full py-2.5 text-sm font-semibold bg-[#111D2E] border border-[#1E2D3D] hover:border-slate-500 text-slate-200 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                {sending ? <><Loader2 size={13} className="animate-spin" /> Sending…</> : <><FileText size={13} /> Request NDA & Deal Details →</>}
               </button>
             </form>
           </>

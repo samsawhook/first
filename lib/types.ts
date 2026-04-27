@@ -204,6 +204,7 @@ export interface PortfolioCompany {
   linkedInUrl?: string;
   logoUrl?: string;
   dataRoomUrl?: string;
+  contact?: string;           // primary contact email for the company
   accentColor: string;
   valuationRefs?: ValuationRef[];
   ebitda?: number;               // trailing EBITDA ($); negative = loss
@@ -387,4 +388,15 @@ export interface Investor {
   id: string;
   name: string;
   holdings: Holding[];
+}
+
+export interface CashPosition {
+  id: string;
+  name: string;             // e.g. "Mercury Operating", "US T-Bills"
+  institution: string;      // e.g. "Mercury", "Fidelity"
+  type: "Checking" | "Savings" | "Money Market" | "T-Bills" | "Other";
+  balance: number;          // current balance ($)
+  yieldPct?: number;        // annual yield %, if interest-bearing
+  asOf?: string;            // e.g. "Apr 2026"
+  notes?: string;
 }
