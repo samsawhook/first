@@ -79,7 +79,7 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
   const [state, setStateRaw] = useState<PortalState>(DEFAULT_STATE);
   const [saved, setSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["lp", "direct"]));
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["lp", "direct", "credit", "cash"]));
   const [addingId, setAddingId] = useState("");
 
   useEffect(() => {
@@ -493,8 +493,154 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
         )}
       </div>
 
+      {/* ── 3. Credit ──────────────────────────────────────────────────────── */}
+      <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+        <div className="border-b border-[#1E2D3D]">
+          <SectionHeader
+            label="Credit"
+            sectionKey="credit"
+            accent="#6366F1"
+            stats={[
+              { label: "Outstanding", value: creditOutstanding > 0 ? fmt(creditOutstanding) : "—", color: "#6366F1" },
+              { label: "Wtd Rate",    value: wtdCreditRate !== null ? `${wtdCreditRate.toFixed(1)}%` : "—" },
+              { label: "Principal",   value: creditPrincipal > 0 ? fmt(creditPrincipal) : "—" },
+            ]}
+          />
+        </div>
+        {openSections.has("credit") && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                <tr>
+                  <TH wide>Position</TH><TH>Type</TH><TH>Original</TH>
+                  <TH>Outstanding</TH><TH>Rate</TH><TH></TH>
+                </tr>
+              </thead>
+              <tbody>
+                {state.creditEntries.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-xs text-slate-600">No credit positions. Add one below.</td></tr>
+                ) : state.creditEntries.map((c, idx) => (
+                  <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/30">
+                    <TD>
+                      <input
+                        type="text" placeholder="Borrower / position name" value={c.name}
+                        onChange={(e) => updateCredit(idx, "name", e.target.value)}
+                        className="w-full bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                      />
+                    </TD>
+                    <TD>
+                      <select
+                        value={c.instrument}
+                        onChange={(e) => updateCredit(idx, "instrument", e.target.value as CreditEntry["instrument"])}
+                        className="bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-slate-600"
+                      >
+                        {(["Term Loan","Line of Credit","Revenue Based Financing","SAFE","Convertible Note","Preferred"] as const).map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </TD>
+                    <TD>
+                      <NumInput value={c.principal} onChange={v => updateCredit(idx, "principal", v)} prefix="$" className="w-28" />
+                    </TD>
+                    <TD>
+                      <NumInput value={c.outstanding} onChange={v => updateCredit(idx, "outstanding", v)} prefix="$" className="w-28" />
+                    </TD>
+                    <TD>
+                      <NumInput value={c.interestRate} onChange={v => updateCredit(idx, "interestRate", v)} className="w-20" />
+                    </TD>
+                    <TD>
+                      <button onClick={() => removeCredit(idx)} className="p-1 rounded text-slate-600 hover:text-rose-400 transition-colors"><Trash2 size={11} /></button>
+                    </TD>
+                  </tr>
+                ))}
+                <tr className="border-t border-[#1E2D3D]">
+                  <td colSpan={6} className="px-3 py-2.5">
+                    <button onClick={addCredit} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-600/30 rounded-lg transition-colors">
+                      <PlusCircle size={12} /> Add credit position
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── 4. Cash ────────────────────────────────────────────────────────── */}
+      <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+        <div className="border-b border-[#1E2D3D]">
+          <SectionHeader
+            label="Cash"
+            sectionKey="cash"
+            accent="#06B6D4"
+            stats={[
+              { label: "Total Balance", value: cashTotal > 0 ? fmt(cashTotal) : "—", color: "#06B6D4" },
+              { label: "Wtd Yield",     value: wtdCashYield !== null ? `${wtdCashYield.toFixed(2)}%` : "—" },
+              { label: "Accounts",      value: state.cashEntries.length > 0 ? String(state.cashEntries.length) : "—" },
+            ]}
+          />
+        </div>
+        {openSections.has("cash") && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                <tr>
+                  <TH wide>Account</TH><TH>Institution</TH><TH>Type</TH>
+                  <TH>Balance</TH><TH>Yield %</TH><TH></TH>
+                </tr>
+              </thead>
+              <tbody>
+                {state.cashEntries.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-xs text-slate-600">No cash accounts. Add one below.</td></tr>
+                ) : state.cashEntries.map((c, idx) => (
+                  <tr key={c.id} className="border-t border-[#111D2E] hover:bg-[#111D2E]/30">
+                    <TD>
+                      <input
+                        type="text" placeholder="Account name" value={c.account}
+                        onChange={(e) => updateCash(idx, "account", e.target.value)}
+                        className="w-full bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                      />
+                    </TD>
+                    <TD>
+                      <input
+                        type="text" placeholder="Institution" value={c.institution}
+                        onChange={(e) => updateCash(idx, "institution", e.target.value)}
+                        className="w-full bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-slate-600"
+                      />
+                    </TD>
+                    <TD>
+                      <select
+                        value={c.type}
+                        onChange={(e) => updateCash(idx, "type", e.target.value as CashEntry["type"])}
+                        className="bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-slate-600"
+                      >
+                        {(["Checking","Savings","Money Market","CD","Treasury"] as const).map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </TD>
+                    <TD>
+                      <NumInput value={c.balance} onChange={v => updateCash(idx, "balance", v)} prefix="$" className="w-32" />
+                    </TD>
+                    <TD>
+                      <NumInput value={c.yieldPct} onChange={v => updateCash(idx, "yieldPct", v)} className="w-20" />
+                    </TD>
+                    <TD>
+                      <button onClick={() => removeCash(idx)} className="p-1 rounded text-slate-600 hover:text-rose-400 transition-colors"><Trash2 size={11} /></button>
+                    </TD>
+                  </tr>
+                ))}
+                <tr className="border-t border-[#1E2D3D]">
+                  <td colSpan={6} className="px-3 py-2.5">
+                    <button onClick={addCash} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-600/30 rounded-lg transition-colors">
+                      <PlusCircle size={12} /> Add cash account
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <p className="text-[10px] text-slate-700 text-center pb-2">
-        Holdings are saved locally in your browser. Prices reflect fund estimates as of {fund.asOf} — not appraisals.
+        Holdings are saved locally in your browser. Equity prices reflect fund estimates as of {fund.asOf} — not appraisals.
       </p>
     </div>
   );
