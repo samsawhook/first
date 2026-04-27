@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     await resend.emails.send({
       from: "nth Venture Portal <portal@nthventure.com>",
       to: ["invest@nthventure.com"],
-      replyTo: email,
+      reply_to: email,
       subject: `[NDA Request] ${dealName} — ${name}`,
       html,
     });

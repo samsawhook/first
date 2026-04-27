@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       from: "nth Venture Portal <portal@nthventure.com>",
       to: ["invest@nthventure.com"],
       cc: [companyContact],
-      replyTo: senderEmail,
+      reply_to: senderEmail,
       subject: `[Portfolio] Message for ${companyName} from ${senderName}`,
       html,
     });
