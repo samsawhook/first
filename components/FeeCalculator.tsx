@@ -65,12 +65,12 @@ function calcBuffett(capital: number, years: number, grossMoic: number): Result 
 }
 
 const ASSET_CLASSES = [
-  { key: "sp500",      label: "S&P 500",            color: "#60A5FA", defaultReturn: 0.10 },
+  { key: "sp500",      label: "S&P 500",            color: "#60A5FA", defaultReturn: 0.09 },
   { key: "realestate", label: "Real Estate",         color: "#34D399", defaultReturn: 0.07 },
-  { key: "crypto",     label: "Crypto",              color: "#FBBF24", defaultReturn: 0.20 },
-  { key: "cash",       label: "Cash / Money Market", color: "#94A3B8", defaultReturn: 0.045 },
+  { key: "crypto",     label: "Crypto",              color: "#FBBF24", defaultReturn: 0.15 },
+  { key: "cash",       label: "Cash / Money Market", color: "#94A3B8", defaultReturn: 0.04 },
   { key: "privCredit", label: "Private Credit",      color: "#A78BFA", defaultReturn: 0.09 },
-  { key: "privEquity", label: "Other Priv. Equity",  color: "#F87171", defaultReturn: 0.15 },
+  { key: "privEquity", label: "Other Priv. Equity",  color: "#F87171", defaultReturn: 0.12 },
 ] as const;
 
 type AssetKey = typeof ASSET_CLASSES[number]["key"];
@@ -187,12 +187,12 @@ function ResultCard({ title, label, accentColor, result, capital }: {
   );
 }
 
-function PortfolioChart({ years, capital, grossReturn, r2_20, rBuf, portAlloc, portReturn }: {
+function PortfolioChart({ years, capital, selectedResult, selectedColor, selectedLabel, portAlloc, portReturn }: {
   years: number;
   capital: number;
-  grossReturn: number;
-  r2_20: Result;
-  rBuf: Result;
+  selectedResult: Result;
+  selectedColor: string;
+  selectedLabel: string;
   portAlloc: Record<string, number>;
   portReturn: Record<string, number>;
 }) {
@@ -219,24 +219,16 @@ function PortfolioChart({ years, capital, grossReturn, r2_20, rBuf, portAlloc, p
       )
     : null;
 
-  const fundGross = Array.from({ length: years + 1 }, (_, t) => capital * Math.pow(1 + grossReturn, t));
-
-  // LP net trajectories: smooth compound interpolation from capital → lpNet
-  const lpTrajectory = (lpNet: number) => {
-    const moic = lpNet / capital;
-    return Array.from({ length: years + 1 }, (_, t) =>
-      capital * Math.pow(Math.max(moic, 0), t / Math.max(years, 1))
-    );
-  };
-  const lpNet2_20Values = lpTrajectory(r2_20.lpNet);
-  const lpNetBufValues  = lpTrajectory(rBuf.lpNet);
+  // LP net trajectory: smooth compound interpolation from capital → lpNet
+  const moic = selectedResult.lpNet / capital;
+  const lpValues = Array.from({ length: years + 1 }, (_, t) =>
+    capital * Math.pow(Math.max(moic, 0), t / Math.max(years, 1))
+  );
 
   const allVals = [
     ...seriesData.flatMap(s => s.values),
     ...(totalValues ?? []),
-    ...fundGross,
-    ...lpNet2_20Values,
-    ...lpNetBufValues,
+    ...lpValues,
     capital,
   ].filter(v => isFinite(v) && v >= 0);
   const maxVal = Math.max(...allVals, capital * 1.1);
@@ -252,9 +244,7 @@ function PortfolioChart({ years, capital, grossReturn, r2_20, rBuf, portAlloc, p
   const tickCount = Math.min(years, 8);
   const xTicks = Array.from({ length: tickCount + 1 }, (_, i) => Math.round((i / tickCount) * years));
 
-  const y2_20 = yS(r2_20.lpNet);
-  const yBuf  = yS(rBuf.lpNet);
-  const labsTooClose = Math.abs(y2_20 - yBuf) < 18;
+  const yLp = yS(selectedResult.lpNet);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minHeight: 220 }}>
@@ -298,33 +288,22 @@ function PortfolioChart({ years, capital, grossReturn, r2_20, rBuf, portAlloc, p
         <path d={mkPath(totalValues)} fill="none" stroke="#E2E8F0" strokeWidth="1.5" strokeDasharray="5 3" opacity="0.4" />
       )}
 
-      {/* Fund LP net area fills */}
-      <path d={mkArea(lpNet2_20Values)} fill="#6366F1" fillOpacity="0.07" />
-      <path d={mkArea(lpNetBufValues)}  fill="#F59E0B" fillOpacity="0.07" />
+      {/* Fund LP net area fill */}
+      <path d={mkArea(lpValues)} fill={selectedColor} fillOpacity="0.10" />
 
-      {/* Fund gross NAV (faint dashed reference) */}
-      <path d={mkPath(fundGross)} fill="none" stroke="#64748B" strokeWidth="1" strokeDasharray="3 3" opacity="0.55" />
+      {/* Fund LP net trajectory (solid, slightly thicker to emphasize) */}
+      <path d={mkPath(lpValues)} fill="none" stroke={selectedColor} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
-      {/* Fund LP net trajectories (solid) */}
-      <path d={mkPath(lpNet2_20Values)} fill="none" stroke="#6366F1" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />
-      <path d={mkPath(lpNetBufValues)}  fill="none" stroke="#F59E0B" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />
+      {/* LP net endpoint dot */}
+      <circle cx={xS(years)} cy={yLp} r="6" fill={selectedColor} />
+      <circle cx={xS(years)} cy={yLp} r="2.5" fill="#0F172A" />
 
-      {/* LP net endpoint dots */}
-      <circle cx={xS(years)} cy={y2_20} r="5.5" fill="#6366F1" />
-      <circle cx={xS(years)} cy={yBuf}  r="5.5" fill="#F59E0B" />
-
-      {/* Endpoint labels — shift if too close */}
+      {/* Endpoint label */}
       <text
-        x={xS(years) - 10} y={labsTooClose ? y2_20 - 12 : y2_20 - 9}
-        textAnchor="end" fontSize="8.5" fontWeight="600" fill="#818CF8"
+        x={xS(years) - 11} y={yLp - 10}
+        textAnchor="end" fontSize="9" fontWeight="700" fill={selectedColor}
       >
-        2/20
-      </text>
-      <text
-        x={xS(years) - 10} y={labsTooClose ? yBuf + 18 : yBuf + 14}
-        textAnchor="end" fontSize="8.5" fontWeight="600" fill="#FCD34D"
-      >
-        0/50
+        {selectedLabel}
       </text>
     </svg>
   );
@@ -347,21 +326,22 @@ export default function FeeCalculator() {
   const rBuf  = useMemo(() => calcBuffett(capital, years, grossMoic), [capital, years, grossMoic]);
   const lpDiff = rBuf.lpNet - r2_20.lpNet;
 
+  // Default fee structure to whichever yields more to the LP at initial conditions
+  const [feeStruct, setFeeStruct] = useState<"2/20" | "0/50">(() => {
+    const m = Math.pow(1.20, 5);
+    return calc2_20(1_000_000, 5, m).lpNet >= calcBuffett(1_000_000, 5, m).lpNet ? "2/20" : "0/50";
+  });
+  const selectedResult = feeStruct === "2/20" ? r2_20 : rBuf;
+  const selectedColor  = feeStruct === "2/20" ? "#6366F1" : "#F59E0B";
+  const selectedLabel  = feeStruct === "2/20" ? "2/20 LP net" : "0/50 LP net";
+  const selectedTextCls = feeStruct === "2/20" ? "text-indigo-400" : "text-amber-400";
+
   const activePortAssets = ASSET_CLASSES.filter(a => (portAlloc[a.key] || 0) > 0);
   const portEndVals = activePortAssets.map(a => ({
     ...a,
     alloc:  portAlloc[a.key],
     endVal: portAlloc[a.key] * Math.pow(1 + (portReturn[a.key] ?? a.defaultReturn), years),
   }));
-
-  const setAlloc = (key: AssetKey, raw: string) => {
-    const v = parseFloat(raw);
-    setPortAlloc(prev => ({ ...prev, [key]: isFinite(v) && v > 0 ? v : 0 }));
-  };
-  const setRet = (key: AssetKey, raw: string) => {
-    const v = parseFloat(raw);
-    setPortReturn(prev => ({ ...prev, [key]: isFinite(v) ? v / 100 : prev[key] }));
-  };
 
   return (
     <div className="space-y-8">
@@ -420,80 +400,117 @@ export default function FeeCalculator() {
 
       {/* Portfolio Context */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-800">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Portfolio Context</p>
-          <p className="text-sm text-slate-400 mt-0.5">
-            Input your other holdings to compare fund returns against liquid alternatives over the same horizon.
-            Expected returns are editable.
-          </p>
+        <div className="px-6 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Portfolio Context</p>
+            <p className="text-sm text-slate-400 mt-0.5">
+              Input your other holdings to compare fund returns against liquid alternatives over the same horizon.
+            </p>
+          </div>
+          {/* Fee structure selector */}
+          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5 shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setFeeStruct("2/20")}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                feeStruct === "2/20"
+                  ? "bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40"
+                  : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              2/20 Traditional
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeeStruct("0/50")}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                feeStruct === "0/50"
+                  ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40"
+                  : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              0/50 Buffett
+            </button>
+          </div>
         </div>
 
         <div className="p-6 flex flex-col lg:flex-row gap-8">
           {/* Allocation inputs */}
           <div className="lg:w-80 shrink-0 space-y-5">
-            <div>
-              {/* Column headers */}
-              <div className="flex items-center mb-2 pr-1">
-                <span className="flex-1 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Asset</span>
-                <span className="w-28 text-right text-[10px] font-semibold uppercase tracking-widest text-slate-600">Amount ($)</span>
-                <span className="w-16 text-right text-[10px] font-semibold uppercase tracking-widest text-slate-600 ml-2">Exp. %/yr</span>
-              </div>
-              <div className="space-y-2.5">
-                {ASSET_CLASSES.map(a => (
-                  <div key={a.key} className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
-                    <span className="flex-1 text-xs text-slate-400 truncate">{a.label}</span>
-                    {/* Dollar amount */}
-                    <input
-                      type="number"
-                      value={portAlloc[a.key] || ""}
-                      placeholder="—"
-                      min={0}
-                      onChange={e => setAlloc(a.key, e.target.value)}
-                      className="w-28 bg-slate-800/80 border border-slate-700/60 rounded px-2 py-1 text-xs text-slate-200 text-right tabular-nums
-                        focus:outline-none focus:border-slate-500
-                        [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    />
-                    {/* Return % */}
-                    <div className="flex items-center gap-0.5 ml-2">
+            <div className="space-y-3.5">
+              {ASSET_CLASSES.map(a => {
+                const alloc = portAlloc[a.key] || 0;
+                const ret   = portReturn[a.key] ?? a.defaultReturn;
+                return (
+                  <div key={a.key} className="space-y-1">
+                    {/* Header */}
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
+                      <span className="text-xs text-slate-300 font-medium flex-1 truncate">{a.label}</span>
+                      <span className="text-xs text-slate-200 tabular-nums">{alloc > 0 ? fmt(alloc) : "—"}</span>
+                      <span className="text-[10px] text-slate-600">@</span>
+                      <span className="text-xs tabular-nums w-12 text-right" style={{ color: a.color }}>
+                        {(ret * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    {/* Amount slider */}
+                    <div className="flex items-center gap-2 pl-4">
+                      <span className="text-[9px] text-slate-600 w-9 shrink-0 uppercase tracking-wide">amt</span>
                       <input
-                        type="number"
-                        value={((portReturn[a.key] ?? a.defaultReturn) * 100).toFixed(1)}
-                        step="0.5"
-                        min={0}
-                        max={100}
-                        onChange={e => setRet(a.key, e.target.value)}
-                        className="w-12 bg-slate-800/80 border border-slate-700/60 rounded px-1.5 py-1 text-xs text-slate-400 text-right tabular-nums
-                          focus:outline-none focus:border-slate-500"
+                        type="range"
+                        min={0} max={10_000_000} step={25_000}
+                        value={alloc}
+                        onChange={e => setPortAlloc(prev => ({ ...prev, [a.key]: parseFloat(e.target.value) }))}
+                        className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+                          [&::-webkit-slider-thumb]:appearance-none
+                          [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                          [&::-webkit-slider-thumb]:rounded-full
+                          [&::-webkit-slider-thumb]:bg-slate-300
+                          [&::-webkit-slider-thumb]:cursor-pointer"
                       />
-                      <span className="text-[10px] text-slate-600">%</span>
+                    </div>
+                    {/* Return slider */}
+                    <div className="flex items-center gap-2 pl-4">
+                      <span className="text-[9px] text-slate-600 w-9 shrink-0 uppercase tracking-wide">ret</span>
+                      <input
+                        type="range"
+                        min={0} max={0.30} step={0.005}
+                        value={ret}
+                        onChange={e => setPortReturn(prev => ({ ...prev, [a.key]: parseFloat(e.target.value) }))}
+                        className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+                          [&::-webkit-slider-thumb]:appearance-none
+                          [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                          [&::-webkit-slider-thumb]:rounded-full
+                          [&::-webkit-slider-thumb]:bg-slate-300
+                          [&::-webkit-slider-thumb]:cursor-pointer"
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
-            {/* Fund reference block */}
+            {/* Fund reference block (selected structure only) */}
             <div className="pt-4 border-t border-slate-800 space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600 mb-2">
-                This Fund  ·  {fmt(capital)}
+                This Fund  ·  {fmt(capital)}  ·  {feeStruct}
               </p>
               <div className="flex items-center gap-2">
                 <svg width="20" height="6" className="shrink-0">
-                  <line x1="0" y1="3" x2="20" y2="3" stroke="#64748B" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+                  <line x1="0" y1="3" x2="20" y2="3" stroke={selectedColor} strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
-                <span className="text-xs text-slate-500 flex-1">Gross NAV at Yr {years}</span>
-                <span className="text-xs text-slate-400 tabular-nums font-medium">{fmt(capital * Math.pow(1 + grossReturn, years))}</span>
+                <span className="text-xs text-slate-500 flex-1">LP net at Yr {years}</span>
+                <span className={`text-xs tabular-nums font-medium ${selectedTextCls}`}>{fmt(selectedResult.lpNet)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <svg width="20" height="6" className="shrink-0"><line x1="0" y1="3" x2="20" y2="3" stroke="#6366F1" strokeWidth="2.25" strokeLinecap="round" /></svg>
-                <span className="text-xs text-slate-500 flex-1">2/20 LP net at Yr {years}</span>
-                <span className="text-xs text-indigo-400 tabular-nums font-medium">{fmt(r2_20.lpNet)}</span>
+                <span className="w-2.5 h-2.5 shrink-0" />
+                <span className="text-xs text-slate-500 flex-1">LP net MOIC</span>
+                <span className={`text-xs tabular-nums font-medium ${selectedTextCls}`}>{fmtX(selectedResult.lpNetMoic)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <svg width="20" height="6" className="shrink-0"><line x1="0" y1="3" x2="20" y2="3" stroke="#F59E0B" strokeWidth="2.25" strokeLinecap="round" /></svg>
-                <span className="text-xs text-slate-500 flex-1">0/50 LP net at Yr {years}</span>
-                <span className="text-xs text-amber-400 tabular-nums font-medium">{fmt(rBuf.lpNet)}</span>
+                <span className="w-2.5 h-2.5 shrink-0" />
+                <span className="text-xs text-slate-500 flex-1">LP net IRR</span>
+                <span className={`text-xs tabular-nums font-medium ${selectedTextCls}`}>{fmtPct(selectedResult.lpNetIrr)}</span>
               </div>
             </div>
 
@@ -508,7 +525,7 @@ export default function FeeCalculator() {
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
                     <span className="text-xs text-slate-500 flex-1 truncate">{a.label}</span>
                     <span className="text-xs text-slate-300 tabular-nums font-medium">{fmt(a.endVal)}</span>
-                    <span className="text-[10px] text-slate-600 tabular-nums">
+                    <span className="text-[10px] text-slate-600 tabular-nums w-10 text-right">
                       {fmtX(a.endVal / a.alloc)}
                     </span>
                   </div>
@@ -533,15 +550,15 @@ export default function FeeCalculator() {
             <PortfolioChart
               years={years}
               capital={capital}
-              grossReturn={grossReturn}
-              r2_20={r2_20}
-              rBuf={rBuf}
+              selectedResult={selectedResult}
+              selectedColor={selectedColor}
+              selectedLabel={selectedLabel}
               portAlloc={portAlloc}
               portReturn={portReturn}
             />
             {activePortAssets.length === 0 && (
               <p className="text-xs text-slate-600 text-center -mt-4">
-                Enter holdings above to overlay additional asset classes on the chart
+                Slide an allocation above to overlay additional asset classes on the chart
               </p>
             )}
           </div>
