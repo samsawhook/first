@@ -26,10 +26,11 @@ import { portfolio, navHistory, fund, cashPositions, LP_TOTAL_UNITS, FUND_LEVERA
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction } from "@/lib/types";
 
-type Tab = "overview" | "pipeline" | "secondary" | "letters" | "investor";
+type Tab = "overview" | "proposal" | "pipeline" | "secondary" | "letters" | "investor";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
+  { id: "proposal",  label: "Proposal",  icon: <LayoutDashboard size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 
@@ -341,7 +342,7 @@ export default function Dashboard() {
           />
         )}
 
-        {!activeCompany && activeTab === "overview" && (
+        {!activeCompany && (activeTab === "overview" || activeTab === "proposal") && (
           <div className="space-y-8">
             {/* ── Overview Hero ── */}
             {(() => {
