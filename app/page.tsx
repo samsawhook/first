@@ -14,6 +14,7 @@ import {
   X,
   Check,
   RotateCcw,
+  FileText,
 } from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import FootballField from "@/components/FootballField";
@@ -78,7 +79,7 @@ type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "s
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
-  { id: "proposal",  label: "Proposal",  icon: <LayoutDashboard size={15} /> },
+  { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 
@@ -1559,7 +1560,7 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* ── Proposal Summary ── */}
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-6 py-5">
-              <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-3">Proposed Transactions</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-3">Deal Memo — Proposed Transactions</p>
               <ul className="space-y-2 text-sm text-slate-300">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-amber-400">•</span>
