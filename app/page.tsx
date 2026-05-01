@@ -82,7 +82,7 @@ type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "s
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
-  { id: "fees",      label: "Fee Calc",  icon: <Calculator size={15} /> },
+  { id: "fees",      label: "Allocator", icon: <Calculator size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 

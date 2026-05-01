@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { ChevronDown } from "lucide-react";
 
 function fmt(n: number) {
   const abs = Math.abs(n);
@@ -122,29 +123,19 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
 }
 
 // =========================================================
-//   Compound slider+text-input field used in asset rows
+//   Slider row — slider only, no inline text input
 // =========================================================
-function FieldSlider({
-  prefix, value, setValue, min, max, step, unit, decimals = 1, suffix,
+function SliderRow({
+  prefix, value, setValue, min, max, step,
 }: {
   prefix: string;
   value: number;
   setValue: (v: number) => void;
   min: number; max: number; step: number;
-  unit: "$" | "%";
-  decimals?: number;
-  suffix?: string;
 }) {
-  const display = unit === "%" ? (value * 100).toFixed(decimals) : Math.round(value).toString();
-  const handleText = (raw: string) => {
-    const cleaned = raw.replace(/[^0-9.\-]/g, "");
-    const v = parseFloat(cleaned);
-    if (!isFinite(v)) return;
-    setValue(unit === "%" ? v / 100 : v);
-  };
   return (
     <div className="flex items-center gap-2 pl-4">
-      <span className="text-[9px] text-slate-600 w-7 shrink-0 uppercase tracking-wide">{prefix}</span>
+      <span className="text-[10px] text-slate-600 w-9 shrink-0 uppercase tracking-wide">{prefix}</span>
       <input
         type="range"
         min={min} max={max} step={step} value={value}
@@ -156,18 +147,60 @@ function FieldSlider({
           [&::-webkit-slider-thumb]:bg-slate-300
           [&::-webkit-slider-thumb]:cursor-pointer"
       />
-      <div className="flex items-center gap-0.5 shrink-0">
-        {unit === "$" && <span className="text-[10px] text-slate-600">$</span>}
-        <input
-          type="text"
-          value={display}
-          onChange={e => handleText(e.target.value)}
-          className="w-20 bg-slate-800/80 border border-slate-700/60 rounded px-1.5 py-0.5 text-[11px] text-slate-200 text-right tabular-nums focus:outline-none focus:border-slate-500"
-        />
-        {unit === "%" && <span className="text-[10px] text-slate-600">%</span>}
-        {suffix && <span className="text-[10px] text-slate-600">{suffix}</span>}
-      </div>
     </div>
+  );
+}
+
+// =========================================================
+//   Inline editable numeric value (click to edit)
+// =========================================================
+function InlineNum({
+  value, displayFn, editFn, parseFn, onChange, widthClass, color, title,
+}: {
+  value: number;
+  displayFn: (v: number) => string;
+  editFn: (v: number) => string;
+  parseFn: (raw: string) => number;
+  onChange: (v: number) => void;
+  widthClass?: string;
+  color?: string;
+  title?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const w = widthClass ?? "w-16";
+  if (editing) {
+    return (
+      <input
+        type="text"
+        value={text}
+        autoFocus
+        onFocus={e => e.currentTarget.select()}
+        onChange={e => setText(e.target.value)}
+        onBlur={() => {
+          const v = parseFn(text);
+          if (isFinite(v)) onChange(v);
+          setEditing(false);
+        }}
+        onKeyDown={e => {
+          if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+          else if (e.key === "Escape") setEditing(false);
+        }}
+        className={`bg-slate-800 ring-1 ring-slate-500 rounded px-1 text-xs tabular-nums text-right text-slate-100 focus:outline-none ${w}`}
+        style={color ? { color } : undefined}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={(e) => { e.stopPropagation(); setText(editFn(value)); setEditing(true); }}
+      className={`text-xs tabular-nums text-right hover:bg-slate-800/60 hover:ring-1 hover:ring-slate-700 rounded px-1 transition-colors ${w}`}
+      style={color ? { color } : undefined}
+    >
+      {displayFn(value)}
+    </button>
   );
 }
 
@@ -563,6 +596,9 @@ export default function FeeCalculator() {
   // Portfolio view selector
   const [portfolioView, setPortfolioView] = useState<ViewMode>("median");
 
+  // Per-asset slider expansion state
+  const [expandedAssets, setExpandedAssets] = useState<Set<AssetKey>>(new Set());
+
   // Build PortfolioInputs rows used by chart + suggestions
   const fundRow: PortfolioInputs = {
     key: "fund",
@@ -599,10 +635,11 @@ export default function FeeCalculator() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-semibold text-slate-100">Fee Structure Calculator</h1>
+        <h1 className="text-xl font-semibold text-slate-100">Allocator</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Compare LP and GP economics across fee structures. All calculations assume a single close,
-          full capital deployed at inception, and a lump-sum exit at horizon.
+          Model fee structures, compare LP and GP economics, and stress-test the Co-Owner Fund
+          against the rest of your portfolio. Fee calculations assume a single close, full capital
+          deployed at inception, and a lump-sum exit at horizon.
         </p>
       </div>
 
@@ -718,7 +755,7 @@ export default function FeeCalculator() {
         {/* Body: input rows + chart */}
         <div className="p-6 flex flex-col lg:flex-row gap-8">
           {/* Asset rows (Co-Owner Fund first, then others) */}
-          <div className="lg:w-[26rem] shrink-0 space-y-3.5">
+          <div className="lg:w-[26rem] shrink-0 space-y-2">
             {ASSET_CLASSES.map(a => {
               const isFund = a.isFund;
               const amount  = isFund ? capital      : (portAlloc[a.key] || 0);
@@ -727,54 +764,85 @@ export default function FeeCalculator() {
               const setAmt  = isFund ? setFundAmount : (v: number) => setPortAlloc(prev => ({ ...prev, [a.key]: v }));
               const setRet  = isFund ? setFundReturn : (v: number) => setPortReturn(prev => ({ ...prev, [a.key]: v }));
               const setVol  = isFund ? setFundVol    : (v: number) => setPortVol(prev   => ({ ...prev, [a.key]: v }));
+              const expanded = expandedAssets.has(a.key);
               const headerReturn = isFund ? selectedResult.lpNetIrr : retRate;
 
               return (
-                <div key={a.key} className="space-y-1">
-                  {/* Header */}
-                  <div className="flex items-center gap-2">
+                <div key={a.key} className="rounded-md border border-transparent hover:border-slate-800/60 transition-colors">
+                  {/* Header — editable inline fields + expand toggle */}
+                  <div className="flex items-center gap-2 py-1.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
-                    <span className="text-xs text-slate-300 font-medium flex-1 truncate">
+                    <span className="text-xs text-slate-300 font-medium flex-1 truncate min-w-0">
                       {a.label}
-                      {isFund && <span className="ml-1 text-[10px] text-slate-600 font-normal">({feeStruct} net)</span>}
+                      {isFund && <span className="ml-1 text-[10px] text-slate-600 font-normal">({feeStruct})</span>}
                     </span>
-                    <span className="text-xs text-slate-200 tabular-nums">{amount > 0 ? fmt(amount) : "—"}</span>
-                    <span className="text-[10px] text-slate-600">@</span>
-                    <span className="text-xs tabular-nums w-12 text-right" style={{ color: a.color }}>
-                      {(headerReturn * 100).toFixed(1)}%
-                    </span>
-                    <span className="text-[10px] text-slate-600">σ</span>
-                    <span className="text-xs tabular-nums w-10 text-right text-slate-400">
-                      {(vol * 100).toFixed(0)}%
-                    </span>
+                    {/* Amount (inline editable) */}
+                    <InlineNum
+                      value={amount}
+                      displayFn={v => v > 0 ? fmt(v) : "—"}
+                      editFn={v => Math.round(v).toString()}
+                      parseFn={raw => parseFloat(raw.replace(/[^0-9.]/g, ""))}
+                      onChange={setAmt}
+                      widthClass="w-16"
+                    />
+                    {/* Return (inline editable). For fund, display = net IRR, edit = gross. */}
+                    <InlineNum
+                      value={headerReturn}
+                      displayFn={v => isFund ? `${(v * 100).toFixed(1)}% net` : `${(v * 100).toFixed(1)}%`}
+                      editFn={() => (retRate * 100).toFixed(1)}
+                      parseFn={raw => parseFloat(raw) / 100}
+                      onChange={setRet}
+                      widthClass={isFund ? "w-20" : "w-14"}
+                      color={a.color}
+                      title={isFund ? `Edit gross return; current gross ${(retRate * 100).toFixed(1)}%` : undefined}
+                    />
+                    {/* Vol (inline editable) */}
+                    <InlineNum
+                      value={vol}
+                      displayFn={v => `Vol. ${(v * 100).toFixed(0)}%`}
+                      editFn={v => (v * 100).toFixed(0)}
+                      parseFn={raw => parseFloat(raw) / 100}
+                      onChange={setVol}
+                      widthClass="w-16"
+                    />
+                    {/* Expand toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedAssets(prev => {
+                        const next = new Set(prev);
+                        if (next.has(a.key)) next.delete(a.key); else next.add(a.key);
+                        return next;
+                      })}
+                      className="shrink-0 p-1 text-slate-500 hover:text-slate-200 transition-colors"
+                      aria-label={expanded ? "Collapse" : "Expand sliders"}
+                    >
+                      <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+                    </button>
                   </div>
-                  {/* Amount slider+input */}
-                  <FieldSlider
-                    prefix="amt"
-                    value={amount}
-                    setValue={setAmt}
-                    min={isFund ? 100_000 : 0} max={10_000_000} step={25_000}
-                    unit="$"
-                  />
-                  {/* Return slider+input */}
-                  <FieldSlider
-                    prefix="ret"
-                    value={retRate}
-                    setValue={setRet}
-                    min={0} max={0.35} step={0.005}
-                    unit="%"
-                    decimals={1}
-                    suffix={isFund ? `gross` : undefined}
-                  />
-                  {/* Variance slider+input */}
-                  <FieldSlider
-                    prefix="σ"
-                    value={vol}
-                    setValue={setVol}
-                    min={0} max={1.0} step={0.01}
-                    unit="%"
-                    decimals={0}
-                  />
+
+                  {/* Sliders — collapsible */}
+                  {expanded && (
+                    <div className="space-y-1.5 pb-2 pt-0.5">
+                      <SliderRow
+                        prefix="$"
+                        value={amount}
+                        setValue={setAmt}
+                        min={isFund ? 100_000 : 0} max={10_000_000} step={25_000}
+                      />
+                      <SliderRow
+                        prefix="%"
+                        value={retRate}
+                        setValue={setRet}
+                        min={0} max={0.35} step={0.005}
+                      />
+                      <SliderRow
+                        prefix="Vol."
+                        value={vol}
+                        setValue={setVol}
+                        min={0} max={1.0} step={0.01}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -825,8 +893,8 @@ export default function FeeCalculator() {
             </div>
             {portfolioView === "variable" && (
               <p className="text-[10px] text-slate-600 mt-2 px-2">
-                Bands shown are ±1.645σ (90% CI) on terminal portfolio value, assuming asset returns are
-                lognormal and uncorrelated. Per-asset σ is editable above.
+                Bands shown are ±1.645 × Vol. (90% CI) on terminal portfolio value, assuming asset
+                returns are lognormal and uncorrelated. Per-asset Vol. is editable above.
               </p>
             )}
           </div>
