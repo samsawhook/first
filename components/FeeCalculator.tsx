@@ -70,6 +70,11 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
   label: string; value: number; min: number; max: number; step: number;
   onChange: (v: number) => void; display: string; sub?: string;
 }) {
+  const isCapital = min === 100_000;
+  const isHorizon = min === 1;
+  const minLabel  = isCapital ? "$100k" : isHorizon ? "1 yr"  : "0%";
+  const maxLabel  = isCapital ? "$10M"  : isHorizon ? "25 yrs" : "35%";
+
   return (
     <div>
       <div className="flex justify-between items-baseline mb-1.5">
@@ -89,22 +94,27 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
           [&::-webkit-slider-thumb]:cursor-pointer"
       />
       <div className="flex justify-between mt-0.5">
-        <span className="text-[10px] text-slate-600">{min === 100000 ? "$100k" : min === 1 ? "1yr" : min === 0 ? "0%" : `${min}×`}</span>
-        <span className="text-[10px] text-slate-600">{min === 100000 ? "$10M" : min === 1 ? "15 yrs" : min === 0 ? "30%" : `${max}×`}</span>
+        <span className="text-[10px] text-slate-600">{minLabel}</span>
+        <span className="text-[10px] text-slate-600">{maxLabel}</span>
       </div>
     </div>
   );
 }
 
-function StackBar({ exit, mgmtFee, carry, lpNet }: { exit: number; mgmtFee: number; carry: number; lpNet: number }) {
-  const lpPct = (lpNet / exit) * 100;
-  const carryPct = (carry / exit) * 100;
-  const feePct = (mgmtFee / exit) * 100;
+function StackBar({ exit, capital, mgmtFee, carry, lpNet }: {
+  exit: number; capital: number; mgmtFee: number; carry: number; lpNet: number;
+}) {
+  const lpReturn = lpNet - capital;
+  const basisPct  = (capital / exit) * 100;
+  const returnPct = (Math.max(lpReturn, 0) / exit) * 100;
+  const carryPct  = (carry / exit) * 100;
+  const feePct    = (mgmtFee / exit) * 100;
   return (
     <div className="w-full h-5 rounded-md overflow-hidden flex" title="Proceeds split">
-      <div style={{ width: `${Math.max(lpPct, 0)}%` }} className="bg-emerald-500/70 transition-all duration-300" title={`LP net: ${fmt(lpNet)}`} />
-      <div style={{ width: `${Math.max(carryPct, 0)}%` }} className="bg-violet-500/70 transition-all duration-300" title={`GP carry: ${fmt(carry)}`} />
-      <div style={{ width: `${Math.max(feePct, 0)}%` }} className="bg-rose-500/60 transition-all duration-300" title={`Mgmt fee: ${fmt(mgmtFee)}`} />
+      <div style={{ width: `${Math.max(basisPct, 0)}%` }}  className="bg-slate-500/70 transition-all duration-300" title={`LP basis: ${fmt(capital)}`} />
+      <div style={{ width: `${Math.max(returnPct, 0)}%` }} className="bg-emerald-500/70 transition-all duration-300" title={`LP return: ${fmt(lpReturn)}`} />
+      <div style={{ width: `${Math.max(carryPct, 0)}%` }}  className="bg-violet-500/70 transition-all duration-300" title={`GP carry: ${fmt(carry)}`} />
+      <div style={{ width: `${Math.max(feePct, 0)}%` }}    className="bg-rose-500/60 transition-all duration-300" title={`Mgmt fee: ${fmt(mgmtFee)}`} />
     </div>
   );
 }
@@ -121,7 +131,6 @@ function ResultCard({ title, label, accentColor, result, capital }: {
     { label: "GP Total Compensation", value: fmt(result.gpTotal), dim: false },
     null,
     { label: "LP Net Proceeds", value: fmt(result.lpNet), dim: false, bold: true },
-    { label: "LP Net MOIC", value: fmtX(result.lpNetMoic), dim: false, color: result.lpNetMoic >= 1 ? "#10B981" : "#F87171" },
     { label: "LP Net IRR", value: fmtPct(result.lpNetIrr), dim: false, color: result.lpNetIrr >= 0.06 ? "#10B981" : "#F59E0B" },
     { label: "GP % of Gross Proceeds", value: fmtPct(result.gpTotal / result.exitValue), dim: true },
     { label: "LP % of Gross Proceeds", value: fmtPct(result.lpNet / result.exitValue), dim: true },
@@ -129,17 +138,24 @@ function ResultCard({ title, label, accentColor, result, capital }: {
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden flex-1 min-w-0">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-800" style={{ background: `${accentColor}10` }}>
-        <p className="text-[10px] font-semibold uppercase tracking-widest mb-0.5" style={{ color: accentColor }}>{label}</p>
-        <p className="text-base font-semibold text-slate-100">{title}</p>
+      {/* Header with prominent MOIC */}
+      <div className="px-5 py-4 border-b border-slate-800 flex items-start justify-between" style={{ background: `${accentColor}10` }}>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-0.5" style={{ color: accentColor }}>{label}</p>
+          <p className="text-base font-semibold text-slate-100">{title}</p>
+        </div>
+        <div className="text-right ml-4 shrink-0">
+          <p className="text-2xl font-bold tabular-nums text-slate-100 leading-none">{fmtX(result.lpNetMoic)}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wide">LP Net MOIC</p>
+        </div>
       </div>
 
       {/* Stack bar */}
       <div className="px-5 pt-4 pb-2">
-        <StackBar exit={result.exitValue} mgmtFee={result.mgmtFee} carry={result.gpCarry} lpNet={result.lpNet} />
+        <StackBar exit={result.exitValue} capital={capital} mgmtFee={result.mgmtFee} carry={result.gpCarry} lpNet={result.lpNet} />
         <div className="flex gap-4 mt-1.5 flex-wrap">
-          <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-emerald-500/70 inline-block" />LP net</span>
+          <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-slate-500/70 inline-block" />LP basis</span>
+          <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-emerald-500/70 inline-block" />LP return</span>
           <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-violet-500/70 inline-block" />GP carry</span>
           {result.mgmtFee > 0 && <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-rose-500/60 inline-block" />Mgmt fee</span>}
         </div>
@@ -170,7 +186,7 @@ function ResultCard({ title, label, accentColor, result, capital }: {
 export default function FeeCalculator() {
   const [capital, setCapital] = useState(1_000_000);
   const [years, setYears] = useState(5);
-  const [grossReturn, setGrossReturn] = useState(0.25); // annual return %
+  const [grossReturn, setGrossReturn] = useState(0.20); // annual return %
 
   const grossMoic = Math.pow(1 + grossReturn, years);
 
@@ -199,11 +215,11 @@ export default function FeeCalculator() {
             display={capital >= 1_000_000 ? `$${(capital / 1_000_000).toFixed(1)}M` : `$${(capital / 1_000).toFixed(0)}k`}
           />
           <Slider
-            label="Investment Horizon" value={years} min={1} max={15} step={1}
+            label="Investment Horizon" value={years} min={1} max={25} step={1}
             onChange={setYears} display={`${years} yr${years !== 1 ? "s" : ""}`}
           />
           <Slider
-            label="Gross Annual Return" value={grossReturn} min={0} max={0.30} step={0.005}
+            label="Gross Annual Return" value={grossReturn} min={0} max={0.35} step={0.005}
             onChange={setGrossReturn}
             display={fmtPct(grossReturn)}
             sub={`${fmtX(grossMoic)} MOIC`}
@@ -213,7 +229,7 @@ export default function FeeCalculator() {
         {/* Summary line */}
         <div className="mt-5 pt-4 border-t border-slate-800 flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
           <span>Gross exit: <span className="text-slate-300 font-medium">{fmt(capital * grossMoic)}</span></span>
-          <span>Gross IRR: <span className="text-slate-300 font-medium">{fmtPct(Math.pow(grossMoic, 1 / years) - 1)}</span></span>
+          <span>Gross MOIC: <span className="text-slate-300 font-medium">{fmtX(grossMoic)}</span></span>
           <span>6% hurdle amount: <span className="text-slate-300 font-medium">{fmt(capital * (Math.pow(1.06, years) - 1))}</span></span>
         </div>
       </div>
