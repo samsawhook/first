@@ -559,16 +559,28 @@ function AllocationSuggestions({
 // =========================================================
 //   Main component
 // =========================================================
+// Preloaded "typical but not sound" $3M portfolio: heavy S&P concentration,
+// excess cash drag, light private allocations. Designed to give the suggestion
+// box something to flag.
+const PRESET_CAPITAL = 200_000;       // Co-Owner Fund position
+const PRESET_PORTFOLIO: Record<AssetKey, number> = {
+  fund:       0,             // not used; fund position is via `capital`
+  sp500:      1_500_000,     // 50% — overweight
+  realestate:   400_000,     // 13%
+  privCredit:   100_000,     //  3% — underweight
+  privEquity:   150_000,     //  5% — underweight
+  crypto:       250_000,     //  8%
+  cash:         400_000,     // 13% — overweight
+};
+
 export default function FeeCalculator() {
   // Top-level fee-calc inputs
-  const [capital, setCapital] = useState(1_000_000);
+  const [capital, setCapital] = useState(PRESET_CAPITAL);
   const [years, setYears] = useState(5);
   const [grossReturn, setGrossReturn] = useState(0.20);
 
   // Other portfolio asset state
-  const [portAlloc, setPortAlloc] = useState<Record<AssetKey, number>>(
-    Object.fromEntries(ASSET_CLASSES.map(a => [a.key, 0])) as Record<AssetKey, number>
-  );
+  const [portAlloc, setPortAlloc] = useState<Record<AssetKey, number>>(PRESET_PORTFOLIO);
   const [portReturn, setPortReturn] = useState<Record<AssetKey, number>>(
     Object.fromEntries(ASSET_CLASSES.map(a => [a.key, a.defaultReturn])) as Record<AssetKey, number>
   );
