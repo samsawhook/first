@@ -15,6 +15,7 @@ import {
   Check,
   RotateCcw,
   FileText,
+  Calculator,
 } from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import FootballField from "@/components/FootballField";
@@ -24,6 +25,7 @@ import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
 import InvestorPortal from "@/components/InvestorPortal";
 import NDAGate from "@/components/NDAGate";
+import FeeCalculator from "@/components/FeeCalculator";
 import {
   portfolio as basePortfolio,
   navHistory,
@@ -75,11 +77,12 @@ const SCENARIOB_FALCONER_SHARES  = 4_735_803;
 const SCENARIOB_SBR2TH_SHARES    = 3_247_832;
 const SCENARIOB_MB_SHARES        = 4_804_351;
 
-type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "letters" | "investor";
+type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "letters" | "investor" | "fees";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
+  { id: "fees",      label: "Fee Calc",  icon: <Calculator size={15} /> },
   { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 
@@ -5204,6 +5207,10 @@ export default function Dashboard() {
             </div>
             <SecondaryMarket />
           </div>
+        )}
+
+        {!activeCompany && activeTab === "fees" && (
+          <FeeCalculator />
         )}
 
         {!activeCompany && activeTab === "letters" && (
