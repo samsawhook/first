@@ -13,7 +13,7 @@ import type { Investor } from "./types";
 export const investors: Investor[] = [
   {
     id: "co-owner-fund",
-    name: "Co-Owner Fund, LP",
+    name: "Co-Owner Fund LP",
     holdings: [
       // ── Audily Inc. ─────────────────────────────────────────────────────────
       {

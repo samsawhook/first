@@ -40,7 +40,7 @@ function resolveHolding(h: Holding): ResolvedHolding | null {
     const value = (h.lpPct / 100) * fund.nav;
     return {
       key: "lp-co-owner-fund",
-      label: "Co-Owner Fund, LP",
+      label: "Co-Owner Fund LP",
       sublabel: `${h.lpPct}% LP interest`,
       value,
       color: "#6366F1",
@@ -53,7 +53,7 @@ function resolveHolding(h: Holding): ResolvedHolding | null {
   if (h.class === "debt") {
     const isFund = h.entityId === "co-owner-fund";
     const co = isFund ? null : portfolio.find((c) => c.id === h.entityId);
-    const label = isFund ? "Co-Owner Fund, LP" : (co?.name ?? h.entityId);
+    const label = isFund ? "Co-Owner Fund LP" : (co?.name ?? h.entityId);
     const color = isFund ? "#F59E0B" : (co?.accentColor ?? "#F59E0B");
     return {
       key: `debt-${h.entityId}-${h.instrument}`,

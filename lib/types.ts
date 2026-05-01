@@ -338,11 +338,11 @@ export type IOIPayload = {
 // which can be one of three classes:
 //
 //   equity      – direct shares in a portfolio company
-//   lp_units    – LP interest in Co-Owner Fund, LP (the fund is just another entity)
+//   lp_units    – LP interest in Co-Owner Fund LP (the fund is just another entity)
 //   debt        – any credit instrument (convertible note, SAFE, term loan, etc.)
 //                 in either a portfolio company or the fund
 //
-// This means "Co-Owner Fund, LP" is not special — it's simply the entityId
+// This means "Co-Owner Fund LP" is not special — it's simply the entityId
 // "co-owner-fund" that may appear in lp_units or debt holdings, the same way
 // a portco id appears in equity or debt holdings.
 

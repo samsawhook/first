@@ -326,7 +326,7 @@ export default function InvestorPortal({ userValuations, setUserValuations, onOp
                 <tr className="border-t border-[#111D2E]">
                   <TD>
                     <div>
-                      <p className="font-semibold text-slate-200">Co-Owner Fund, LP</p>
+                      <p className="font-semibold text-slate-200">Co-Owner Fund LP</p>
                       <p className="text-[10px] text-slate-600">Fund NAV: {fmt(fund.nav)} · {LP_TOTAL_UNITS.toLocaleString()} total units · as of {fund.asOf}</p>
                     </div>
                   </TD>

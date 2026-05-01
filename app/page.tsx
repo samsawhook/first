@@ -321,7 +321,7 @@ export default function Dashboard() {
                   <span className="text-[9px] font-bold text-indigo-400">CF</span>
                 </div>
                 <div className="hidden sm:block leading-tight">
-                  <p className="text-xs font-medium text-slate-200">Co-Owner Fund, LP</p>
+                  <p className="text-xs font-medium text-slate-200">Co-Owner Fund LP</p>
                   <p className="text-[9px] text-slate-500">Fund View</p>
                 </div>
                 <User size={12} className="sm:hidden text-slate-400" />

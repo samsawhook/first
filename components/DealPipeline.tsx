@@ -256,7 +256,7 @@ export default function DealPipeline({ onCompanyClick }: { onCompanyClick?: (id:
               LP spots in Co-Owner Fund are available. The fund provides diversified exposure to the nth portfolio managed by the team.
             </p>
           </div>
-          <button onClick={() => setIoiDeal("Co-Owner Fund, LP")}
+          <button onClick={() => setIoiDeal("Co-Owner Fund LP")}
             className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-colors">
             <Zap size={13} /> Express LP Interest
           </button>
