@@ -1437,6 +1437,60 @@ export default function FeeCalculator() {
   // Correlation regime — affects portfolio Vol. for stat cards
   const [corrRegime, setCorrRegime] = usePersistedState<"independent" | "mild" | "crisis">("corrRegime", "mild");
 
+  // ---- Saved scenarios ----
+  type Scenario = {
+    name: string;
+    capital: number;
+    portAlloc: Record<AssetKey, number>;
+    portReturn: Record<AssetKey, number>;
+    portVol: Record<AssetKey, number>;
+    age: number; retireAge: number;
+    retireTarget: number; retireIncome: number;
+    inflationRate: number; drawdownRate: number;
+    annualSavings: number;
+    riskTolerance: RiskTolerance;
+    contribMode: "flat" | "growing";
+    salary: number; savingsRate: number; raiseRate: number;
+    corrRegime: "independent" | "mild" | "crisis";
+    feeStruct: "2/20" | "0/50";
+    years: number; grossReturn: number;
+  };
+  const [scenarios, setScenarios] = usePersistedState<Scenario[]>("scenarios", []);
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
+
+  const captureScenario = (name: string): Scenario => ({
+    name, capital, portAlloc, portReturn, portVol,
+    age, retireAge, retireTarget, retireIncome,
+    inflationRate, drawdownRate, annualSavings, riskTolerance,
+    contribMode, salary, savingsRate, raiseRate,
+    corrRegime, feeStruct, years, grossReturn,
+  });
+  const loadScenario = (s: Scenario) => {
+    setCapital(s.capital);
+    setPortAlloc(s.portAlloc);
+    setPortReturn(s.portReturn);
+    setPortVol(s.portVol);
+    setAge(s.age); setRetireAge(s.retireAge);
+    setRetireTarget(s.retireTarget); setRetireIncome(s.retireIncome);
+    setInflationRate(s.inflationRate); setDrawdownRate(s.drawdownRate);
+    setAnnualSavings(s.annualSavings); setRiskTolerance(s.riskTolerance);
+    setContribMode(s.contribMode);
+    setSalary(s.salary); setSavingsRate(s.savingsRate); setRaiseRate(s.raiseRate);
+    setCorrRegime(s.corrRegime); setFeeStruct(s.feeStruct);
+    setYears(s.years); setGrossReturn(s.grossReturn);
+  };
+  const saveScenario = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const snap = captureScenario(trimmed);
+    setScenarios(prev => [...prev.filter(s => s.name !== trimmed), snap]);
+    setActiveScenario(trimmed);
+  };
+  const deleteScenario = (name: string) => {
+    setScenarios(prev => prev.filter(s => s.name !== name));
+    if (activeScenario === name) setActiveScenario(null);
+  };
+
   // Build PortfolioInputs rows used by chart + suggestions
   const fundRow: PortfolioInputs = {
     key: "fund",
@@ -1583,13 +1637,61 @@ export default function FeeCalculator() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-100">Allocator</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Model fee structures, compare LP and GP economics, and stress-test the Co-Owner Fund
-          against the rest of your portfolio. Fee calculations assume a single close, full capital
-          deployed at inception, and a lump-sum exit at horizon.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-100">Allocator</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Model fee structures, compare LP and GP economics, and stress-test the Co-Owner Fund
+            against the rest of your portfolio. State auto-saves to this browser; use Scenarios to
+            snapshot &amp; switch between named what-ifs.
+          </p>
+        </div>
+
+        {/* Scenarios toolbar */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Save and switch between named portfolio + plan snapshots, persisted in this browser.">
+            Scenarios
+          </span>
+          <select
+            value={activeScenario ?? ""}
+            onChange={e => {
+              const name = e.target.value;
+              if (!name) { setActiveScenario(null); return; }
+              const s = scenarios.find(x => x.name === name);
+              if (s) loadScenario(s);
+              setActiveScenario(name);
+            }}
+            className="text-xs bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-slate-600 max-w-[12rem]"
+          >
+            <option value="">— current —</option>
+            {scenarios.map(s => (
+              <option key={s.name} value={s.name}>{s.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              const name = window.prompt("Name this scenario:", activeScenario ?? "Base");
+              if (name) saveScenario(name);
+            }}
+            className="text-xs px-2 py-1 rounded bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40 hover:bg-emerald-500/25 transition-colors"
+            title="Save current state under a new (or existing) name."
+          >
+            + Save
+          </button>
+          {activeScenario && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(`Delete scenario "${activeScenario}"?`)) deleteScenario(activeScenario);
+              }}
+              className="text-xs px-2 py-1 rounded text-rose-400 ring-1 ring-rose-700/50 hover:bg-rose-500/10 transition-colors"
+              title="Delete the active scenario."
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Sliders */}
