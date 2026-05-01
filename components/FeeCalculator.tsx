@@ -348,6 +348,58 @@ interface PortfolioInputs {
   key: AssetKey;
 }
 
+// Seeded PRNG (mulberry32) — deterministic so the spaghetti chart doesn't
+// flicker between renders with the same inputs.
+function makeRng(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Standard-normal sample via Box–Muller
+function normalSample(rng: () => number): number {
+  const u1 = Math.max(rng(), 1e-12);
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+// Independent-asset Monte Carlo. For each asset, log-drift μ = ln(1+r) so
+// the PATH MEDIAN matches the user's expected (1+r)^t (uncorrelated draws
+// across assets). Returns nPaths × (years+1) total-portfolio paths.
+function simulatePaths(
+  rows: { amount: number; retRate: number; vol: number }[],
+  years: number,
+  nPaths: number,
+  seed: number,
+): number[][] {
+  const rng = makeRng(seed);
+  const out: number[][] = new Array(nPaths);
+  for (let p = 0; p < nPaths; p++) {
+    const totals = new Array(years + 1).fill(0);
+    for (const row of rows) {
+      const mu = Math.log(1 + Math.max(row.retRate, -0.999));
+      let v = row.amount;
+      totals[0] += v;
+      for (let t = 1; t <= years; t++) {
+        const z = normalSample(rng);
+        v *= Math.exp(mu + row.vol * z);
+        totals[t] += v;
+      }
+    }
+    out[p] = totals;
+  }
+  return out;
+}
+// Empirical percentile across paths at a single timestep.
+function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(p * sorted.length)));
+  return sorted[idx];
+}
+
 function PortfolioChart({
   view, years, rows, accentColor,
 }: {
@@ -361,33 +413,49 @@ function PortfolioChart({
   const innerH = H - PT - PB;
   const T = Math.max(years, 1);
 
-  // Per-asset median + lognormal 90% bounds. Lognormal lower is bounded
-  // at 0 by construction, so per-asset values can never go negative.
-  const Z = 1.645; // ~90% two-sided
-  const medians: { row: PortfolioInputs; values: number[]; lows: number[]; highs: number[] }[] = rows.map(r => {
-    const values = Array.from({ length: years + 1 }, (_, t) => r.amount * Math.pow(1 + r.retRate, t));
-    const lows   = values.map((v, t) => v * Math.exp(-Z * r.vol * Math.sqrt(t)));
-    const highs  = values.map((v, t) => v * Math.exp(+Z * r.vol * Math.sqrt(t)));
-    return { row: r, values, lows, highs };
-  });
+  // Per-asset deterministic median trajectory (= amount × (1+r)^t)
+  const medians: { row: PortfolioInputs; values: number[] }[] = rows.map(r => ({
+    row: r,
+    values: Array.from({ length: years + 1 }, (_, t) => r.amount * Math.pow(1 + r.retRate, t)),
+  }));
 
-  // Total = sum of per-asset values/lows/highs (sum of lognormal bounds).
+  // Analytic total median (used in stacked Median view + as overlay on
+  // Variable view; matches the user's expected (1+r)^t per asset).
   const totalMedian = Array.from({ length: years + 1 }, (_, t) =>
     medians.reduce((s, m) => s + m.values[t], 0)
   );
-  const totalLow = Array.from({ length: years + 1 }, (_, t) =>
-    medians.reduce((s, m) => s + m.lows[t], 0)
-  );
-  const totalHigh = Array.from({ length: years + 1 }, (_, t) =>
-    medians.reduce((s, m) => s + m.highs[t], 0)
-  );
 
-  // y-axis max
-  const allY: number[] =
-    view === "median"
-      ? [...totalMedian]
-      : [...totalHigh];
-  const maxVal = Math.max(...allY, 1);
+  // Monte Carlo simulation for Variable view (spaghetti + empirical envelope)
+  const mc = useMemo(() => {
+    if (view !== "variable" || rows.length === 0) return null;
+    const N_PATHS = 200;
+    const N_SPAGHETTI = 30;
+    // Stable seed derived from row count so layout doesn't shuffle between
+    // re-renders with identical input.
+    const seed = 4242;
+    const paths = simulatePaths(rows, years, N_PATHS, seed);
+    const median: number[] = [];
+    const p5: number[] = [];
+    const p95: number[] = [];
+    for (let t = 0; t <= years; t++) {
+      const slice = paths.map(p => p[t]);
+      median.push(percentile(slice, 0.5));
+      p5.push(percentile(slice, 0.05));
+      p95.push(percentile(slice, 0.95));
+    }
+    // Subset paths for visualization (deterministic stride sample)
+    const stride = Math.max(1, Math.floor(N_PATHS / N_SPAGHETTI));
+    const sample: number[][] = [];
+    for (let i = 0; i < N_PATHS && sample.length < N_SPAGHETTI; i += stride) {
+      sample.push(paths[i]);
+    }
+    return { sample, median, p5, p95 };
+  }, [view, rows, years]);
+
+  // y-axis max — clamp to P95 endpoint in Variable mode, total median in stacked.
+  const maxVal = view === "median"
+    ? Math.max(...totalMedian, 1)
+    : Math.max((mc?.p95[years] ?? 1), 1);
 
   const xS = (t: number) => PL + (t / T) * innerW;
   const yS = (v: number) => PT + innerH * (1 - Math.min(Math.max(v, 0) / maxVal, 1));
@@ -428,8 +496,6 @@ function PortfolioChart({
   const xTicks = Array.from({ length: tickCount + 1 }, (_, i) => Math.round((i / tickCount) * years));
 
   const finalMedian = totalMedian[years];
-  const finalHigh   = totalHigh[years];
-  const finalLow    = totalLow[years];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minHeight: 240 }}>
@@ -469,30 +535,42 @@ function PortfolioChart({
         </>
       )}
 
-      {view === "variable" && (
+      {view === "variable" && mc && (
         <>
-          {/* Per-asset median (faint reference) */}
-          {medians.map(m => (
-            <path key={m.row.key} d={linePath(m.values)} fill="none" stroke={m.row.color} strokeWidth="1" strokeOpacity="0.5" />
+          {/* Spaghetti: sample of simulated total-portfolio paths */}
+          {mc.sample.map((path, i) => (
+            <path
+              key={`s-${i}`}
+              d={linePath(path)}
+              fill="none"
+              stroke={accentColor}
+              strokeOpacity="0.10"
+              strokeWidth="1"
+              strokeLinejoin="round"
+            />
           ))}
-          {/* CI band */}
-          <path d={areaPath(totalLow, totalHigh)} fill={accentColor} fillOpacity="0.18" />
-          {/* Low / High edges */}
-          <path d={linePath(totalLow)}  fill="none" stroke={accentColor} strokeOpacity="0.5" strokeWidth="1" strokeDasharray="3 3" />
-          <path d={linePath(totalHigh)} fill="none" stroke={accentColor} strokeOpacity="0.5" strokeWidth="1" strokeDasharray="3 3" />
-          {/* Total median line */}
+          {/* Empirical 5-95 CI envelope */}
+          <path d={areaPath(mc.p5, mc.p95)} fill={accentColor} fillOpacity="0.10" />
+          <path d={linePath(mc.p5)}  fill="none" stroke={accentColor} strokeOpacity="0.55" strokeWidth="1" strokeDasharray="3 3" />
+          <path d={linePath(mc.p95)} fill="none" stroke={accentColor} strokeOpacity="0.55" strokeWidth="1" strokeDasharray="3 3" />
+          {/* Total median (analytic; matches user's expected (1+r)^t) */}
           <path d={linePath(totalMedian)} fill="none" stroke={accentColor} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" />
-          {/* Endpoint labels */}
-          {finalMedian > 0 && (
-            <>
-              <circle cx={xS(years)} cy={yS(finalHigh)} r="3" fill={accentColor} fillOpacity="0.7" />
-              <circle cx={xS(years)} cy={yS(finalMedian)} r="5" fill={accentColor} />
-              <circle cx={xS(years)} cy={yS(finalLow)} r="3" fill={accentColor} fillOpacity="0.7" />
-              <text x={xS(years) - 8} y={yS(finalHigh) - 4} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P95 {fmt(finalHigh)}</text>
-              <text x={xS(years) - 8} y={yS(finalMedian) - 8} textAnchor="end" fontSize="9" fontWeight="700" fill={accentColor}>median {fmt(finalMedian)}</text>
-              <text x={xS(years) - 8} y={yS(finalLow) + 12} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P5 {fmt(finalLow)}</text>
-            </>
-          )}
+          {/* Endpoint markers */}
+          {totalMedian[years] > 0 && (() => {
+            const fHigh = mc.p95[years];
+            const fMed  = totalMedian[years];
+            const fLow  = mc.p5[years];
+            return (
+              <>
+                <circle cx={xS(years)} cy={yS(fHigh)} r="3" fill={accentColor} fillOpacity="0.7" />
+                <circle cx={xS(years)} cy={yS(fMed)} r="5" fill={accentColor} />
+                <circle cx={xS(years)} cy={yS(fLow)} r="3" fill={accentColor} fillOpacity="0.7" />
+                <text x={xS(years) - 8} y={yS(fHigh) - 4} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P95 {fmt(fHigh)}</text>
+                <text x={xS(years) - 8} y={yS(fMed) - 8} textAnchor="end" fontSize="9" fontWeight="700" fill={accentColor}>median {fmt(fMed)}</text>
+                <text x={xS(years) - 8} y={yS(fLow) + 12} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P5 {fmt(fLow)}</text>
+              </>
+            );
+          })()}
         </>
       )}
     </svg>
@@ -755,7 +833,7 @@ function RetirementPlanner({
   savingsRate, setSavingsRate,
   raiseRate, setRaiseRate,
   riskTolerance, setRiskTolerance,
-  corrRegime, setCorrRegime,
+  glidePathEnabled, setGlidePathEnabled,
   rows, totalValue, targets, wealthBandLabel,
   yearsToRetire, requiredAtRetire,
   currStats, targetStats, currFV, targetFV, currProb, targetProb,
@@ -774,7 +852,7 @@ function RetirementPlanner({
   savingsRate: number; setSavingsRate: (n: number) => void;
   raiseRate: number; setRaiseRate: (n: number) => void;
   riskTolerance: RiskTolerance; setRiskTolerance: (v: RiskTolerance) => void;
-  corrRegime: "independent" | "mild" | "crisis"; setCorrRegime: (v: "independent" | "mild" | "crisis") => void;
+  glidePathEnabled: boolean; setGlidePathEnabled: (v: boolean) => void;
   rows: PortfolioInputs[]; totalValue: number;
   targets: Record<AssetKey, number>;
   wealthBandLabel: string;
@@ -1100,24 +1178,15 @@ function RetirementPlanner({
               </button>
             ))}
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Asset return correlation regime. Higher correlation widens portfolio Vol. and reduces P(success) under stress. Independent = fully diversifying assets. Crisis = 2008-style co-movement.">Correlation</span>
-          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
-            {(["independent", "mild", "crisis"] as const).map(r => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setCorrRegime(r)}
-                className={`px-3 py-1 text-xs font-medium rounded capitalize transition-colors ${
-                  corrRegime === r
-                    ? "bg-slate-700/40 text-slate-100 ring-1 ring-slate-600"
-                    : "text-slate-500 hover:text-slate-300"
-                }`}
-                title={r === "independent" ? "ρ = 0" : r === "mild" ? "ρ ≈ 0.3" : "ρ ≈ 0.7"}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-500 cursor-pointer select-none" title="Glide path: as retirement nears, the target portfolio gradually shifts toward the conservative target for the same wealth band. Linear blend, full conservative at 0 yrs, full chosen-tolerance at 20+ yrs.">
+            <input
+              type="checkbox"
+              checked={glidePathEnabled}
+              onChange={e => setGlidePathEnabled(e.target.checked)}
+              className="w-3 h-3 accent-amber-400 cursor-pointer"
+            />
+            Glide path
+          </label>
           <span className="text-[10px] text-slate-600 ml-auto tabular-nums">
             {yearsToRetire > 0 ? `${yearsToRetire} years to retirement` : "Already retired"}
           </span>
@@ -1140,7 +1209,7 @@ function RetirementPlanner({
           target={fmtPct1(targetStats.vol)}
           delta={fmtPP(targetStats.vol - currStats.vol)}
           neutral
-          tooltip="Annualized portfolio standard deviation. Formula: √[(1−ρ)·Σ wᵢ²σᵢ² + ρ·(Σ wᵢσᵢ)²], where ρ is the correlation regime selected above. ~68% of years fall within ±1σ of the mean return."
+          tooltip="Annualized portfolio standard deviation. Formula: √(Σ wᵢ²σᵢ²) under the simplifying assumption that asset returns are uncorrelated. ~68% of years fall within ±1σ of the mean return."
         />
         <StatCard
           title={`FV @ Age ${retireAge}`}
@@ -1436,8 +1505,8 @@ export default function FeeCalculator() {
   const [salary, setSalary] = usePersistedState("salary", 200_000);
   const [savingsRate, setSavingsRate] = usePersistedState("savingsRate", 0.20);
   const [raiseRate, setRaiseRate] = usePersistedState("raiseRate", 0.03);
-  // Correlation regime — affects portfolio Vol. for stat cards
-  const [corrRegime, setCorrRegime] = usePersistedState<"independent" | "mild" | "crisis">("corrRegime", "mild");
+  // Glide path — gradual shift toward conservative as retirement nears
+  const [glidePathEnabled, setGlidePathEnabled] = usePersistedState<boolean>("glidePath", false);
 
   // ---- Saved scenarios ----
   type Scenario = {
@@ -1453,7 +1522,7 @@ export default function FeeCalculator() {
     riskTolerance: RiskTolerance;
     contribMode: "flat" | "growing";
     salary: number; savingsRate: number; raiseRate: number;
-    corrRegime: "independent" | "mild" | "crisis";
+    glidePathEnabled: boolean;
     feeStruct: "2/20" | "0/50";
     years: number; grossReturn: number;
   };
@@ -1465,7 +1534,7 @@ export default function FeeCalculator() {
     age, retireAge, retireTarget, retireIncome,
     inflationRate, drawdownRate, annualSavings, riskTolerance,
     contribMode, salary, savingsRate, raiseRate,
-    corrRegime, feeStruct, years, grossReturn,
+    glidePathEnabled, feeStruct, years, grossReturn,
   });
   const loadScenario = (s: Scenario) => {
     setCapital(s.capital);
@@ -1478,7 +1547,7 @@ export default function FeeCalculator() {
     setAnnualSavings(s.annualSavings); setRiskTolerance(s.riskTolerance);
     setContribMode(s.contribMode);
     setSalary(s.salary); setSavingsRate(s.savingsRate); setRaiseRate(s.raiseRate);
-    setCorrRegime(s.corrRegime); setFeeStruct(s.feeStruct);
+    setGlidePathEnabled(s.glidePathEnabled); setFeeStruct(s.feeStruct);
     setYears(s.years); setGrossReturn(s.grossReturn);
   };
   const saveScenario = (name: string) => {
@@ -1518,8 +1587,20 @@ export default function FeeCalculator() {
   // Total portfolio value (current)
   const totalValue = allRows.reduce((s, r) => s + r.amount, 0);
 
-  // Wealth-band-aware targets
-  const targets = getTargets(totalValue, riskTolerance);
+  // Wealth-band-aware targets, optionally glide-pathed toward conservative
+  // as retirement nears (linear blend over 0..20 yrs to retirement).
+  const yearsToRetire = Math.max(0, retireAge - age);
+  const baseTargets = getTargets(totalValue, riskTolerance);
+  const consTargets = getTargets(totalValue, "conservative");
+  const targets: Record<AssetKey, number> = (() => {
+    if (!glidePathEnabled) return baseTargets;
+    const blend = Math.max(0, Math.min(1, yearsToRetire / 20));
+    const out = {} as Record<AssetKey, number>;
+    for (const a of ASSET_CLASSES) {
+      out[a.key] = blend * (baseTargets[a.key] ?? 0) + (1 - blend) * (consTargets[a.key] ?? 0);
+    }
+    return out;
+  })();
   const wealthBandLabel = getWealthBandLabel(totalValue);
 
   // Returns/vols by asset key, with the fund using selected-net IRR / fund Vol.
@@ -1545,11 +1626,9 @@ export default function FeeCalculator() {
   const effectiveGrowth  = contribMode === "growing" ? raiseRate : 0;
 
   // Retirement projections — target is canonical; income is derived (and editable, syncs back).
-  const yearsToRetire = Math.max(0, retireAge - age);
   const requiredAtRetire = retireTarget;
-  const rho = CORRELATION_RHO[corrRegime];
-  const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap, rho);
-  const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap, rho);
+  const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap, 0);
+  const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap, 0);
   const currFV  = projectFV(totalValue, effectiveContrib, currStats.expRet,  yearsToRetire, effectiveGrowth);
   const targetFV = projectFV(totalValue, effectiveContrib, targetStats.expRet, yearsToRetire, effectiveGrowth);
   const currProb   = probMeetGoal(currFV,  currStats.vol,  yearsToRetire, requiredAtRetire);
@@ -1783,7 +1862,17 @@ export default function FeeCalculator() {
         {/* Body: input rows + chart */}
         <div className="p-6 flex flex-col lg:flex-row gap-8">
           {/* Asset rows (Co-Owner Fund first, then others) */}
-          <div className="lg:w-[26rem] shrink-0 space-y-2">
+          <div className="lg:w-[28rem] shrink-0 space-y-1">
+            {/* Column headers */}
+            <div className="flex items-baseline gap-1.5 text-[9px] uppercase tracking-widest text-slate-600 px-1 pb-1.5 border-b border-slate-800/50">
+              <span className="w-2 shrink-0" />
+              <span className="flex-1 min-w-0">Asset</span>
+              <span className="w-[6.5rem] text-center">Amount</span>
+              <span className="w-12 text-right">Return</span>
+              <span className="w-9 text-right">Alloc</span>
+              <span className="w-12 text-right hidden md:inline-block">Δ$</span>
+              <span className="w-6 shrink-0" />
+            </div>
             {ASSET_CLASSES.map(a => {
               const isFund = a.isFund;
               const amount  = isFund ? capital      : (portAlloc[a.key] || 0);
@@ -1805,11 +1894,11 @@ export default function FeeCalculator() {
                   }`}
                 >
                   {/* Header — editable inline fields + expand toggle */}
-                  <div className="flex items-center gap-2 py-1.5">
+                  <div className="flex items-center gap-1.5 py-1.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
-                    <span className="text-xs text-slate-300 font-medium flex-1 truncate min-w-0">
+                    <span className="text-xs text-slate-300 font-medium flex-1 min-w-0 truncate">
                       {a.label}
-                      {isFund && <span className="ml-1 text-[10px] text-slate-600 font-normal">({feeStruct})</span>}
+                      {isFund && <span className="ml-1 text-[10px] text-slate-600 font-normal hidden lg:inline">({feeStruct})</span>}
                     </span>
                     {/* Amount with +/- buttons */}
                     <div className="flex items-center shrink-0">
@@ -1825,7 +1914,7 @@ export default function FeeCalculator() {
                         editFn={v => Math.round(v).toString()}
                         parseFn={raw => parseFloat(raw.replace(/[^0-9.]/g, ""))}
                         onChange={setAmt}
-                        widthClass="w-16"
+                        widthClass="w-14"
                       />
                       <button
                         type="button"
@@ -1841,7 +1930,7 @@ export default function FeeCalculator() {
                       editFn={() => (retRate * 100).toFixed(1)}
                       parseFn={raw => parseFloat(raw) / 100}
                       onChange={setRet}
-                      widthClass="w-14"
+                      widthClass="w-12"
                       color={a.color}
                       title={isFund ? `Edit gross return; current gross ${(retRate * 100).toFixed(1)}%` : undefined}
                     />
@@ -1857,22 +1946,22 @@ export default function FeeCalculator() {
                       const dColor = isOn ? "text-slate-600" : isOver ? "text-rose-400" : "text-emerald-400";
                       const dArrow = isOn ? "✓" : isOver ? "↓" : "↑";
                       return (
-                        <span className="flex items-baseline gap-1 px-1 shrink-0">
-                          <span className="text-xs tabular-nums w-9 text-right text-slate-400">
+                        <>
+                          <span className="text-xs tabular-nums w-9 text-right text-slate-400 shrink-0">
                             {totalValue > 0 ? `${(currPct * 100).toFixed(0)}%` : "—"}
                           </span>
                           {totalValue > 0 && targetPct > 0.005 && (
                             <span
-                              className={`text-[10px] tabular-nums ${dColor} w-14 text-right hidden md:inline-block`}
+                              className={`text-[10px] tabular-nums ${dColor} w-12 text-right shrink-0 hidden md:inline-block`}
                               title={`Target ${(targetPct * 100).toFixed(0)}% (${fmt(targetPct * totalValue)}). Currently ${(currPct * 100).toFixed(1)}%.`}
                             >
                               {dArrow} {isOn ? "" : fmt(Math.abs(deltaDollar))}
                             </span>
                           )}
                           {totalValue > 0 && targetPct <= 0.005 && (
-                            <span className="text-[10px] text-slate-600 w-14 text-right hidden md:inline-block">—</span>
+                            <span className="text-[10px] text-slate-600 w-12 text-right shrink-0 hidden md:inline-block">—</span>
                           )}
-                        </span>
+                        </>
                       );
                     })()}
                     {/* Expand toggle */}
@@ -2012,9 +2101,9 @@ export default function FeeCalculator() {
             </div>
             {portfolioView === "variable" && (
               <p className="text-[10px] text-slate-600 mt-2 px-2">
-                Bands shown are 90% CI on each asset&rsquo;s terminal value (lognormal, summed).
-                Lognormal floors each asset at $0, so the band can&rsquo;t go negative even at high Vol.
-                Per-asset Vol. is editable above.
+                Spaghetti = 30 sample paths from a 200-path Monte Carlo (lognormal, uncorrelated annual log
+                returns, drift μ = ln(1+r) so path median = (1+r)<sup>t</sup>). Dashed envelope is the empirical
+                5/95 percentile. Per-asset Vol. is editable above.
               </p>
             )}
           </div>
@@ -2035,7 +2124,7 @@ export default function FeeCalculator() {
             savingsRate={savingsRate} setSavingsRate={setSavingsRate}
             raiseRate={raiseRate} setRaiseRate={setRaiseRate}
             riskTolerance={riskTolerance} setRiskTolerance={setRiskTolerance}
-            corrRegime={corrRegime} setCorrRegime={setCorrRegime}
+            glidePathEnabled={glidePathEnabled} setGlidePathEnabled={setGlidePathEnabled}
             rows={allRows} totalValue={totalValue} targets={targets}
             wealthBandLabel={wealthBandLabel}
             yearsToRetire={yearsToRetire} requiredAtRetire={requiredAtRetire}
