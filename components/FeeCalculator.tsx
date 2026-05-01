@@ -365,30 +365,39 @@ function normalSample(rng: () => number): number {
   const u2 = rng();
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
-// Independent-asset Monte Carlo. For each asset, log-drift μ = ln(1+r) so
-// the PATH MEDIAN matches the user's expected (1+r)^t (uncorrelated draws
-// across assets). Returns nPaths × (years+1) total-portfolio paths.
-function simulatePaths(
+// Independent-asset Monte Carlo at MONTHLY resolution. For each asset,
+// annual log-drift μ = ln(1+r) split across 12 months; vol scaled by
+// √12. PATH MEDIAN matches the user's expected (1+r)^t. Monthly resolution
+// makes the spaghetti chart visibly look like Brownian motion rather than
+// linear interpolations between yearly endpoints.
+// Returns nPaths × (months+1) total-portfolio paths.
+function simulatePathsMonthly(
   rows: { amount: number; retRate: number; vol: number }[],
   years: number,
   nPaths: number,
   seed: number,
 ): number[][] {
+  const months = years * 12;
   const rng = makeRng(seed);
   const out: number[][] = new Array(nPaths);
+  // Pre-compute per-asset monthly drift / vol
+  const params = rows.map(r => ({
+    amount: r.amount,
+    muMo: Math.log(1 + Math.max(r.retRate, -0.999)) / 12,
+    volMo: r.vol / Math.sqrt(12),
+  }));
   for (let p = 0; p < nPaths; p++) {
-    const totals = new Array(years + 1).fill(0);
-    for (const row of rows) {
-      const mu = Math.log(1 + Math.max(row.retRate, -0.999));
-      let v = row.amount;
+    const totals = new Float64Array(months + 1);
+    for (const pa of params) {
+      let v = pa.amount;
       totals[0] += v;
-      for (let t = 1; t <= years; t++) {
+      for (let m = 1; m <= months; m++) {
         const z = normalSample(rng);
-        v *= Math.exp(mu + row.vol * z);
-        totals[t] += v;
+        v *= Math.exp(pa.muMo + pa.volMo * z);
+        totals[m] += v;
       }
     }
-    out[p] = totals;
+    out[p] = Array.from(totals);
   }
   return out;
 }
@@ -412,6 +421,7 @@ function PortfolioChart({
   const innerW = W - PL - PR;
   const innerH = H - PT - PB;
   const T = Math.max(years, 1);
+  const currentYear = new Date().getFullYear();
 
   // Per-asset deterministic median trajectory (= amount × (1+r)^t)
   const medians: { row: PortfolioInputs; values: number[] }[] = rows.map(r => ({
@@ -425,46 +435,60 @@ function PortfolioChart({
     medians.reduce((s, m) => s + m.values[t], 0)
   );
 
-  // Monte Carlo simulation for Variable view (spaghetti + empirical envelope)
+  // Stable serialization of inputs for useMemo deps — re-runs on any change
+  const mcDepKey = useMemo(
+    () => rows.map(r => `${r.key}:${r.amount.toFixed(2)}:${r.retRate.toFixed(4)}:${r.vol.toFixed(4)}`).join("|") + `|y${years}`,
+    [rows, years],
+  );
+
+  // Monte Carlo simulation for Variable view, MONTHLY resolution.
+  // Re-runs whenever any allocation, return, or vol changes (via mcDepKey).
+  const months = years * 12;
   const mc = useMemo(() => {
     if (view !== "variable" || rows.length === 0) return null;
-    const N_PATHS = 200;
-    const N_SPAGHETTI = 30;
-    // Stable seed derived from row count so layout doesn't shuffle between
-    // re-renders with identical input.
+    const N_PATHS = 400;
+    const N_SPAGHETTI = 60;
     const seed = 4242;
-    const paths = simulatePaths(rows, years, N_PATHS, seed);
+    const paths = simulatePathsMonthly(rows, years, N_PATHS, seed);
     const median: number[] = [];
     const p5: number[] = [];
     const p95: number[] = [];
-    for (let t = 0; t <= years; t++) {
-      const slice = paths.map(p => p[t]);
+    for (let m = 0; m <= months; m++) {
+      const slice = paths.map(p => p[m]);
       median.push(percentile(slice, 0.5));
       p5.push(percentile(slice, 0.05));
       p95.push(percentile(slice, 0.95));
     }
-    // Subset paths for visualization (deterministic stride sample)
     const stride = Math.max(1, Math.floor(N_PATHS / N_SPAGHETTI));
     const sample: number[][] = [];
     for (let i = 0; i < N_PATHS && sample.length < N_SPAGHETTI; i += stride) {
       sample.push(paths[i]);
     }
-    return { sample, median, p5, p95 };
-  }, [view, rows, years]);
+    return { sample, median, p5, p95, months };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, mcDepKey]);
 
   // y-axis max — clamp to P95 endpoint in Variable mode, total median in stacked.
   const maxVal = view === "median"
     ? Math.max(...totalMedian, 1)
-    : Math.max((mc?.p95[years] ?? 1), 1);
+    : Math.max((mc?.p95[months] ?? 1), 1);
 
+  // x scaling — yearly index for stacked, monthly for variable.
   const xS = (t: number) => PL + (t / T) * innerW;
+  const xSM = (m: number) => PL + (m / Math.max(months, 1)) * innerW;
   const yS = (v: number) => PT + innerH * (1 - Math.min(Math.max(v, 0) / maxVal, 1));
   const linePath = (vals: number[]) =>
     vals.map((v, t) => `${t === 0 ? "M" : "L"} ${xS(t).toFixed(1)} ${yS(v).toFixed(1)}`).join(" ");
-  const areaPath = (lower: number[], upper: number[]) => {
-    const top = upper.map((v, t) => `${t === 0 ? "M" : "L"} ${xS(t).toFixed(1)} ${yS(v).toFixed(1)}`).join(" ");
-    const bot = lower.map((v, t) => `L ${xS(years - t).toFixed(1)} ${yS(lower[years - t]).toFixed(1)}`).join(" ").replace(/^L/, " L");
-    return `${top}${bot} Z`;
+  const linePathM = (vals: number[]) =>
+    vals.map((v, m) => `${m === 0 ? "M" : "L"} ${xSM(m).toFixed(1)} ${yS(v).toFixed(1)}`).join(" ");
+  const areaPathM = (lower: number[], upper: number[]) => {
+    const top = upper.map((v, m) => `${m === 0 ? "M" : "L"} ${xSM(m).toFixed(1)} ${yS(v).toFixed(1)}`).join(" ");
+    const N = lower.length;
+    const bot = lower.map((_v, i) => {
+      const idx = N - 1 - i;
+      return `L ${xSM(idx).toFixed(1)} ${yS(lower[idx]).toFixed(1)}`;
+    }).join(" ");
+    return `${top} ${bot} Z`;
   };
 
   // -------- Stacked layers (Median view) --------
@@ -508,10 +532,10 @@ function PortfolioChart({
           </text>
         </g>
       ))}
-      {/* X axis labels */}
+      {/* X axis labels (calendar years) */}
       {xTicks.map(t => (
         <text key={t} x={xS(t)} y={H - 8} textAnchor="middle" fontSize="9" fill="#475569">
-          {t === 0 ? "Now" : `Yr ${t}`}
+          {currentYear + t}
         </text>
       ))}
       {/* Exit vertical guide */}
@@ -537,37 +561,39 @@ function PortfolioChart({
 
       {view === "variable" && mc && (
         <>
+          {/* Empirical 5-95 CI envelope (drawn first as background) */}
+          <path d={areaPathM(mc.p5, mc.p95)} fill={accentColor} fillOpacity="0.08" />
           {/* Spaghetti: sample of simulated total-portfolio paths */}
           {mc.sample.map((path, i) => (
             <path
               key={`s-${i}`}
-              d={linePath(path)}
+              d={linePathM(path)}
               fill="none"
               stroke={accentColor}
-              strokeOpacity="0.10"
-              strokeWidth="1"
+              strokeOpacity="0.18"
+              strokeWidth="0.7"
               strokeLinejoin="round"
             />
           ))}
-          {/* Empirical 5-95 CI envelope */}
-          <path d={areaPath(mc.p5, mc.p95)} fill={accentColor} fillOpacity="0.10" />
-          <path d={linePath(mc.p5)}  fill="none" stroke={accentColor} strokeOpacity="0.55" strokeWidth="1" strokeDasharray="3 3" />
-          <path d={linePath(mc.p95)} fill="none" stroke={accentColor} strokeOpacity="0.55" strokeWidth="1" strokeDasharray="3 3" />
-          {/* Total median (analytic; matches user's expected (1+r)^t) */}
-          <path d={linePath(totalMedian)} fill="none" stroke={accentColor} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" />
+          {/* P5/P95 edges */}
+          <path d={linePathM(mc.p5)}  fill="none" stroke={accentColor} strokeOpacity="0.6" strokeWidth="1.25" strokeDasharray="3 3" />
+          <path d={linePathM(mc.p95)} fill="none" stroke={accentColor} strokeOpacity="0.6" strokeWidth="1.25" strokeDasharray="3 3" />
+          {/* MC empirical median (bold) */}
+          <path d={linePathM(mc.median)} fill="none" stroke={accentColor} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" />
           {/* Endpoint markers */}
-          {totalMedian[years] > 0 && (() => {
-            const fHigh = mc.p95[years];
-            const fMed  = totalMedian[years];
-            const fLow  = mc.p5[years];
+          {mc.median[months] > 0 && (() => {
+            const fHigh = mc.p95[months];
+            const fMed  = mc.median[months];
+            const fLow  = mc.p5[months];
+            const xEnd = xSM(months);
             return (
               <>
-                <circle cx={xS(years)} cy={yS(fHigh)} r="3" fill={accentColor} fillOpacity="0.7" />
-                <circle cx={xS(years)} cy={yS(fMed)} r="5" fill={accentColor} />
-                <circle cx={xS(years)} cy={yS(fLow)} r="3" fill={accentColor} fillOpacity="0.7" />
-                <text x={xS(years) - 8} y={yS(fHigh) - 4} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P95 {fmt(fHigh)}</text>
-                <text x={xS(years) - 8} y={yS(fMed) - 8} textAnchor="end" fontSize="9" fontWeight="700" fill={accentColor}>median {fmt(fMed)}</text>
-                <text x={xS(years) - 8} y={yS(fLow) + 12} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P5 {fmt(fLow)}</text>
+                <circle cx={xEnd} cy={yS(fHigh)} r="3" fill={accentColor} fillOpacity="0.7" />
+                <circle cx={xEnd} cy={yS(fMed)} r="5" fill={accentColor} />
+                <circle cx={xEnd} cy={yS(fLow)} r="3" fill={accentColor} fillOpacity="0.7" />
+                <text x={xEnd - 8} y={yS(fHigh) - 4} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P95 {fmt(fHigh)}</text>
+                <text x={xEnd - 8} y={yS(fMed) - 8} textAnchor="end" fontSize="9" fontWeight="700" fill={accentColor}>median {fmt(fMed)}</text>
+                <text x={xEnd - 8} y={yS(fLow) + 12} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P5 {fmt(fLow)}</text>
               </>
             );
           })()}
@@ -834,6 +860,7 @@ function RetirementPlanner({
   raiseRate, setRaiseRate,
   riskTolerance, setRiskTolerance,
   glidePathEnabled, setGlidePathEnabled,
+  planningOpen, setPlanningOpen,
   rows, totalValue, targets, wealthBandLabel,
   yearsToRetire, requiredAtRetire,
   currStats, targetStats, currFV, targetFV, currProb, targetProb,
@@ -853,6 +880,7 @@ function RetirementPlanner({
   raiseRate: number; setRaiseRate: (n: number) => void;
   riskTolerance: RiskTolerance; setRiskTolerance: (v: RiskTolerance) => void;
   glidePathEnabled: boolean; setGlidePathEnabled: (v: boolean) => void;
+  planningOpen: boolean; setPlanningOpen: (v: boolean) => void;
   rows: PortfolioInputs[]; totalValue: number;
   targets: Record<AssetKey, number>;
   wealthBandLabel: string;
@@ -983,9 +1011,19 @@ function RetirementPlanner({
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-          Allocation Suggestions <span className="text-slate-700">·</span> Retirement Planning
-        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPlanningOpen(!planningOpen)}
+            className="p-1 -m-0.5 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
+            aria-label={planningOpen ? "Collapse retirement planning" : "Expand retirement planning"}
+          >
+            <ChevronDown size={14} className={`transition-transform ${planningOpen ? "rotate-180" : ""}`} />
+          </button>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+            Retirement Planning
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <p className="text-[10px] text-slate-600">
             Goal: <span className="text-slate-400 font-semibold">{fmt(requiredAtRetire)}</span>
@@ -1003,6 +1041,7 @@ function RetirementPlanner({
         </div>
       </div>
 
+      {planningOpen && <>
       {/* Narrative summary */}
       <div className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3">
         {narrative}
@@ -1178,7 +1217,7 @@ function RetirementPlanner({
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-500 cursor-pointer select-none" title="Glide path: as retirement nears, the target portfolio gradually shifts toward the conservative target for the same wealth band. Linear blend, full conservative at 0 yrs, full chosen-tolerance at 20+ yrs.">
+          <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-500 cursor-pointer select-none" title="Glide path: as retirement nears, the target portfolio gradually shifts toward the conservative target for the same wealth band. Linear blend, full conservative at 0 yrs, full chosen-tolerance at 20+ yrs.&#10;&#10;NOTE — Pfau & Kitces (2014) showed that once basic retirement is funded (Social Security covers essentials, P(success) ≥ ~90%), retirees can comfortably RAISE equity exposure post-retirement. The conventional declining-equity glide path actually leaves money on the table in many scenarios. Consider increasing risk tolerance once the goal is comfortably in reach.">
             <input
               type="checkbox"
               checked={glidePathEnabled}
@@ -1430,6 +1469,7 @@ function RetirementPlanner({
         portfolio Vol. scaled by √horizon, where Vol. = √(Σ wᵢ²σᵢ²) (independence). Required portfolio uses the 4% rule
         (25× target income).
       </p>
+      </>}
     </div>
   );
 }
@@ -1505,8 +1545,15 @@ export default function FeeCalculator() {
   const [salary, setSalary] = usePersistedState("salary", 200_000);
   const [savingsRate, setSavingsRate] = usePersistedState("savingsRate", 0.20);
   const [raiseRate, setRaiseRate] = usePersistedState("raiseRate", 0.03);
-  // Glide path — gradual shift toward conservative as retirement nears
-  const [glidePathEnabled, setGlidePathEnabled] = usePersistedState<boolean>("glidePath", false);
+  // Glide path — gradual shift toward conservative as retirement nears.
+  // Default ON (Bogleheads / target-date convention). Note that recent
+  // research (Pfau & Kitces, 2014; "Reducing Retirement Risk with a Rising
+  // Equity Glide Path") suggests retirees may benefit from RAISING equity
+  // post-retirement once basic income is funded — see tooltip on the toggle.
+  const [glidePathEnabled, setGlidePathEnabled] = usePersistedState<boolean>("glidePath", true);
+  // Section collapse state
+  const [portfolioBodyOpen, setPortfolioBodyOpen] = usePersistedState<boolean>("portfolioBodyOpen", true);
+  const [planningOpen, setPlanningOpen] = usePersistedState<boolean>("planningOpen", true);
 
   // ---- Saved scenarios ----
   type Scenario = {
@@ -1824,11 +1871,21 @@ export default function FeeCalculator() {
       <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
         {/* Header with two toggles */}
         <div className="px-6 py-4 border-b border-slate-800 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Portfolio Context</p>
-            <p className="text-sm text-slate-400 mt-0.5">
-              Compare your full holdings — Co-Owner Fund alongside other assets — over the same horizon.
-            </p>
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
+              onClick={() => setPortfolioBodyOpen(!portfolioBodyOpen)}
+              className="p-1 -m-0.5 mt-0.5 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors shrink-0"
+              aria-label={portfolioBodyOpen ? "Collapse portfolio balancing" : "Expand portfolio balancing"}
+            >
+              <ChevronDown size={14} className={`transition-transform ${portfolioBodyOpen ? "rotate-180" : ""}`} />
+            </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Portfolio Balancing</p>
+              <p className="text-sm text-slate-400 mt-0.5">
+                Compare your full holdings — Co-Owner Fund alongside other assets — over the same horizon.
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             {/* View mode */}
@@ -1860,6 +1917,7 @@ export default function FeeCalculator() {
         </div>
 
         {/* Body: input rows + chart */}
+        {portfolioBodyOpen && (
         <div className="p-6 flex flex-col lg:flex-row gap-8">
           {/* Asset rows (Co-Owner Fund first, then others) */}
           <div className="lg:w-[28rem] shrink-0 space-y-1">
@@ -2063,10 +2121,76 @@ export default function FeeCalculator() {
                   aria-label="Increase total"
                 >+</button>
               </div>
-              {/* Pie chart of current allocation */}
-              <div className="flex justify-center pt-1">
-                <AllocationPie rows={allRows} totalValue={totalValue} size={180} />
+              {/* Current vs Optimized allocation pies */}
+              <div className="flex flex-wrap justify-center gap-3 pt-1">
+                <div className="text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-1">Current</p>
+                  <AllocationPie rows={allRows} totalValue={totalValue} size={140} />
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-1">
+                    Optimized · <span className="capitalize text-slate-500">{riskTolerance}</span>
+                    {glidePathEnabled && <span className="text-slate-600 normal-case"> · glide</span>}
+                  </p>
+                  <AllocationPie
+                    rows={ASSET_CLASSES.map(a => ({
+                      key: a.key,
+                      label: a.label,
+                      color: a.color,
+                      amount: totalValue * (targets[a.key] || 0),
+                      retRate: 0,
+                      vol: 0,
+                    }))}
+                    totalValue={totalValue}
+                    size={140}
+                  />
+                </div>
               </div>
+              {/* Key rebalancing moves */}
+              {(() => {
+                const items = ASSET_CLASSES.map(a => {
+                  const row = allRows.find(r => r.key === a.key);
+                  const current = row?.amount ?? 0;
+                  const targetPct = targets[a.key] ?? 0;
+                  const targetDollar = targetPct * totalValue;
+                  return { asset: a, current, targetPct, currPct: totalValue > 0 ? current / totalValue : 0, deltaDollar: current - targetDollar };
+                });
+                const tol = totalValue * 0.02;
+                const moves = items
+                  .filter(i => Math.abs(i.deltaDollar) > tol)
+                  .sort((a, b) => Math.abs(b.deltaDollar) - Math.abs(a.deltaDollar))
+                  .slice(0, 4);
+                if (moves.length === 0) return (
+                  <p className="text-[11px] text-emerald-400 pt-2 border-t border-slate-800/60 mt-1">
+                    ✓ Allocation is within ±2% of target across all assets.
+                  </p>
+                );
+                return (
+                  <div className="pt-2 mt-1 border-t border-slate-800/60 space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-600">Key Rebalancing Moves</p>
+                    <ul className="space-y-1">
+                      {moves.map(m => {
+                        const isOver = m.deltaDollar > 0;
+                        return (
+                          <li key={m.asset.key} className="text-[11px] flex items-baseline gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5" style={{ background: m.asset.color }} />
+                            <span className={`shrink-0 font-semibold ${isOver ? "text-rose-400" : "text-emerald-400"}`}>
+                              {isOver ? "↓" : "↑"}
+                            </span>
+                            <span className="text-slate-300 flex-1">
+                              <span className="tabular-nums font-semibold text-slate-100">{fmt(Math.abs(m.deltaDollar))}</span>{" "}
+                              {isOver ? "out of" : "into"} {m.asset.label}
+                              <span className="text-slate-600 tabular-nums">
+                                {" "}({(m.currPct * 100).toFixed(0)}% → {(m.targetPct * 100).toFixed(0)}%)
+                              </span>
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -2108,6 +2232,7 @@ export default function FeeCalculator() {
             )}
           </div>
         </div>
+        )}
 
         {/* Allocation suggestions footer */}
         <div className="px-6 py-5 border-t border-slate-800 bg-slate-950/40">
@@ -2125,6 +2250,7 @@ export default function FeeCalculator() {
             raiseRate={raiseRate} setRaiseRate={setRaiseRate}
             riskTolerance={riskTolerance} setRiskTolerance={setRiskTolerance}
             glidePathEnabled={glidePathEnabled} setGlidePathEnabled={setGlidePathEnabled}
+            planningOpen={planningOpen} setPlanningOpen={setPlanningOpen}
             rows={allRows} totalValue={totalValue} targets={targets}
             wealthBandLabel={wealthBandLabel}
             yearsToRetire={yearsToRetire} requiredAtRetire={requiredAtRetire}
