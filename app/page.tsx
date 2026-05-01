@@ -1535,6 +1535,24 @@ export default function Dashboard() {
           const fund = { ...baseFund, calledCapital: baseFund.calledCapital + PROPOSAL_LP_BASIS_ADD };
           return (
           <div className="space-y-8">
+            {/* ── Proposal Summary ── */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-6 py-5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-3">Proposed Transactions</p>
+              <ul className="space-y-2 text-sm text-slate-300">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-amber-400">•</span>
+                  <span>Take in <span className="text-white font-medium">$350k</span> of new LP capital</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-amber-400">•</span>
+                  <span>Purchase <span className="text-white font-medium">50% of Nueces Brewing</span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-amber-400">•</span>
+                  <span>Purchase <span className="text-white font-medium">$150k</span> of <span className="text-white font-medium">Audily Preferred</span></span>
+                </li>
+              </ul>
+            </div>
             {/* ── Overview Hero ── */}
             {(() => {
               // ── LP multiplier — compute first so displayItems can use it ────────────
