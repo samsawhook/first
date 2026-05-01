@@ -11,6 +11,14 @@ function fmt(n: number) {
 function fmtPct(n: number, digits = 1) { return `${(n * 100).toFixed(digits)}%`; }
 function fmtX(n: number) { return `${n.toFixed(2)}x`; }
 
+// Smart $ increment for +/- buttons — scales with magnitude.
+function dollarIncrement(amount: number): number {
+  if (amount < 50_000) return 1_000;
+  if (amount < 500_000) return 5_000;
+  if (amount < 5_000_000) return 25_000;
+  return 100_000;
+}
+
 interface Result {
   mgmtFee: number;
   gpCarry: number;
@@ -628,6 +636,60 @@ function StatCard({
 }
 
 // =========================================================
+//   Pie chart of current allocation
+// =========================================================
+function AllocationPie({ rows, totalValue, size = 180 }: {
+  rows: PortfolioInputs[];
+  totalValue: number;
+  size?: number;
+}) {
+  if (totalValue <= 0) return null;
+  const r = size / 2 - 4;
+  const cx = size / 2;
+  const cy = size / 2;
+  const active = rows.filter(rw => rw.amount > 0);
+  if (active.length === 0) return null;
+
+  let cum = -Math.PI / 2; // start at top
+  const sectors = active.map(row => {
+    const a = (row.amount / totalValue) * 2 * Math.PI;
+    const start = cum;
+    const end = cum + a;
+    cum = end;
+    if (active.length === 1) {
+      // single asset = full circle (two semicircles to avoid degenerate arc)
+      return { row, path: `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z` };
+    }
+    const x1 = cx + r * Math.cos(start);
+    const y1 = cy + r * Math.sin(start);
+    const x2 = cx + r * Math.cos(end);
+    const y2 = cy + r * Math.sin(end);
+    const largeArc = a > Math.PI ? 1 : 0;
+    return { row, path: `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z` };
+  });
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full" style={{ maxWidth: size, maxHeight: size }}>
+      {sectors.map(({ row, path }) => (
+        <path
+          key={row.key}
+          d={path}
+          fill={row.color}
+          fillOpacity="0.85"
+          stroke="#0F172A"
+          strokeWidth="1.5"
+        >
+          <title>{`${row.label}: ${fmt(row.amount)} (${((row.amount / totalValue) * 100).toFixed(1)}%)`}</title>
+        </path>
+      ))}
+      <circle cx={cx} cy={cy} r={r * 0.42} fill="#0F172A" />
+      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="9" fill="#64748B">Total</text>
+      <text x={cx} y={cy + 8} textAnchor="middle" fontSize="11" fontWeight="700" fill="#E2E8F0">{fmt(totalValue)}</text>
+    </svg>
+  );
+}
+
+// =========================================================
 //   Retirement Planner — combines personal profile, outlook,
 //   shortfall analysis, and rebalancing actions
 // =========================================================
@@ -635,11 +697,9 @@ function RetirementPlanner({
   // Profile
   age, setAge, retireAge, setRetireAge,
   retireTarget, setRetireTarget,
-  targetMode, setTargetMode,
   retireIncome, setRetireIncome,
   inflationRate, setInflationRate,
   drawdownRate, setDrawdownRate,
-  computedTargetFromIncome,
   annualSavings, setAnnualSavings,
   contribMode, setContribMode,
   salary, setSalary,
@@ -658,11 +718,9 @@ function RetirementPlanner({
   age: number; setAge: (n: number) => void;
   retireAge: number; setRetireAge: (n: number) => void;
   retireTarget: number; setRetireTarget: (n: number) => void;
-  targetMode: "direct" | "fromIncome"; setTargetMode: (m: "direct" | "fromIncome") => void;
   retireIncome: number; setRetireIncome: (n: number) => void;
   inflationRate: number; setInflationRate: (n: number) => void;
   drawdownRate: number; setDrawdownRate: (n: number) => void;
-  computedTargetFromIncome: number;
   annualSavings: number; setAnnualSavings: (n: number) => void;
   contribMode: "flat" | "growing"; setContribMode: (m: "flat" | "growing") => void;
   salary: number; setSalary: (n: number) => void;
@@ -684,6 +742,34 @@ function RetirementPlanner({
   const [contribFreq, setContribFreq] = useState<"month" | "quarter" | "year">("year");
   const freqDivisor: Record<typeof contribFreq, number> = { month: 12, quarter: 4, year: 1 };
   const freqUnit: Record<typeof contribFreq, string> = { month: "mo", quarter: "qtr", year: "yr" };
+
+  // Per-cell expansion (for chevron dropdowns under target / contribution cells)
+  const [targetExpanded, setTargetExpanded] = useState(false);
+  const [contribExpanded, setContribExpanded] = useState(false);
+
+  // Bidirectional sync helpers between target ($ at retirement) and income (today's $).
+  // The most-recently-edited variable is canonical; the other is recomputed.
+  const inflMult = (infl: number, ytr: number) => Math.pow(1 + infl, ytr);
+  const incomeFromTarget = (t: number, infl: number, dd: number, ytr: number) =>
+    dd > 0 ? (t * dd) / inflMult(infl, ytr) : 0;
+  const targetFromIncome = (i: number, infl: number, dd: number, ytr: number) =>
+    dd > 0 ? (i * inflMult(infl, ytr)) / dd : 0;
+  const setRetireTargetSync = (v: number) => {
+    setRetireTarget(v);
+    setRetireIncome(incomeFromTarget(v, inflationRate, drawdownRate, yearsToRetire));
+  };
+  const setRetireIncomeSync = (v: number) => {
+    setRetireIncome(v);
+    setRetireTarget(targetFromIncome(v, inflationRate, drawdownRate, yearsToRetire));
+  };
+  const setInflationSync = (v: number) => {
+    setInflationRate(v);
+    setRetireIncome(incomeFromTarget(retireTarget, v, drawdownRate, yearsToRetire));
+  };
+  const setDrawdownSync = (v: number) => {
+    setDrawdownRate(v);
+    setRetireIncome(incomeFromTarget(retireTarget, inflationRate, v, yearsToRetire));
+  };
 
   if (totalValue <= 0) {
     return (
@@ -750,15 +836,14 @@ function RetirementPlanner({
         </p>
         <p className="text-[10px] text-slate-600">
           Goal: <span className="text-slate-400 font-semibold">{fmt(requiredAtRetire)}</span>
-          {targetMode === "direct"
-            ? " (direct target)"
-            : ` (${fmt(retireIncome)}/yr today × ${(inflationRate * 100).toFixed(1)}% infl ÷ ${(drawdownRate * 100).toFixed(1)}% drawdown)`}
+          {" "}≈ <span className="text-slate-400 tabular-nums">{fmt(retireIncome)}</span>/yr today&rsquo;s $
+          {" "}({(drawdownRate * 100).toFixed(1)}% drawdown, {(inflationRate * 100).toFixed(1)}% infl)
         </p>
       </div>
 
       {/* Personal Profile */}
       <div className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-4 space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
           <ProfileSlider
             label="Current Age"
             value={age} setValue={v => { setAge(v); if (retireAge <= v) setRetireAge(v + 1); }}
@@ -771,143 +856,140 @@ function RetirementPlanner({
             min={Math.max(45, age + 1)} max={80} step={1}
             format={v => `${v} yrs`}
           />
-          {/* Retirement target — direct $ or computed from income */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
+
+          {/* Retirement Target cell with chevron-expandable detail */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wide text-slate-500">
                 Retirement Target
               </span>
-              <select
-                value={targetMode}
-                onChange={e => {
-                  const newMode = e.target.value as "direct" | "fromIncome";
-                  // Switching back to direct: snap retireTarget to current computed value
-                  if (newMode === "direct" && targetMode === "fromIncome") {
-                    setRetireTarget(Math.round(computedTargetFromIncome / 50_000) * 50_000);
-                  }
-                  setTargetMode(newMode);
-                }}
-                className="text-[9px] uppercase tracking-wider bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-slate-400 focus:outline-none focus:border-slate-600"
+              <button
+                type="button"
+                onClick={() => setTargetExpanded(v => !v)}
+                className="p-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+                aria-label={targetExpanded ? "Collapse details" : "Expand details"}
               >
-                <option value="direct">direct $</option>
-                <option value="fromIncome">from income</option>
-              </select>
+                <ChevronDown size={12} className={`transition-transform ${targetExpanded ? "rotate-180" : ""}`} />
+              </button>
             </div>
-            {targetMode === "direct" ? (
-              <>
-                <div className="text-right text-xs tabular-nums font-semibold text-slate-200 mb-1">
-                  {fmt(retireTarget)}
-                </div>
-                <input
-                  type="range" min={500_000} max={20_000_000} step={50_000} value={retireTarget}
-                  onChange={e => setRetireTarget(parseFloat(e.target.value))}
-                  className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-                    [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
-                    [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:cursor-pointer"
+            <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
+              {fmt(retireTarget)}
+            </div>
+            <input
+              type="range" min={500_000} max={20_000_000} step={50_000} value={retireTarget}
+              onChange={e => setRetireTargetSync(parseFloat(e.target.value))}
+              className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+                [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:cursor-pointer"
+            />
+            {targetExpanded && (
+              <div className="pt-2 mt-2 space-y-2.5 border-t border-slate-800/60">
+                <ProfileSlider
+                  label="Income / yr (today's $)"
+                  value={retireIncome} setValue={setRetireIncomeSync}
+                  min={30_000} max={500_000} step={1_000}
+                  format={v => fmt(v)}
                 />
-              </>
-            ) : (
-              <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
-                {fmt(computedTargetFromIncome)}
-                <span className="text-[9px] text-slate-600 ml-1 font-normal">computed</span>
+                <ProfileSlider
+                  label="Inflation"
+                  value={inflationRate} setValue={setInflationSync}
+                  min={0} max={0.08} step={0.0025}
+                  format={v => `${(v * 100).toFixed(2)}%`}
+                />
+                <ProfileSlider
+                  label="Drawdown"
+                  value={drawdownRate} setValue={setDrawdownSync}
+                  min={0.02} max={0.08} step={0.001}
+                  format={v => `${(v * 100).toFixed(1)}%`}
+                />
+                <p className="text-[10px] text-slate-600 leading-relaxed">
+                  {fmt(retireIncome)} today × {inflMult(inflationRate, yearsToRetire).toFixed(2)} infl ÷ {(drawdownRate * 100).toFixed(1)}%
+                  {" = "}<span className="text-slate-300 tabular-nums">{fmt(retireTarget)}</span>
+                </p>
               </div>
             )}
           </div>
-          {/* Annual contribution: flat or growing */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
+
+          {/* Annual Contribution cell with chevron-expandable detail */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wide text-slate-500">
                 Annual Contribution
               </span>
-              <select
-                value={contribMode}
-                onChange={e => setContribMode(e.target.value as "flat" | "growing")}
-                className="text-[9px] uppercase tracking-wider bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-slate-400 focus:outline-none focus:border-slate-600"
+              <button
+                type="button"
+                onClick={() => setContribExpanded(v => !v)}
+                className="p-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+                aria-label={contribExpanded ? "Collapse details" : "Expand details"}
               >
-                <option value="flat">flat</option>
-                <option value="growing">growing</option>
-              </select>
+                <ChevronDown size={12} className={`transition-transform ${contribExpanded ? "rotate-180" : ""}`} />
+              </button>
+            </div>
+            <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
+              {fmt(effectiveContrib)}
+              {contribMode === "growing" && (
+                <span className="text-[9px] text-slate-600 ml-1 font-normal">yr 1</span>
+              )}
             </div>
             {contribMode === "flat" ? (
-              <>
-                <div className="text-right text-xs tabular-nums font-semibold text-slate-200 mb-1">
-                  {fmt(annualSavings)}
-                </div>
-                <input
-                  type="range" min={0} max={500_000} step={5_000} value={annualSavings}
-                  onChange={e => setAnnualSavings(parseFloat(e.target.value))}
-                  className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
-                    [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
-                    [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:cursor-pointer"
-                />
-              </>
+              <input
+                type="range" min={0} max={500_000} step={5_000} value={annualSavings}
+                onChange={e => setAnnualSavings(parseFloat(e.target.value))}
+                className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                  [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:cursor-pointer"
+              />
             ) : (
-              <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
-                {fmt(salary * savingsRate)}
-                <span className="text-[9px] text-slate-600 ml-1 font-normal">yr 1 → grows {(raiseRate * 100).toFixed(1)}%/yr</span>
+              <div className="h-1" />
+            )}
+            {contribExpanded && (
+              <div className="pt-2 mt-2 space-y-2.5 border-t border-slate-800/60">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] uppercase tracking-wide text-slate-600">Mode</span>
+                  <select
+                    value={contribMode}
+                    onChange={e => setContribMode(e.target.value as "flat" | "growing")}
+                    className="text-[10px] bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-slate-300 focus:outline-none focus:border-slate-600"
+                  >
+                    <option value="flat">Flat</option>
+                    <option value="growing">Growing (income × rate)</option>
+                  </select>
+                </div>
+                {contribMode === "growing" ? (
+                  <>
+                    <ProfileSlider
+                      label="Income (salary)"
+                      value={salary} setValue={setSalary}
+                      min={50_000} max={1_000_000} step={5_000}
+                      format={v => fmt(v)}
+                    />
+                    <ProfileSlider
+                      label="Savings Rate"
+                      value={savingsRate} setValue={setSavingsRate}
+                      min={0} max={0.50} step={0.005}
+                      format={v => `${(v * 100).toFixed(1)}%`}
+                    />
+                    <ProfileSlider
+                      label="Annual Raise"
+                      value={raiseRate} setValue={setRaiseRate}
+                      min={0} max={0.10} step={0.0025}
+                      format={v => `${(v * 100).toFixed(2)}%`}
+                    />
+                  </>
+                ) : (
+                  <ProfileSlider
+                    label="Annual Contribution"
+                    value={annualSavings} setValue={setAnnualSavings}
+                    min={0} max={500_000} step={1_000}
+                    format={v => fmt(v)}
+                  />
+                )}
               </div>
             )}
           </div>
         </div>
-
-        {/* Target sub-sliders (visible only in fromIncome mode) */}
-        {targetMode === "fromIncome" && (
-          <div className="pt-3 border-t border-slate-800/60 space-y-2">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <ProfileSlider
-                label="Desired Income / yr (today's $)"
-                value={retireIncome} setValue={setRetireIncome}
-                min={30_000} max={500_000} step={5_000}
-                format={v => fmt(v)}
-              />
-              <ProfileSlider
-                label="Inflation (est.)"
-                value={inflationRate} setValue={setInflationRate}
-                min={0} max={0.08} step={0.0025}
-                format={v => `${(v * 100).toFixed(2)}%`}
-              />
-              <ProfileSlider
-                label="Drawdown Rate"
-                value={drawdownRate} setValue={setDrawdownRate}
-                min={0.02} max={0.08} step={0.001}
-                format={v => `${(v * 100).toFixed(1)}%`}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500 leading-relaxed">
-              At age {retireAge}, {fmt(retireIncome)} of today&rsquo;s purchasing power
-              {" = "}<span className="text-slate-300 tabular-nums">{fmt(retireIncome * Math.pow(1 + inflationRate, yearsToRetire))}/yr</span>{" "}
-              in future dollars (×{Math.pow(1 + inflationRate, yearsToRetire).toFixed(2)} from {(inflationRate * 100).toFixed(1)}% inflation
-              over {yearsToRetire} yrs). Divided by {(drawdownRate * 100).toFixed(1)}% drawdown
-              {" → "}<span className="text-slate-200 font-semibold tabular-nums">{fmt(computedTargetFromIncome)}</span> nest egg required.
-            </p>
-          </div>
-        )}
-
-        {/* Growing-contribution sub-sliders (visible only in growing mode) */}
-        {contribMode === "growing" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-3 border-t border-slate-800/60">
-            <ProfileSlider
-              label="Income (salary)"
-              value={salary} setValue={setSalary}
-              min={50_000} max={1_000_000} step={5_000}
-              format={v => fmt(v)}
-            />
-            <ProfileSlider
-              label="Savings Rate"
-              value={savingsRate} setValue={setSavingsRate}
-              min={0} max={0.50} step={0.005}
-              format={v => `${(v * 100).toFixed(1)}%`}
-            />
-            <ProfileSlider
-              label="Annual Raise"
-              value={raiseRate} setValue={setRaiseRate}
-              min={0} max={0.10} step={0.0025}
-              format={v => `${(v * 100).toFixed(2)}%`}
-            />
-          </div>
-        )}
 
         <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-800/60">
           <span className="text-[10px] uppercase tracking-widest text-slate-500">Risk tolerance</span>
@@ -1214,10 +1296,12 @@ export default function FeeCalculator() {
   // ---- Retirement planning state ----
   const [age, setAge] = useState(45);
   const [retireAge, setRetireAge] = useState(65);
-  // Retirement target — direct $ amount, or computed from desired income/yr
+  // Retirement target ($ at retirement). Income (today's $) is derived but
+  // also editable; the two stay in sync via wrappers in RetirementPlanner.
   const [retireTarget, setRetireTarget] = useState(5_000_000);
-  const [targetMode, setTargetMode] = useState<"direct" | "fromIncome">("direct");
-  const [retireIncome, setRetireIncome] = useState(120_000);    // today's $
+  const [retireIncome, setRetireIncome] = useState(() =>
+    (5_000_000 * 0.04) / Math.pow(1.03, 20)
+  );
   const [inflationRate, setInflationRate] = useState(0.03);
   const [drawdownRate, setDrawdownRate] = useState(0.04);
   const [annualSavings, setAnnualSavings] = useState(50_000);
@@ -1279,15 +1363,9 @@ export default function FeeCalculator() {
   const effectiveContrib = contribMode === "growing" ? salary * savingsRate : annualSavings;
   const effectiveGrowth  = contribMode === "growing" ? raiseRate : 0;
 
-  // Retirement projections
+  // Retirement projections — target is canonical; income is derived (and editable, syncs back).
   const yearsToRetire = Math.max(0, retireAge - age);
-  // From-income computation: today's desired income inflated to the retirement
-  // year, then divided by drawdown rate (e.g. 4% rule = 1/0.04 = 25× factor).
-  const computedTargetFromIncome =
-    drawdownRate > 0
-      ? (retireIncome * Math.pow(1 + inflationRate, yearsToRetire)) / drawdownRate
-      : 0;
-  const requiredAtRetire = targetMode === "direct" ? retireTarget : computedTargetFromIncome;
+  const requiredAtRetire = retireTarget;
   const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap);
   const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap);
   const currFV  = projectFV(totalValue, effectiveContrib, currStats.expRet,  yearsToRetire, effectiveGrowth);
@@ -1308,6 +1386,41 @@ export default function FeeCalculator() {
       crypto:     totalValue * targets.crypto,
       cash:       totalValue * targets.cash,
     });
+  };
+
+  // Set total portfolio: scale non-fund holdings to match new total. If non-fund
+  // is currently zero, distribute via target weights (excluding fund's slice).
+  const setTotalAmount = (newTotal: number) => {
+    const nonFundOld = totalValue - capital;
+    const nonFundNew = Math.max(0, newTotal - capital);
+    if (nonFundOld > 0) {
+      const scale = nonFundNew / nonFundOld;
+      setPortAlloc({
+        fund: 0,
+        sp500:      portAlloc.sp500 * scale,
+        realestate: portAlloc.realestate * scale,
+        privCredit: portAlloc.privCredit * scale,
+        privEquity: portAlloc.privEquity * scale,
+        crypto:     portAlloc.crypto * scale,
+        cash:       portAlloc.cash * scale,
+      });
+    } else {
+      const nonFundTargetSum = 1 - (targets.fund || 0);
+      if (nonFundTargetSum > 1e-6) {
+        setPortAlloc({
+          fund: 0,
+          sp500:      nonFundNew * (targets.sp500 / nonFundTargetSum),
+          realestate: nonFundNew * (targets.realestate / nonFundTargetSum),
+          privCredit: nonFundNew * (targets.privCredit / nonFundTargetSum),
+          privEquity: nonFundNew * (targets.privEquity / nonFundTargetSum),
+          crypto:     nonFundNew * (targets.crypto / nonFundTargetSum),
+          cash:       nonFundNew * (targets.cash / nonFundTargetSum),
+        });
+      } else {
+        const each = nonFundNew / 6;
+        setPortAlloc({ fund: 0, sp500: each, realestate: each, privCredit: each, privEquity: each, crypto: each, cash: each });
+      }
+    }
   };
 
   // Fund accessors (special bindings)
@@ -1382,31 +1495,6 @@ export default function FeeCalculator() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            {/* Fee structure */}
-            <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
-              <button
-                type="button"
-                onClick={() => setFeeStruct("2/20")}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                  feeStruct === "2/20"
-                    ? "bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40"
-                    : "text-slate-500 hover:text-slate-300"
-                }`}
-              >
-                2/20 Traditional
-              </button>
-              <button
-                type="button"
-                onClick={() => setFeeStruct("0/50")}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                  feeStruct === "0/50"
-                    ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40"
-                    : "text-slate-500 hover:text-slate-300"
-                }`}
-              >
-                0/50 Buffett
-              </button>
-            </div>
             {/* View mode */}
             <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
               <button
@@ -1459,23 +1547,37 @@ export default function FeeCalculator() {
                       {a.label}
                       {isFund && <span className="ml-1 text-[10px] text-slate-600 font-normal">({feeStruct})</span>}
                     </span>
-                    {/* Amount (inline editable) */}
-                    <InlineNum
-                      value={amount}
-                      displayFn={v => v > 0 ? fmt(v) : "—"}
-                      editFn={v => Math.round(v).toString()}
-                      parseFn={raw => parseFloat(raw.replace(/[^0-9.]/g, ""))}
-                      onChange={setAmt}
-                      widthClass="w-16"
-                    />
+                    {/* Amount with +/- buttons */}
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setAmt(Math.max(0, amount - dollarIncrement(amount)))}
+                        className="w-4 h-4 text-[11px] leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                        aria-label="Decrease"
+                      >−</button>
+                      <InlineNum
+                        value={amount}
+                        displayFn={v => v > 0 ? fmt(v) : "—"}
+                        editFn={v => Math.round(v).toString()}
+                        parseFn={raw => parseFloat(raw.replace(/[^0-9.]/g, ""))}
+                        onChange={setAmt}
+                        widthClass="w-16"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAmt(amount + dollarIncrement(Math.max(amount, 1_000)))}
+                        className="w-4 h-4 text-[11px] leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                        aria-label="Increase"
+                      >+</button>
+                    </div>
                     {/* Return (inline editable). For fund, display = net IRR, edit = gross. */}
                     <InlineNum
                       value={headerReturn}
-                      displayFn={v => isFund ? `${(v * 100).toFixed(1)}% net` : `${(v * 100).toFixed(1)}%`}
+                      displayFn={v => `${(v * 100).toFixed(1)}%`}
                       editFn={() => (retRate * 100).toFixed(1)}
                       parseFn={raw => parseFloat(raw) / 100}
                       onChange={setRet}
-                      widthClass={isFund ? "w-20" : "w-14"}
+                      widthClass="w-14"
                       color={a.color}
                       title={isFund ? `Edit gross return; current gross ${(retRate * 100).toFixed(1)}%` : undefined}
                     />
@@ -1501,6 +1603,35 @@ export default function FeeCalculator() {
                   {/* Sliders — collapsible */}
                   {expanded && (
                     <div className="space-y-1.5 pb-2 pt-0.5">
+                      {isFund && (
+                        <div className="flex items-center gap-2 pl-4">
+                          <span className="text-[10px] text-slate-600 w-9 shrink-0 uppercase tracking-wide">Fees</span>
+                          <div className="inline-flex rounded border border-slate-800 bg-slate-950/60 p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setFeeStruct("2/20")}
+                              className={`px-2.5 py-0.5 text-[11px] font-medium rounded transition-colors ${
+                                feeStruct === "2/20"
+                                  ? "bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40"
+                                  : "text-slate-500 hover:text-slate-300"
+                              }`}
+                            >
+                              2/20
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFeeStruct("0/50")}
+                              className={`px-2.5 py-0.5 text-[11px] font-medium rounded transition-colors ${
+                                feeStruct === "0/50"
+                                  ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40"
+                                  : "text-slate-500 hover:text-slate-300"
+                              }`}
+                            >
+                              0/50
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <SliderRow
                         prefix="$"
                         value={amount}
@@ -1525,17 +1656,34 @@ export default function FeeCalculator() {
               );
             })}
 
-            {/* Total summary */}
-            <div className="pt-4 border-t border-slate-800 space-y-1.5">
+            {/* Total summary — editable with +/- */}
+            <div className="pt-4 border-t border-slate-800 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-300 flex-1">Total Portfolio</span>
-                <span className="text-sm tabular-nums font-semibold text-slate-100">{fmt(totalValue)}</span>
+                <button
+                  type="button"
+                  onClick={() => setTotalAmount(Math.max(0, totalValue - dollarIncrement(totalValue)))}
+                  className="w-5 h-5 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                  aria-label="Decrease total"
+                >−</button>
+                <InlineNum
+                  value={totalValue}
+                  displayFn={v => fmt(v)}
+                  editFn={v => Math.round(v).toString()}
+                  parseFn={raw => parseFloat(raw.replace(/[^0-9.]/g, ""))}
+                  onChange={setTotalAmount}
+                  widthClass="w-24"
+                />
+                <button
+                  type="button"
+                  onClick={() => setTotalAmount(totalValue + dollarIncrement(Math.max(totalValue, 1_000)))}
+                  className="w-5 h-5 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                  aria-label="Increase total"
+                >+</button>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-500 flex-1">Co-Owner Fund share</span>
-                <span className={`text-xs tabular-nums ${selectedTextCls}`}>
-                  {totalValue > 0 ? fmtPct(capital / totalValue, 1) : "—"}
-                </span>
+              {/* Pie chart of current allocation */}
+              <div className="flex justify-center pt-1">
+                <AllocationPie rows={allRows} totalValue={totalValue} size={180} />
               </div>
             </div>
           </div>
@@ -1585,11 +1733,9 @@ export default function FeeCalculator() {
             age={age} setAge={setAge}
             retireAge={retireAge} setRetireAge={setRetireAge}
             retireTarget={retireTarget} setRetireTarget={setRetireTarget}
-            targetMode={targetMode} setTargetMode={setTargetMode}
             retireIncome={retireIncome} setRetireIncome={setRetireIncome}
             inflationRate={inflationRate} setInflationRate={setInflationRate}
             drawdownRate={drawdownRate} setDrawdownRate={setDrawdownRate}
-            computedTargetFromIncome={computedTargetFromIncome}
             annualSavings={annualSavings} setAnnualSavings={setAnnualSavings}
             contribMode={contribMode} setContribMode={setContribMode}
             salary={salary} setSalary={setSalary}
