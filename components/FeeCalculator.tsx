@@ -680,6 +680,11 @@ function RetirementPlanner({
   effectiveContrib: number; effectiveGrowth: number;
   applyRebalancing: () => void;
 }) {
+  // Frequency selector for the marginal allocation breakdown
+  const [contribFreq, setContribFreq] = useState<"month" | "quarter" | "year">("year");
+  const freqDivisor: Record<typeof contribFreq, number> = { month: 12, quarter: 4, year: 1 };
+  const freqUnit: Record<typeof contribFreq, string> = { month: "mo", quarter: "qtr", year: "yr" };
+
   if (totalValue <= 0) {
     return (
       <p className="text-xs text-slate-600">
@@ -1043,49 +1048,75 @@ function RetirementPlanner({
       )}
 
       {/* Marginal contribution allocation */}
-      {effectiveContrib > 0 && (
-        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">
-              Ideal Marginal Allocation · per {fmt(effectiveContrib)}/yr saved
-            </p>
-            <p className="text-[10px] text-slate-600">
-              {effectiveGrowth > 0
-                ? `Year-1 contribution; grows at ${(effectiveGrowth * 100).toFixed(2)}%/yr`
-                : `Constant annual contribution`}
-            </p>
+      {effectiveContrib > 0 && (() => {
+        const div = freqDivisor[contribFreq];
+        const unit = freqUnit[contribFreq];
+        const periodContrib = effectiveContrib / div;
+        return (
+          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">
+                  Ideal Marginal Allocation
+                </p>
+                <div className="inline-flex rounded border border-slate-800 bg-slate-950/60 p-0.5">
+                  {(["month", "quarter", "year"] as const).map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setContribFreq(f)}
+                      className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                        contribFreq === f
+                          ? "bg-slate-700/40 text-slate-200 ring-1 ring-slate-600"
+                          : "text-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      /{freqUnit[f]}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-slate-400 tabular-nums">
+                  {fmt(periodContrib)}/{unit} saved
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-600">
+                {effectiveGrowth > 0
+                  ? `Year-1 amount; grows ${(effectiveGrowth * 100).toFixed(2)}%/yr`
+                  : `Constant contribution`}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1.5">
+              {ASSET_CLASSES
+                .filter(a => (targets[a.key] ?? 0) > 0.005)
+                .map(a => {
+                  const pct = targets[a.key] ?? 0;
+                  const dollars = periodContrib * pct;
+                  return (
+                    <div key={a.key} className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.color }} />
+                      <span className="text-[11px] text-slate-400 flex-1 truncate">{a.label}</span>
+                      <span className="text-[11px] tabular-nums text-slate-200 font-medium">{fmt(dollars)}</span>
+                      <span className="text-[10px] tabular-nums text-slate-600 w-9 text-right">{(pct * 100).toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+            </div>
+            {yearsToRetire > 0 && (
+              <p className="text-[10px] text-slate-600 mt-3 pt-2 border-t border-slate-800/60">
+                Cumulative contributions over {yearsToRetire} yrs ≈{" "}
+                <span className="text-slate-400 tabular-nums font-medium">
+                  {fmt(
+                    effectiveGrowth > 0 && Math.abs(effectiveGrowth) > 1e-9
+                      ? effectiveContrib * (Math.pow(1 + effectiveGrowth, yearsToRetire) - 1) / effectiveGrowth
+                      : effectiveContrib * yearsToRetire
+                  )}
+                </span>{" "}
+                (undiscounted, future dollars).
+              </p>
+            )}
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1.5">
-            {ASSET_CLASSES
-              .filter(a => (targets[a.key] ?? 0) > 0.005)
-              .map(a => {
-                const pct = targets[a.key] ?? 0;
-                const dollars = effectiveContrib * pct;
-                return (
-                  <div key={a.key} className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.color }} />
-                    <span className="text-[11px] text-slate-400 flex-1 truncate">{a.label}</span>
-                    <span className="text-[11px] tabular-nums text-slate-200 font-medium">{fmt(dollars)}</span>
-                    <span className="text-[10px] tabular-nums text-slate-600 w-9 text-right">{(pct * 100).toFixed(0)}%</span>
-                  </div>
-                );
-              })}
-          </div>
-          {yearsToRetire > 0 && (
-            <p className="text-[10px] text-slate-600 mt-3 pt-2 border-t border-slate-800/60">
-              Cumulative contributions over {yearsToRetire} yrs ≈{" "}
-              <span className="text-slate-400 tabular-nums font-medium">
-                {fmt(
-                  effectiveGrowth > 0 && Math.abs(effectiveGrowth) > 1e-9
-                    ? effectiveContrib * (Math.pow(1 + effectiveGrowth, yearsToRetire) - 1) / effectiveGrowth
-                    : effectiveContrib * yearsToRetire
-                )}
-              </span>{" "}
-              (undiscounted, future dollars).
-            </p>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* Target portfolio bar */}
       <div>
