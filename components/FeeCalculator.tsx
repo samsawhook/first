@@ -947,7 +947,7 @@ function RetirementPlanner({
           />
 
           {/* Retirement Target cell with chevron-expandable detail */}
-          <div className="space-y-1">
+          <div className={`space-y-1 ${targetExpanded ? "col-span-2 lg:col-span-1" : ""}`}>
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wide text-slate-500">
                 Retirement Target
@@ -955,7 +955,7 @@ function RetirementPlanner({
               <button
                 type="button"
                 onClick={() => setTargetExpanded(v => !v)}
-                className="p-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+                className="p-1.5 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
                 aria-label={targetExpanded ? "Collapse details" : "Expand details"}
               >
                 <ChevronDown size={12} className={`transition-transform ${targetExpanded ? "rotate-180" : ""}`} />
@@ -1001,7 +1001,7 @@ function RetirementPlanner({
           </div>
 
           {/* Annual Contribution cell with chevron-expandable detail */}
-          <div className="space-y-1">
+          <div className={`space-y-1 ${contribExpanded ? "col-span-2 lg:col-span-1" : ""}`}>
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wide text-slate-500">
                 Annual Contribution
@@ -1009,7 +1009,7 @@ function RetirementPlanner({
               <button
                 type="button"
                 onClick={() => setContribExpanded(v => !v)}
-                className="p-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+                className="p-1.5 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
                 aria-label={contribExpanded ? "Collapse details" : "Expand details"}
               >
                 <ChevronDown size={12} className={`transition-transform ${contribExpanded ? "rotate-180" : ""}`} />
@@ -1810,11 +1810,11 @@ export default function FeeCalculator() {
                       {isFund && <span className="ml-1 text-[10px] text-slate-600 font-normal">({feeStruct})</span>}
                     </span>
                     {/* Amount with +/- buttons */}
-                    <div className="flex items-center">
+                    <div className="flex items-center shrink-0">
                       <button
                         type="button"
                         onClick={() => setAmt(Math.max(0, amount - dollarIncrement(amount)))}
-                        className="w-4 h-4 text-[11px] leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                        className="w-6 h-6 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 active:bg-slate-700 rounded transition-colors"
                         aria-label="Decrease"
                       >−</button>
                       <InlineNum
@@ -1828,7 +1828,7 @@ export default function FeeCalculator() {
                       <button
                         type="button"
                         onClick={() => setAmt(amount + dollarIncrement(Math.max(amount, 1_000)))}
-                        className="w-4 h-4 text-[11px] leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                        className="w-6 h-6 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 active:bg-slate-700 rounded transition-colors"
                         aria-label="Increase"
                       >+</button>
                     </div>
@@ -1861,14 +1861,14 @@ export default function FeeCalculator() {
                           </span>
                           {totalValue > 0 && targetPct > 0.005 && (
                             <span
-                              className={`text-[10px] tabular-nums ${dColor} w-14 text-right`}
+                              className={`text-[10px] tabular-nums ${dColor} w-14 text-right hidden md:inline-block`}
                               title={`Target ${(targetPct * 100).toFixed(0)}% (${fmt(targetPct * totalValue)}). Currently ${(currPct * 100).toFixed(1)}%.`}
                             >
                               {dArrow} {isOn ? "" : fmt(Math.abs(deltaDollar))}
                             </span>
                           )}
                           {totalValue > 0 && targetPct <= 0.005 && (
-                            <span className="text-[10px] text-slate-600 w-14 text-right">—</span>
+                            <span className="text-[10px] text-slate-600 w-14 text-right hidden md:inline-block">—</span>
                           )}
                         </span>
                       );
@@ -1881,7 +1881,7 @@ export default function FeeCalculator() {
                         if (next.has(a.key)) next.delete(a.key); else next.add(a.key);
                         return next;
                       })}
-                      className="shrink-0 p-1 text-slate-500 hover:text-slate-200 transition-colors"
+                      className="shrink-0 p-2 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
                       aria-label={expanded ? "Collapse" : "Expand sliders"}
                     >
                       <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -1954,7 +1954,7 @@ export default function FeeCalculator() {
                 <button
                   type="button"
                   onClick={() => setTotalAmount(Math.max(0, totalValue - dollarIncrement(totalValue)))}
-                  className="w-5 h-5 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                  className="w-6 h-6 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 active:bg-slate-700 rounded transition-colors"
                   aria-label="Decrease total"
                 >−</button>
                 <InlineNum
@@ -1968,7 +1968,7 @@ export default function FeeCalculator() {
                 <button
                   type="button"
                   onClick={() => setTotalAmount(totalValue + dollarIncrement(Math.max(totalValue, 1_000)))}
-                  className="w-5 h-5 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
+                  className="w-6 h-6 text-sm leading-none text-slate-500 hover:text-slate-200 hover:bg-slate-800 active:bg-slate-700 rounded transition-colors"
                   aria-label="Increase total"
                 >+</button>
               </div>
