@@ -831,6 +831,18 @@ export const portfolio: PortfolioCompany[] = [
     revenueGrowth: 1.4,                          // FY 2024 ($2,584,054) → FY 2025 ($2,619,138)
     ebitda: 331_528,                             // FY 2025 SDE (with $120k officer comp added back in Q4)
     financialsAsOf: "Mar 2026",
+    balanceSheet: {
+      asOf: "March 31, 2026",
+      cash: 162_232,                  // sum of bank accounts (incl. ATM, petty cash, Prosperity, Simmons)
+      accountsReceivable: 0,
+      otherCurrentAssets: 185_578,    // inventory $79,058 + crypto $106,520
+      totalAssets: 900_261,
+      totalLiabilities: 732_584,      // current $100,509 + long-term $632,075
+      netEquity: 167_677,
+    } satisfies BalanceSheet,
+    balanceSheetHistory: [
+      { period: "Q1 2026", cash: 162_232, totalCurrentAssets: 347_810, totalAssets: 900_261, totalCurrentLiabilities: 100_509, totalLiabilities: 732_584, totalEquity: 167_677 },
+    ] satisfies BalanceSheetSnapshot[],
     financialHistory: [
       { period: "Q4 2017", periodType: "quarterly", revenue: 0, costOfRevenue: 0, grossProfit: 0, operatingExpenses: 8_323, ebitda: -8_323, netIncome: -8_323 },
       { period: "Q1 2018", periodType: "quarterly", revenue: 0, costOfRevenue: 0, grossProfit: 0, operatingExpenses: 0, ebitda: 0, netIncome: 0 },
