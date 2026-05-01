@@ -809,12 +809,12 @@ export const portfolio: PortfolioCompany[] = [
   {
     id: "nueces-brewing",
     name: "Nueces Brewing",
-    legalName: "Third Coast Beer LLC",
+    legalName: "Third Coast Brewing LLC dba Nueces Brewing",
     initials: "NB",
     sector: "Consumer / Beverage",
     tagline: "Independent craft brewery & taproom",
     description:
-      "Independent craft brewery operating a taproom and wholesale kegged/packaged beer business. Trading as Nueces Brewing under Third Coast Beer LLC.",
+      "Independent craft brewery operating a taproom and wholesale kegged/packaged beer business. Trading as Nueces Brewing under Third Coast Brewing LLC.",
     invested: 0,
     currentValue: 0,
     ownership: 0,
@@ -826,6 +826,7 @@ export const portfolio: PortfolioCompany[] = [
     impliedValuation: 0,
     accentColor: "#D97706",
     website: "https://nuecesbrewing.com",
+    logoUrl: "/logos/nueces-brewing.png",
     revenue: 2_619_138,                          // FY 2025 sum of Q1-Q4
     revenueGrowth: 1.4,                          // FY 2024 ($2,584,054) → FY 2025 ($2,619,138)
     ebitda: 331_528,                             // FY 2025 SDE (with $120k officer comp added back in Q4)
