@@ -634,7 +634,12 @@ function StatCard({
 function RetirementPlanner({
   // Profile
   age, setAge, retireAge, setRetireAge,
+  retireTarget, setRetireTarget,
+  targetMode, setTargetMode,
   retireIncome, setRetireIncome,
+  inflationRate, setInflationRate,
+  drawdownRate, setDrawdownRate,
+  computedTargetFromIncome,
   annualSavings, setAnnualSavings,
   contribMode, setContribMode,
   salary, setSalary,
@@ -652,7 +657,12 @@ function RetirementPlanner({
 }: {
   age: number; setAge: (n: number) => void;
   retireAge: number; setRetireAge: (n: number) => void;
+  retireTarget: number; setRetireTarget: (n: number) => void;
+  targetMode: "direct" | "fromIncome"; setTargetMode: (m: "direct" | "fromIncome") => void;
   retireIncome: number; setRetireIncome: (n: number) => void;
+  inflationRate: number; setInflationRate: (n: number) => void;
+  drawdownRate: number; setDrawdownRate: (n: number) => void;
+  computedTargetFromIncome: number;
   annualSavings: number; setAnnualSavings: (n: number) => void;
   contribMode: "flat" | "growing"; setContribMode: (m: "flat" | "growing") => void;
   salary: number; setSalary: (n: number) => void;
@@ -735,7 +745,9 @@ function RetirementPlanner({
         </p>
         <p className="text-[10px] text-slate-600">
           Goal: <span className="text-slate-400 font-semibold">{fmt(requiredAtRetire)}</span>
-          {" "}({fmt(retireIncome)}/yr × 25, 4% rule)
+          {targetMode === "direct"
+            ? " (direct target)"
+            : ` (${fmt(retireIncome)}/yr today × ${(inflationRate * 100).toFixed(1)}% infl ÷ ${(drawdownRate * 100).toFixed(1)}% drawdown)`}
         </p>
       </div>
 
@@ -754,12 +766,49 @@ function RetirementPlanner({
             min={Math.max(45, age + 1)} max={80} step={1}
             format={v => `${v} yrs`}
           />
-          <ProfileSlider
-            label="Required Income / yr"
-            value={retireIncome} setValue={setRetireIncome}
-            min={30_000} max={500_000} step={5_000}
-            format={v => fmt(v)}
-          />
+          {/* Retirement target — direct $ or computed from income */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                Retirement Target
+              </span>
+              <select
+                value={targetMode}
+                onChange={e => {
+                  const newMode = e.target.value as "direct" | "fromIncome";
+                  // Switching back to direct: snap retireTarget to current computed value
+                  if (newMode === "direct" && targetMode === "fromIncome") {
+                    setRetireTarget(Math.round(computedTargetFromIncome / 50_000) * 50_000);
+                  }
+                  setTargetMode(newMode);
+                }}
+                className="text-[9px] uppercase tracking-wider bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-slate-400 focus:outline-none focus:border-slate-600"
+              >
+                <option value="direct">direct $</option>
+                <option value="fromIncome">from income</option>
+              </select>
+            </div>
+            {targetMode === "direct" ? (
+              <>
+                <div className="text-right text-xs tabular-nums font-semibold text-slate-200 mb-1">
+                  {fmt(retireTarget)}
+                </div>
+                <input
+                  type="range" min={500_000} max={20_000_000} step={50_000} value={retireTarget}
+                  onChange={e => setRetireTarget(parseFloat(e.target.value))}
+                  className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                    [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+                    [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:cursor-pointer"
+                />
+              </>
+            ) : (
+              <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
+                {fmt(computedTargetFromIncome)}
+                <span className="text-[9px] text-slate-600 ml-1 font-normal">computed</span>
+              </div>
+            )}
+          </div>
           {/* Annual contribution: flat or growing */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -797,6 +846,39 @@ function RetirementPlanner({
             )}
           </div>
         </div>
+
+        {/* Target sub-sliders (visible only in fromIncome mode) */}
+        {targetMode === "fromIncome" && (
+          <div className="pt-3 border-t border-slate-800/60 space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <ProfileSlider
+                label="Desired Income / yr (today's $)"
+                value={retireIncome} setValue={setRetireIncome}
+                min={30_000} max={500_000} step={5_000}
+                format={v => fmt(v)}
+              />
+              <ProfileSlider
+                label="Inflation (est.)"
+                value={inflationRate} setValue={setInflationRate}
+                min={0} max={0.08} step={0.0025}
+                format={v => `${(v * 100).toFixed(2)}%`}
+              />
+              <ProfileSlider
+                label="Drawdown Rate"
+                value={drawdownRate} setValue={setDrawdownRate}
+                min={0.02} max={0.08} step={0.001}
+                format={v => `${(v * 100).toFixed(1)}%`}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              At age {retireAge}, {fmt(retireIncome)} of today&rsquo;s purchasing power
+              {" = "}<span className="text-slate-300 tabular-nums">{fmt(retireIncome * Math.pow(1 + inflationRate, yearsToRetire))}/yr</span>{" "}
+              in future dollars (×{Math.pow(1 + inflationRate, yearsToRetire).toFixed(2)} from {(inflationRate * 100).toFixed(1)}% inflation
+              over {yearsToRetire} yrs). Divided by {(drawdownRate * 100).toFixed(1)}% drawdown
+              {" → "}<span className="text-slate-200 font-semibold tabular-nums">{fmt(computedTargetFromIncome)}</span> nest egg required.
+            </p>
+          </div>
+        )}
 
         {/* Growing-contribution sub-sliders (visible only in growing mode) */}
         {contribMode === "growing" && (
@@ -1101,7 +1183,12 @@ export default function FeeCalculator() {
   // ---- Retirement planning state ----
   const [age, setAge] = useState(45);
   const [retireAge, setRetireAge] = useState(65);
-  const [retireIncome, setRetireIncome] = useState(120_000);
+  // Retirement target — direct $ amount, or computed from desired income/yr
+  const [retireTarget, setRetireTarget] = useState(5_000_000);
+  const [targetMode, setTargetMode] = useState<"direct" | "fromIncome">("direct");
+  const [retireIncome, setRetireIncome] = useState(120_000);    // today's $
+  const [inflationRate, setInflationRate] = useState(0.03);
+  const [drawdownRate, setDrawdownRate] = useState(0.04);
   const [annualSavings, setAnnualSavings] = useState(50_000);
   const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
   // Growing-contribution mode
@@ -1163,7 +1250,13 @@ export default function FeeCalculator() {
 
   // Retirement projections
   const yearsToRetire = Math.max(0, retireAge - age);
-  const requiredAtRetire = retireIncome * 25; // 4% rule
+  // From-income computation: today's desired income inflated to the retirement
+  // year, then divided by drawdown rate (e.g. 4% rule = 1/0.04 = 25× factor).
+  const computedTargetFromIncome =
+    drawdownRate > 0
+      ? (retireIncome * Math.pow(1 + inflationRate, yearsToRetire)) / drawdownRate
+      : 0;
+  const requiredAtRetire = targetMode === "direct" ? retireTarget : computedTargetFromIncome;
   const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap);
   const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap);
   const currFV  = projectFV(totalValue, effectiveContrib, currStats.expRet,  yearsToRetire, effectiveGrowth);
@@ -1460,7 +1553,12 @@ export default function FeeCalculator() {
           <RetirementPlanner
             age={age} setAge={setAge}
             retireAge={retireAge} setRetireAge={setRetireAge}
+            retireTarget={retireTarget} setRetireTarget={setRetireTarget}
+            targetMode={targetMode} setTargetMode={setTargetMode}
             retireIncome={retireIncome} setRetireIncome={setRetireIncome}
+            inflationRate={inflationRate} setInflationRate={setInflationRate}
+            drawdownRate={drawdownRate} setDrawdownRate={setDrawdownRate}
+            computedTargetFromIncome={computedTargetFromIncome}
             annualSavings={annualSavings} setAnnualSavings={setAnnualSavings}
             contribMode={contribMode} setContribMode={setContribMode}
             salary={salary} setSalary={setSalary}
