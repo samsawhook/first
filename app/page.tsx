@@ -50,16 +50,6 @@ const PROPOSAL_AUDILY_PREFERRED: DebtPosition = {
   notes: "Proposed follow-on preferred share purchase.",
 };
 
-const PROPOSAL_NUECES_PREFERRED: DebtPosition = {
-  id: "nueces-pref-proposal",
-  date: "May 2026",
-  instrument: "Preferred",
-  principal: 200_000,
-  status: "Current",
-  currentValue: 200_000,
-  notes: "Proposed initial preferred share purchase.",
-};
-
 const PROPOSAL_LP_BASIS_ADD = 350_000;   // $1/unit par value
 const PROPOSAL_LEVERAGE_ADD  = 120_000;
 
@@ -246,6 +236,7 @@ export default function Dashboard() {
   const effectiveImplied = useCallback((c: typeof portfolio[0]) =>
     userValuations[c.id] ?? defaultImplied(c), [userValuations, defaultImplied]);
   const effectiveCurrVal = useCallback((c: typeof portfolio[0]) => {
+    if (!c.impliedValuation) return c.currentValue;   // avoid 0/0 → NaN
     const base = defaultImplied(c);
     if (userValuations[c.id] === undefined) return c.currentValue * (base / c.impliedValuation);
     return c.currentValue * (userValuations[c.id] / c.impliedValuation);
@@ -1517,9 +1508,24 @@ export default function Dashboard() {
             if (c.id === "nueces-brewing") {
               return {
                 ...c,
-                invested: 200_000,
-                currentValue: 200_000,
-                debtPositions: [...(c.debtPositions ?? []), PROPOSAL_NUECES_PREFERRED],
+                invested: 320_000,
+                currentValue: 320_000,
+                ownership: 50,
+                votingOwnership: 50,
+                impliedValuation: 640_000,
+                customPricePerShare: 6.40,
+                totalShares: 100_000,
+                shareTransactions: [
+                  ...(c.shareTransactions ?? []),
+                  {
+                    date: "May 2026",
+                    type: "Common" as const,
+                    shares: 50_000,
+                    amount: 320_000,
+                    certificateNumber: "CS-1",
+                    notes: "Proposed initial common share purchase — 50% of economic and voting.",
+                  },
+                ],
               };
             }
             return c;

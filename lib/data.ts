@@ -826,7 +826,6 @@ export const portfolio: PortfolioCompany[] = [
     impliedValuation: 0,
     accentColor: "#D97706",
     website: "https://nuecesbrewing.com",
-    logoUrl: "/logos/nueces-brewing.png",
     revenue: 2_177_752,                         // FY 2025 sum of Q1-Q4
     revenueGrowth: 0.4,                          // FY 2024 ($2,584,054) vs FY 2025 — actually flat / slight decline; placeholder
     ebitda: 211_468,                             // FY 2025 sum of NOI Q1-Q4
