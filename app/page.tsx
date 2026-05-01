@@ -937,7 +937,7 @@ export default function Dashboard() {
                                           {c.totalShares && sh > 0 ? `${((sh / c.totalShares) * 100).toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD className="tabular-nums text-slate-400">
-                                          {c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
+                                          {c.commonSharesOutstanding && sh > 0 ? `${((sh / c.commonSharesOutstanding) * 100).toFixed(1)}%` : c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD>
                                           {userValuations[c.id] !== undefined && (
@@ -2118,7 +2118,7 @@ export default function Dashboard() {
                                           {c.totalShares && sh > 0 ? `${((sh / c.totalShares) * 100).toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD className="tabular-nums text-slate-400">
-                                          {c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
+                                          {c.commonSharesOutstanding && sh > 0 ? `${((sh / c.commonSharesOutstanding) * 100).toFixed(1)}%` : c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD>
                                           {userValuations[c.id] !== undefined && (
@@ -3382,7 +3382,7 @@ export default function Dashboard() {
                                           {c.totalShares && sh > 0 ? `${((sh / c.totalShares) * 100).toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD className="tabular-nums text-slate-400">
-                                          {c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
+                                          {c.commonSharesOutstanding && sh > 0 ? `${((sh / c.commonSharesOutstanding) * 100).toFixed(1)}%` : c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD>
                                           {userValuations[c.id] !== undefined && (
@@ -4605,7 +4605,7 @@ export default function Dashboard() {
                                           {c.totalShares && sh > 0 ? `${((sh / c.totalShares) * 100).toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD className="tabular-nums text-slate-400">
-                                          {c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
+                                          {c.commonSharesOutstanding && sh > 0 ? `${((sh / c.commonSharesOutstanding) * 100).toFixed(1)}%` : c.votingOwnership !== undefined ? `${c.votingOwnership.toFixed(1)}%` : "—"}
                                         </TD>
                                         <TD>
                                           {userValuations[c.id] !== undefined && (

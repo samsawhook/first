@@ -62,6 +62,7 @@ export const portfolio: PortfolioCompany[] = [
     currentValue: 246_542,   // 7,023,990 / 90,000,000 × $3,156,849 implied
     ownership: 7.8,          // 7,023,990 ÷ 90,000,000 adj FD (Pulley 4/9/26)
     votingOwnership: 17.6,   // 7,023,990 ÷ 40,000,000 common (RSUs non-voting until settled)
+    commonSharesOutstanding: 40_000_000,
     stage: "Growth",
     founded: 2022,
     employees: 2,
@@ -251,6 +252,7 @@ export const portfolio: PortfolioCompany[] = [
     contact: "doug@merchantboxes.com",
     accentColor: "#F59E0B",
     votingOwnership: 16.3,    // 6,530,527 ÷ 40,000,000 common (RSUs non-voting until settled)
+    commonSharesOutstanding: 40_000_000,
     valuationRefs: [
       { label: "409A – DLOM (2022)", low: 2_640_000, high: 2_640_000,
         color: "#64748B", note: "$0.03/sh × 88M adj. FD · DLOM applied" },
@@ -376,6 +378,7 @@ export const portfolio: PortfolioCompany[] = [
     currentValue: 43_507,    // 4,350,663 shares × $0.01/share (customPricePerShare)
     ownership: 5.37,         // 4,350,663 ÷ 81,000,000 FD
     votingOwnership: 14.03,  // 4,350,663 ÷ 31,000,000 common outstanding
+    commonSharesOutstanding: 31_000_000,
     stage: "Seed",
     founded: 2022,
     employees: 0,
@@ -433,6 +436,7 @@ export const portfolio: PortfolioCompany[] = [
     contact: "markowitz@audily.com",
     accentColor: "#8B5CF6",
     votingOwnership: 31.20,   // 16,537,717 ÷ 53,000,000 common (non-voting RSUs excluded)
+    commonSharesOutstanding: 53_000_000,
     capTable: {
       asOf: "April 9, 2026",
       source: "Pulley",
@@ -635,6 +639,7 @@ export const portfolio: PortfolioCompany[] = [
     currentValue: 138_516,   // 4,617,214 shares × $0.03/share (2024 409A per-share)
     ownership: 5.7,          // 4,617,214 ÷ 81,000,000 adj FD (Pulley 4/9/26)
     votingOwnership: 14.9,   // 4,617,214 ÷ 31,000,000 common (RSUs non-voting until settled)
+    commonSharesOutstanding: 31_000_000,
     stage: "Growth",
     founded: 2022,
     employees: 5,
@@ -771,6 +776,7 @@ export const portfolio: PortfolioCompany[] = [
     currentValue: 2_160,     // 125,000 shares × ($1,400,000 / 81,000,000 FD)
     ownership: 0.15,         // 125,000 ÷ 81,000,000 FD
     votingOwnership: 0.40,   // 125,000 ÷ 31,000,000 common outstanding
+    commonSharesOutstanding: 31_000_000,
     stage: "Seed",
     founded: 2023,
     employees: 0,
