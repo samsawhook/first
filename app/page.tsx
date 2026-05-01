@@ -22,6 +22,7 @@ import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
 import InvestorPortal from "@/components/InvestorPortal";
+import NDAGate from "@/components/NDAGate";
 import {
   portfolio as basePortfolio,
   navHistory,
@@ -293,6 +294,7 @@ export default function Dashboard() {
   };
 
   return (
+    <NDAGate>
     <div className="min-h-screen bg-[#060B14]">
       {/* Top nav bar */}
       <header className="sticky top-0 z-30 bg-[#060B14]/90 backdrop-blur-md border-b border-[#1E2D3D]">
@@ -5372,5 +5374,6 @@ export default function Dashboard() {
         document.body
       )}
     </div>
+    </NDAGate>
   );
 }
