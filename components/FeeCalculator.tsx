@@ -1,6 +1,37 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
+
+// =========================================================
+//   Persisted state — localStorage-backed useState wrapper
+// =========================================================
+const STORAGE_VERSION = "v3-bonds";
+function usePersistedState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const fullKey = `allocator.${STORAGE_VERSION}.${key}`;
+  const [state, setState] = useState<T>(() => {
+    if (typeof window === "undefined") return initial;
+    try {
+      const raw = window.localStorage.getItem(fullKey);
+      if (raw === null) return initial;
+      const parsed = JSON.parse(raw);
+      // Merge for object-shaped state to fill missing keys (e.g., new asset added)
+      if (
+        parsed && typeof parsed === "object" && !Array.isArray(parsed) &&
+        initial && typeof initial === "object" && !Array.isArray(initial)
+      ) {
+        return { ...(initial as object), ...parsed } as T;
+      }
+      return parsed as T;
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { window.localStorage.setItem(fullKey, JSON.stringify(state)); } catch {}
+  }, [fullKey, state]);
+  return [state, setState];
+}
 
 function fmt(n: number) {
   const abs = Math.abs(n);
@@ -11,12 +42,10 @@ function fmt(n: number) {
 function fmtPct(n: number, digits = 1) { return `${(n * 100).toFixed(digits)}%`; }
 function fmtX(n: number) { return `${n.toFixed(2)}x`; }
 
-// Smart $ increment for +/- buttons — scales with magnitude.
+// $ increment for +/- buttons — 10% of current value or $25k, whichever is greater.
 function dollarIncrement(amount: number): number {
-  if (amount < 50_000) return 1_000;
-  if (amount < 500_000) return 5_000;
-  if (amount < 5_000_000) return 25_000;
-  return 100_000;
+  const ten = Math.abs(amount) * 0.10;
+  return Math.max(25_000, Math.round(ten / 1_000) * 1_000);
 }
 
 interface Result {
@@ -87,6 +116,7 @@ function calcBuffett(capital: number, years: number, grossMoic: number): Result 
 const ASSET_CLASSES = [
   { key: "fund",       label: "Co-Owner Fund",       color: "#A855F7", defaultReturn: 0.20,  defaultVol: 0.25, isFund: true,  targetPct: 0.15 },
   { key: "sp500",      label: "S&P 500",             color: "#60A5FA", defaultReturn: 0.09,  defaultVol: 0.16, isFund: false, targetPct: 0.35 },
+  { key: "bonds",      label: "Bonds",               color: "#14B8A6", defaultReturn: 0.05,  defaultVol: 0.05, isFund: false, targetPct: 0.10 },
   { key: "realestate", label: "Real Estate",         color: "#34D399", defaultReturn: 0.07,  defaultVol: 0.12, isFund: false, targetPct: 0.15 },
   { key: "privCredit", label: "Private Credit",      color: "#A78BFA", defaultReturn: 0.09,  defaultVol: 0.06, isFund: false, targetPct: 0.10 },
   { key: "privEquity", label: "Other Priv. Equity",  color: "#F87171", defaultReturn: 0.12,  defaultVol: 0.25, isFund: false, targetPct: 0.10 },
@@ -97,7 +127,7 @@ const ASSET_CLASSES = [
 type AssetKey = typeof ASSET_CLASSES[number]["key"];
 
 // Stacked-area draw order: bottom (most stable) to top (most volatile)
-const STACK_ORDER: AssetKey[] = ["cash", "privCredit", "sp500", "realestate", "privEquity", "fund", "crypto"];
+const STACK_ORDER: AssetKey[] = ["cash", "bonds", "privCredit", "sp500", "realestate", "privEquity", "fund", "crypto"];
 
 // =========================================================
 //   Slider (top-level fee-calc assumptions)
@@ -141,12 +171,13 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
 //   Slider row — slider only, no inline text input
 // =========================================================
 function SliderRow({
-  prefix, value, setValue, min, max, step,
+  prefix, value, setValue, min, max, step, format,
 }: {
   prefix: string;
   value: number;
   setValue: (v: number) => void;
   min: number; max: number; step: number;
+  format?: (v: number) => string;
 }) {
   return (
     <div className="flex items-center gap-2 pl-4">
@@ -162,6 +193,9 @@ function SliderRow({
           [&::-webkit-slider-thumb]:bg-slate-300
           [&::-webkit-slider-thumb]:cursor-pointer"
       />
+      <span className="text-[10px] tabular-nums text-slate-300 w-14 text-right shrink-0">
+        {format ? format(value) : value.toFixed(0)}
+      </span>
     </div>
   );
 }
@@ -478,19 +512,19 @@ type RiskTolerance = "conservative" | "moderate" | "aggressive";
 //   Established ($1M+): full diversification
 // All rows must sum to 1.00 within each tolerance.
 const TARGETS_STARTER: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: { fund: 0,    sp500: 0.50, realestate: 0.15, privCredit: 0,    privEquity: 0,    crypto: 0.02, cash: 0.33 },
-  moderate:     { fund: 0,    sp500: 0.65, realestate: 0.10, privCredit: 0,    privEquity: 0,    crypto: 0.05, cash: 0.20 },
-  aggressive:   { fund: 0,    sp500: 0.70, realestate: 0.10, privCredit: 0,    privEquity: 0,    crypto: 0.10, cash: 0.10 },
+  conservative: { fund: 0,    sp500: 0.40, bonds: 0.20, realestate: 0.20, privCredit: 0,    privEquity: 0,    crypto: 0.02, cash: 0.18 },
+  moderate:     { fund: 0,    sp500: 0.55, bonds: 0.15, realestate: 0.15, privCredit: 0,    privEquity: 0,    crypto: 0.05, cash: 0.10 },
+  aggressive:   { fund: 0,    sp500: 0.60, bonds: 0.05, realestate: 0.15, privCredit: 0,    privEquity: 0,    crypto: 0.15, cash: 0.05 },
 };
 const TARGETS_BUILDER: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: { fund: 0.05, sp500: 0.35, realestate: 0.15, privCredit: 0.15, privEquity: 0.05, crypto: 0.02, cash: 0.23 },
-  moderate:     { fund: 0.07, sp500: 0.45, realestate: 0.15, privCredit: 0.08, privEquity: 0.08, crypto: 0.07, cash: 0.10 },
-  aggressive:   { fund: 0.13, sp500: 0.35, realestate: 0.12, privCredit: 0.05, privEquity: 0.18, crypto: 0.12, cash: 0.05 },
+  conservative: { fund: 0.05, sp500: 0.30, bonds: 0.15, realestate: 0.15, privCredit: 0.10, privEquity: 0.05, crypto: 0.02, cash: 0.18 },
+  moderate:     { fund: 0.07, sp500: 0.40, bonds: 0.12, realestate: 0.13, privCredit: 0.05, privEquity: 0.08, crypto: 0.07, cash: 0.08 },
+  aggressive:   { fund: 0.13, sp500: 0.30, bonds: 0.08, realestate: 0.12, privCredit: 0.03, privEquity: 0.18, crypto: 0.12, cash: 0.04 },
 };
 const TARGETS_ESTABLISHED: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: { fund: 0.10, sp500: 0.25, realestate: 0.15, privCredit: 0.25, privEquity: 0.05, crypto: 0.02, cash: 0.18 },
-  moderate:     { fund: 0.15, sp500: 0.35, realestate: 0.15, privCredit: 0.10, privEquity: 0.10, crypto: 0.10, cash: 0.05 },
-  aggressive:   { fund: 0.20, sp500: 0.30, realestate: 0.10, privCredit: 0.05, privEquity: 0.20, crypto: 0.13, cash: 0.02 },
+  conservative: { fund: 0.10, sp500: 0.20, bonds: 0.15, realestate: 0.15, privCredit: 0.20, privEquity: 0.05, crypto: 0.02, cash: 0.13 },
+  moderate:     { fund: 0.15, sp500: 0.30, bonds: 0.08, realestate: 0.15, privCredit: 0.08, privEquity: 0.10, crypto: 0.10, cash: 0.04 },
+  aggressive:   { fund: 0.20, sp500: 0.28, bonds: 0.05, realestate: 0.10, privCredit: 0.03, privEquity: 0.20, crypto: 0.13, cash: 0.01 },
 };
 
 function getWealthBand(wealth: number): "starter" | "builder" | "established" {
@@ -549,23 +583,35 @@ function probMeetGoal(meanFV: number, vol: number, years: number, target: number
   return 1 - normalCdf(z);
 }
 
-// Weighted-average expected return + portfolio vol (assumes uncorrelated assets)
+// Weighted-average expected return + portfolio vol with uniform off-diagonal
+// correlation rho. rho=0 → independent (simple sum of variances). rho=1 →
+// perfect (Σwᵢσᵢ)². Closed-form: σ²ₚ = (1−ρ)·Σ wᵢ²σᵢ² + ρ·(Σ wᵢσᵢ)².
 function portfolioStats(
   weights: Record<string, number>,
   returns: Record<string, number>,
   vols: Record<string, number>,
+  rho: number = 0,
 ): { expRet: number; vol: number } {
   let expRet = 0;
-  let variance = 0;
+  let sumW2S2 = 0;
+  let sumWS = 0;
   for (const a of ASSET_CLASSES) {
     const w = weights[a.key] ?? 0;
     const r = returns[a.key] ?? 0;
     const v = vols[a.key] ?? 0;
     expRet += w * r;
-    variance += w * w * v * v;
+    sumW2S2 += w * w * v * v;
+    sumWS  += w * v;
   }
+  const variance = (1 - rho) * sumW2S2 + rho * sumWS * sumWS;
   return { expRet, vol: Math.sqrt(Math.max(variance, 0)) };
 }
+
+const CORRELATION_RHO: Record<"independent" | "mild" | "crisis", number> = {
+  independent: 0,
+  mild: 0.30,
+  crisis: 0.70,
+};
 
 // =========================================================
 //   Profile slider (personal inputs)
@@ -603,7 +649,7 @@ function ProfileSlider({
 //   Stat card (current vs target with delta)
 // =========================================================
 function StatCard({
-  title, current, target, delta, better, neutral, highlight,
+  title, current, target, delta, better, neutral, highlight, tooltip,
 }: {
   title: string;
   current: string;
@@ -612,12 +658,16 @@ function StatCard({
   better?: boolean;
   neutral?: boolean;
   highlight?: boolean;
+  tooltip?: string;
 }) {
   const deltaColor = neutral ? "text-slate-400" : better ? "text-emerald-400" : "text-rose-400";
   return (
-    <div className={`rounded-lg border p-3 space-y-1 ${
-      highlight ? "border-emerald-700/40 bg-emerald-900/10" : "border-slate-800 bg-slate-950/40"
-    }`}>
+    <div
+      title={tooltip}
+      className={`rounded-lg border p-3 space-y-1 ${
+        highlight ? "border-emerald-700/40 bg-emerald-900/10" : "border-slate-800 bg-slate-950/40"
+      }${tooltip ? " cursor-help" : ""}`}
+    >
       <p className="text-[10px] uppercase tracking-widest text-slate-600">{title}</p>
       <div className="flex justify-between items-baseline">
         <span className="text-[10px] text-slate-500">Current</span>
@@ -694,7 +744,6 @@ function AllocationPie({ rows, totalValue, size = 180 }: {
 //   shortfall analysis, and rebalancing actions
 // =========================================================
 function RetirementPlanner({
-  // Profile
   age, setAge, retireAge, setRetireAge,
   retireTarget, setRetireTarget,
   retireIncome, setRetireIncome,
@@ -706,14 +755,12 @@ function RetirementPlanner({
   savingsRate, setSavingsRate,
   raiseRate, setRaiseRate,
   riskTolerance, setRiskTolerance,
-  // Portfolio
+  corrRegime, setCorrRegime,
   rows, totalValue, targets, wealthBandLabel,
-  // Pre-computed outlook
   yearsToRetire, requiredAtRetire,
   currStats, targetStats, currFV, targetFV, currProb, targetProb,
   effectiveContrib, effectiveGrowth,
-  // Actions
-  applyRebalancing,
+  applyRebalancing, undoRebalance, canUndo, resetToPreload,
 }: {
   age: number; setAge: (n: number) => void;
   retireAge: number; setRetireAge: (n: number) => void;
@@ -727,6 +774,7 @@ function RetirementPlanner({
   savingsRate: number; setSavingsRate: (n: number) => void;
   raiseRate: number; setRaiseRate: (n: number) => void;
   riskTolerance: RiskTolerance; setRiskTolerance: (v: RiskTolerance) => void;
+  corrRegime: "independent" | "mild" | "crisis"; setCorrRegime: (v: "independent" | "mild" | "crisis") => void;
   rows: PortfolioInputs[]; totalValue: number;
   targets: Record<AssetKey, number>;
   wealthBandLabel: string;
@@ -737,6 +785,9 @@ function RetirementPlanner({
   currProb: number; targetProb: number;
   effectiveContrib: number; effectiveGrowth: number;
   applyRebalancing: () => void;
+  undoRebalance: () => void;
+  canUndo: boolean;
+  resetToPreload: () => void;
 }) {
   // Frequency selector for the marginal allocation breakdown
   const [contribFreq, setContribFreq] = useState<"month" | "quarter" | "year">("year");
@@ -827,6 +878,29 @@ function RetirementPlanner({
     </div>
   );
 
+  // Plain-English narrative — 2 sentences describing the situation.
+  const probColor = currProb >= 0.75 ? "text-emerald-300" : currProb >= 0.5 ? "text-amber-300" : "text-rose-300";
+  const probTargetColor = targetProb >= 0.75 ? "text-emerald-300" : targetProb >= 0.5 ? "text-amber-300" : "text-rose-300";
+  const probLift = targetProb - currProb;
+  const narrative = (
+    <p className="text-sm text-slate-300 leading-relaxed">
+      At <span className="text-slate-100 font-semibold">{age}</span>, retiring at{" "}
+      <span className="text-slate-100 font-semibold">{retireAge}</span> with a{" "}
+      <span className="text-slate-100 font-semibold tabular-nums">{fmt(requiredAtRetire)}</span> target,
+      your current allocation has a{" "}
+      <span className={`font-semibold ${probColor}`}>{(currProb * 100).toFixed(0)}%</span> chance
+      of getting you there. Rebalancing to the{" "}
+      <span className="text-slate-100 capitalize">{wealthBandLabel.split(" ")[0].toLowerCase()}</span>/
+      <span className="text-slate-100 capitalize">{riskTolerance}</span> target{" "}
+      {probLift > 0.005
+        ? <>lifts that to <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> ({probLift > 0 ? "+" : ""}{(probLift * 100).toFixed(0)}pp).</>
+        : probLift < -0.005
+        ? <>would drop it to <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> — current is already over-aggressive.</>
+        : <>holds at <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> — already near-optimal.</>
+      }
+    </p>
+  );
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -834,11 +908,26 @@ function RetirementPlanner({
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
           Allocation Suggestions <span className="text-slate-700">·</span> Retirement Planning
         </p>
-        <p className="text-[10px] text-slate-600">
-          Goal: <span className="text-slate-400 font-semibold">{fmt(requiredAtRetire)}</span>
-          {" "}≈ <span className="text-slate-400 tabular-nums">{fmt(retireIncome)}</span>/yr today&rsquo;s $
-          {" "}({(drawdownRate * 100).toFixed(1)}% drawdown, {(inflationRate * 100).toFixed(1)}% infl)
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-[10px] text-slate-600">
+            Goal: <span className="text-slate-400 font-semibold">{fmt(requiredAtRetire)}</span>
+            {" "}≈ <span className="text-slate-400 tabular-nums">{fmt(retireIncome)}</span>/yr today&rsquo;s $
+            {" "}({(drawdownRate * 100).toFixed(1)}% drawdown, {(inflationRate * 100).toFixed(1)}% infl)
+          </p>
+          <button
+            type="button"
+            onClick={resetToPreload}
+            className="text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-200 transition-colors"
+            title="Reset all allocations and personal profile to the preloaded sample portfolio."
+          >
+            ↺ Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Narrative summary */}
+      <div className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3">
+        {narrative}
       </div>
 
       {/* Personal Profile */}
@@ -992,7 +1081,7 @@ function RetirementPlanner({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-800/60">
-          <span className="text-[10px] uppercase tracking-widest text-slate-500">Risk tolerance</span>
+          <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Sets the target portfolio used for rebalancing suggestions and projections.">Risk tolerance</span>
           <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
             {(["conservative", "moderate", "aggressive"] as const).map(r => (
               <button
@@ -1004,6 +1093,24 @@ function RetirementPlanner({
                     ? "bg-slate-700/40 text-slate-100 ring-1 ring-slate-600"
                     : "text-slate-500 hover:text-slate-300"
                 }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Asset return correlation regime. Higher correlation widens portfolio Vol. and reduces P(success) under stress. Independent = fully diversifying assets. Crisis = 2008-style co-movement.">Correlation</span>
+          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
+            {(["independent", "mild", "crisis"] as const).map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setCorrRegime(r)}
+                className={`px-3 py-1 text-xs font-medium rounded capitalize transition-colors ${
+                  corrRegime === r
+                    ? "bg-slate-700/40 text-slate-100 ring-1 ring-slate-600"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+                title={r === "independent" ? "ρ = 0" : r === "mild" ? "ρ ≈ 0.3" : "ρ ≈ 0.7"}
               >
                 {r}
               </button>
@@ -1023,6 +1130,7 @@ function RetirementPlanner({
           target={fmtPct1(targetStats.expRet)}
           delta={fmtPP(targetStats.expRet - currStats.expRet)}
           better={targetStats.expRet > currStats.expRet}
+          tooltip="Weighted-average annual return: Σ wᵢ × rᵢ across asset weights and editable expected returns. The Co-Owner Fund uses LP net IRR after fees."
         />
         <StatCard
           title="Portfolio Volatility"
@@ -1030,6 +1138,7 @@ function RetirementPlanner({
           target={fmtPct1(targetStats.vol)}
           delta={fmtPP(targetStats.vol - currStats.vol)}
           neutral
+          tooltip="Annualized portfolio standard deviation. Formula: √[(1−ρ)·Σ wᵢ²σᵢ² + ρ·(Σ wᵢσᵢ)²], where ρ is the correlation regime selected above. ~68% of years fall within ±1σ of the mean return."
         />
         <StatCard
           title={`FV @ Age ${retireAge}`}
@@ -1037,6 +1146,7 @@ function RetirementPlanner({
           target={fmt(targetFV)}
           delta={fmtSign(targetFV - currFV)}
           better={targetFV > currFV}
+          tooltip={`Deterministic future value at retirement age, in nominal future dollars. = current portfolio × (1+r)^${yearsToRetire} + ${effectiveGrowth > 0 ? "growing-annuity" : "flat-annuity"} of contributions.`}
         />
         <StatCard
           title="P(Reach Goal)"
@@ -1045,6 +1155,7 @@ function RetirementPlanner({
           delta={`${targetProb - currProb >= 0 ? "+" : ""}${((targetProb - currProb) * 100).toFixed(0)}pp`}
           better={targetProb > currProb}
           highlight
+          tooltip="Probability the terminal portfolio meets the retirement target. Models the FV as lognormal with median = deterministic FV and log-vol = portfolio Vol × √horizon. P(V_T ≥ goal) = 1 − Φ((ln goal − ln median)/log-vol)."
         />
       </div>
 
@@ -1103,15 +1214,28 @@ function RetirementPlanner({
       {/* Rebalancing actions */}
       {(underweight.length > 0 || overweight.length > 0) && (
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 gap-2">
             <p className="text-[10px] uppercase tracking-widest text-slate-500">Rebalance to Target</p>
-            <button
-              type="button"
-              onClick={applyRebalancing}
-              className="px-3 py-1.5 text-xs font-semibold rounded bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-500/25 hover:text-indigo-200 transition-colors"
-            >
-              Apply rebalancing →
-            </button>
+            <div className="flex items-center gap-2">
+              {canUndo && (
+                <button
+                  type="button"
+                  onClick={undoRebalance}
+                  className="px-3 py-1.5 text-xs font-medium rounded bg-slate-800/60 text-slate-300 ring-1 ring-slate-700 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+                  title="Restore the allocation as it was before the last apply or reset."
+                >
+                  ↺ Undo
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={applyRebalancing}
+                className="px-3 py-1.5 text-xs font-semibold rounded bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-500/25 hover:text-indigo-200 transition-colors"
+                title="Replace the current asset amounts with target weights × current total. Snapshot is saved so you can Undo."
+              >
+                Apply rebalancing →
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
             <div>
@@ -1248,7 +1372,8 @@ function RetirementPlanner({
 const PRESET_CAPITAL = 200_000;       // Co-Owner Fund position
 const PRESET_PORTFOLIO: Record<AssetKey, number> = {
   fund:       0,             // not used; fund position is via `capital`
-  sp500:      1_500_000,     // 50% — overweight
+  sp500:      1_400_000,     // 47% — overweight
+  bonds:        100_000,     //  3% — underweight
   realestate:   400_000,     // 13%
   privCredit:   100_000,     //  3% — underweight
   privEquity:   150_000,     //  5% — underweight
@@ -1257,17 +1382,19 @@ const PRESET_PORTFOLIO: Record<AssetKey, number> = {
 };
 
 export default function FeeCalculator() {
-  // Top-level fee-calc inputs
-  const [capital, setCapital] = useState(PRESET_CAPITAL);
-  const [years, setYears] = useState(5);
-  const [grossReturn, setGrossReturn] = useState(0.20);
+  // Top-level fee-calc inputs (persisted)
+  const [capital, setCapital] = usePersistedState("capital", PRESET_CAPITAL);
+  const [years, setYears] = usePersistedState("years", 5);
+  const [grossReturn, setGrossReturn] = usePersistedState("grossReturn", 0.20);
 
-  // Other portfolio asset state
-  const [portAlloc, setPortAlloc] = useState<Record<AssetKey, number>>(PRESET_PORTFOLIO);
-  const [portReturn, setPortReturn] = useState<Record<AssetKey, number>>(
+  // Other portfolio asset state (persisted; merged with defaults to handle new assets)
+  const [portAlloc, setPortAlloc] = usePersistedState<Record<AssetKey, number>>("portAlloc", PRESET_PORTFOLIO);
+  const [portReturn, setPortReturn] = usePersistedState<Record<AssetKey, number>>(
+    "portReturn",
     Object.fromEntries(ASSET_CLASSES.map(a => [a.key, a.defaultReturn])) as Record<AssetKey, number>
   );
-  const [portVol, setPortVol] = useState<Record<AssetKey, number>>(
+  const [portVol, setPortVol] = usePersistedState<Record<AssetKey, number>>(
+    "portVol",
     Object.fromEntries(ASSET_CLASSES.map(a => [a.key, a.defaultVol])) as Record<AssetKey, number>
   );
 
@@ -1277,40 +1404,38 @@ export default function FeeCalculator() {
   const rBuf  = useMemo(() => calcBuffett(capital, years, grossMoic), [capital, years, grossMoic]);
   const lpDiff = rBuf.lpNet - r2_20.lpNet;
 
-  // Fee structure selector
-  const [feeStruct, setFeeStruct] = useState<"2/20" | "0/50">(() => {
-    const m = Math.pow(1.20, 5);
-    return calc2_20(1_000_000, 5, m).lpNet >= calcBuffett(1_000_000, 5, m).lpNet ? "2/20" : "0/50";
-  });
+  // Fee structure selector (persisted)
+  const [feeStruct, setFeeStruct] = usePersistedState<"2/20" | "0/50">("feeStruct", "2/20");
   const selectedResult = feeStruct === "2/20" ? r2_20 : rBuf;
   const selectedColor  = feeStruct === "2/20" ? "#6366F1" : "#F59E0B";
   const selectedLabel  = feeStruct === "2/20" ? "2/20 LP net" : "0/50 LP net";
   const selectedTextCls = feeStruct === "2/20" ? "text-indigo-400" : "text-amber-400";
 
-  // Portfolio view selector
-  const [portfolioView, setPortfolioView] = useState<ViewMode>("median");
+  // Portfolio view selector (persisted)
+  const [portfolioView, setPortfolioView] = usePersistedState<ViewMode>("view", "median");
 
-  // Per-asset slider expansion state
+  // Per-asset slider expansion state (UI only, not persisted)
   const [expandedAssets, setExpandedAssets] = useState<Set<AssetKey>>(new Set());
 
-  // ---- Retirement planning state ----
-  const [age, setAge] = useState(45);
-  const [retireAge, setRetireAge] = useState(65);
-  // Retirement target ($ at retirement). Income (today's $) is derived but
-  // also editable; the two stay in sync via wrappers in RetirementPlanner.
-  const [retireTarget, setRetireTarget] = useState(5_000_000);
-  const [retireIncome, setRetireIncome] = useState(() =>
+  // ---- Retirement planning state (persisted) ----
+  const [age, setAge] = usePersistedState("age", 45);
+  const [retireAge, setRetireAge] = usePersistedState("retireAge", 65);
+  const [retireTarget, setRetireTarget] = usePersistedState("retireTarget", 5_000_000);
+  const [retireIncome, setRetireIncome] = usePersistedState(
+    "retireIncome",
     (5_000_000 * 0.04) / Math.pow(1.03, 20)
   );
-  const [inflationRate, setInflationRate] = useState(0.03);
-  const [drawdownRate, setDrawdownRate] = useState(0.04);
-  const [annualSavings, setAnnualSavings] = useState(50_000);
-  const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
-  // Growing-contribution mode
-  const [contribMode, setContribMode] = useState<"flat" | "growing">("flat");
-  const [salary, setSalary] = useState(200_000);
-  const [savingsRate, setSavingsRate] = useState(0.20);
-  const [raiseRate, setRaiseRate] = useState(0.03);
+  const [inflationRate, setInflationRate] = usePersistedState("inflationRate", 0.03);
+  const [drawdownRate, setDrawdownRate] = usePersistedState("drawdownRate", 0.04);
+  const [annualSavings, setAnnualSavings] = usePersistedState("annualSavings", 50_000);
+  const [riskTolerance, setRiskTolerance] = usePersistedState<RiskTolerance>("riskTolerance", "moderate");
+  // Growing-contribution mode (persisted)
+  const [contribMode, setContribMode] = usePersistedState<"flat" | "growing">("contribMode", "flat");
+  const [salary, setSalary] = usePersistedState("salary", 200_000);
+  const [savingsRate, setSavingsRate] = usePersistedState("savingsRate", 0.20);
+  const [raiseRate, setRaiseRate] = usePersistedState("raiseRate", 0.03);
+  // Correlation regime — affects portfolio Vol. for stat cards
+  const [corrRegime, setCorrRegime] = usePersistedState<"independent" | "mild" | "crisis">("corrRegime", "mild");
 
   // Build PortfolioInputs rows used by chart + suggestions
   const fundRow: PortfolioInputs = {
@@ -1344,12 +1469,12 @@ export default function FeeCalculator() {
   // Returns/vols by asset key, with the fund using selected-net IRR / fund Vol.
   const allReturnsMap: Record<string, number> = {
     fund: selectedResult.lpNetIrr,
-    sp500: portReturn.sp500, realestate: portReturn.realestate,
+    sp500: portReturn.sp500, bonds: portReturn.bonds, realestate: portReturn.realestate,
     privCredit: portReturn.privCredit, privEquity: portReturn.privEquity,
     crypto: portReturn.crypto, cash: portReturn.cash,
   };
   const allVolsMap: Record<string, number> = {
-    fund: portVol.fund, sp500: portVol.sp500, realestate: portVol.realestate,
+    fund: portVol.fund, sp500: portVol.sp500, bonds: portVol.bonds, realestate: portVol.realestate,
     privCredit: portVol.privCredit, privEquity: portVol.privEquity,
     crypto: portVol.crypto, cash: portVol.cash,
   };
@@ -1366,26 +1491,52 @@ export default function FeeCalculator() {
   // Retirement projections — target is canonical; income is derived (and editable, syncs back).
   const yearsToRetire = Math.max(0, retireAge - age);
   const requiredAtRetire = retireTarget;
-  const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap);
-  const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap);
+  const rho = CORRELATION_RHO[corrRegime];
+  const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap, rho);
+  const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap, rho);
   const currFV  = projectFV(totalValue, effectiveContrib, currStats.expRet,  yearsToRetire, effectiveGrowth);
   const targetFV = projectFV(totalValue, effectiveContrib, targetStats.expRet, yearsToRetire, effectiveGrowth);
   const currProb   = probMeetGoal(currFV,  currStats.vol,  yearsToRetire, requiredAtRetire);
   const targetProb = probMeetGoal(targetFV, targetStats.vol, yearsToRetire, requiredAtRetire);
 
+  // Snapshot of last pre-rebalance state (for Undo)
+  const [preRebalanceSnapshot, setPreRebalanceSnapshot] = useState<{
+    capital: number; portAlloc: Record<AssetKey, number>;
+  } | null>(null);
+
+  // Highlight rows briefly after Apply Rebalancing (for #15 animate)
+  const [recentlyChanged, setRecentlyChanged] = useState<boolean>(false);
+
   // Apply target rebalancing — sets capital and portAlloc to match target weights
   const applyRebalancing = () => {
     if (totalValue <= 0) return;
+    setPreRebalanceSnapshot({ capital, portAlloc: { ...portAlloc } });
     setCapital(totalValue * targets.fund);
     setPortAlloc({
-      fund: 0,                                  // unused; fund position is via `capital`
+      fund: 0,
       sp500:      totalValue * targets.sp500,
+      bonds:      totalValue * targets.bonds,
       realestate: totalValue * targets.realestate,
       privCredit: totalValue * targets.privCredit,
       privEquity: totalValue * targets.privEquity,
       crypto:     totalValue * targets.crypto,
       cash:       totalValue * targets.cash,
     });
+    setRecentlyChanged(true);
+    setTimeout(() => setRecentlyChanged(false), 1400);
+  };
+
+  const undoRebalance = () => {
+    if (!preRebalanceSnapshot) return;
+    setCapital(preRebalanceSnapshot.capital);
+    setPortAlloc(preRebalanceSnapshot.portAlloc);
+    setPreRebalanceSnapshot(null);
+  };
+
+  const resetToPreload = () => {
+    setPreRebalanceSnapshot({ capital, portAlloc: { ...portAlloc } });
+    setCapital(PRESET_CAPITAL);
+    setPortAlloc(PRESET_PORTFOLIO);
   };
 
   // Set total portfolio: scale non-fund holdings to match new total. If non-fund
@@ -1398,6 +1549,7 @@ export default function FeeCalculator() {
       setPortAlloc({
         fund: 0,
         sp500:      portAlloc.sp500 * scale,
+        bonds:      portAlloc.bonds * scale,
         realestate: portAlloc.realestate * scale,
         privCredit: portAlloc.privCredit * scale,
         privEquity: portAlloc.privEquity * scale,
@@ -1410,6 +1562,7 @@ export default function FeeCalculator() {
         setPortAlloc({
           fund: 0,
           sp500:      nonFundNew * (targets.sp500 / nonFundTargetSum),
+          bonds:      nonFundNew * (targets.bonds / nonFundTargetSum),
           realestate: nonFundNew * (targets.realestate / nonFundTargetSum),
           privCredit: nonFundNew * (targets.privCredit / nonFundTargetSum),
           privEquity: nonFundNew * (targets.privEquity / nonFundTargetSum),
@@ -1417,8 +1570,8 @@ export default function FeeCalculator() {
           cash:       nonFundNew * (targets.cash / nonFundTargetSum),
         });
       } else {
-        const each = nonFundNew / 6;
-        setPortAlloc({ fund: 0, sp500: each, realestate: each, privCredit: each, privEquity: each, crypto: each, cash: each });
+        const each = nonFundNew / 7;
+        setPortAlloc({ fund: 0, sp500: each, bonds: each, realestate: each, privCredit: each, privEquity: each, crypto: each, cash: each });
       }
     }
   };
@@ -1539,7 +1692,14 @@ export default function FeeCalculator() {
               const headerReturn = isFund ? selectedResult.lpNetIrr : retRate;
 
               return (
-                <div key={a.key} className="rounded-md border border-transparent hover:border-slate-800/60 transition-colors">
+                <div
+                  key={a.key}
+                  className={`rounded-md border transition-all duration-700 ${
+                    recentlyChanged
+                      ? "border-amber-500/40 bg-amber-500/5"
+                      : "border-transparent hover:border-slate-800/60"
+                  }`}
+                >
                   {/* Header — editable inline fields + expand toggle */}
                   <div className="flex items-center gap-2 py-1.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
@@ -1581,10 +1741,36 @@ export default function FeeCalculator() {
                       color={a.color}
                       title={isFund ? `Edit gross return; current gross ${(retRate * 100).toFixed(1)}%` : undefined}
                     />
-                    {/* Current % of total portfolio (display only; Vol moved to dropdown) */}
-                    <span className="text-xs tabular-nums w-12 text-right text-slate-400 px-1">
-                      {totalValue > 0 ? `${((amount / totalValue) * 100).toFixed(0)}%` : "—"}
-                    </span>
+                    {/* Current % of total + Δ$ vs target (display only; Vol moved to dropdown) */}
+                    {(() => {
+                      const targetPct = targets[a.key] ?? 0;
+                      const currPct = totalValue > 0 ? amount / totalValue : 0;
+                      const deltaDollar = totalValue > 0 ? amount - targetPct * totalValue : 0;
+                      const deltaPP = currPct - targetPct;
+                      const ON_TARGET = 0.02;
+                      const isOn = Math.abs(deltaPP) < ON_TARGET;
+                      const isOver = deltaPP >= ON_TARGET;
+                      const dColor = isOn ? "text-slate-600" : isOver ? "text-rose-400" : "text-emerald-400";
+                      const dArrow = isOn ? "✓" : isOver ? "↓" : "↑";
+                      return (
+                        <span className="flex items-baseline gap-1 px-1 shrink-0">
+                          <span className="text-xs tabular-nums w-9 text-right text-slate-400">
+                            {totalValue > 0 ? `${(currPct * 100).toFixed(0)}%` : "—"}
+                          </span>
+                          {totalValue > 0 && targetPct > 0.005 && (
+                            <span
+                              className={`text-[10px] tabular-nums ${dColor} w-14 text-right`}
+                              title={`Target ${(targetPct * 100).toFixed(0)}% (${fmt(targetPct * totalValue)}). Currently ${(currPct * 100).toFixed(1)}%.`}
+                            >
+                              {dArrow} {isOn ? "" : fmt(Math.abs(deltaDollar))}
+                            </span>
+                          )}
+                          {totalValue > 0 && targetPct <= 0.005 && (
+                            <span className="text-[10px] text-slate-600 w-14 text-right">—</span>
+                          )}
+                        </span>
+                      );
+                    })()}
                     {/* Expand toggle */}
                     <button
                       type="button"
@@ -1637,18 +1823,21 @@ export default function FeeCalculator() {
                         value={amount}
                         setValue={setAmt}
                         min={0} max={10_000_000} step={25_000}
+                        format={v => fmt(v)}
                       />
                       <SliderRow
                         prefix="%"
                         value={retRate}
                         setValue={setRet}
                         min={0} max={0.35} step={0.005}
+                        format={v => `${(v * 100).toFixed(1)}%`}
                       />
                       <SliderRow
                         prefix="Vol."
                         value={vol}
                         setValue={setVol}
                         min={0} max={1.0} step={0.01}
+                        format={v => `${(v * 100).toFixed(0)}%`}
                       />
                     </div>
                   )}
@@ -1742,6 +1931,7 @@ export default function FeeCalculator() {
             savingsRate={savingsRate} setSavingsRate={setSavingsRate}
             raiseRate={raiseRate} setRaiseRate={setRaiseRate}
             riskTolerance={riskTolerance} setRiskTolerance={setRiskTolerance}
+            corrRegime={corrRegime} setCorrRegime={setCorrRegime}
             rows={allRows} totalValue={totalValue} targets={targets}
             wealthBandLabel={wealthBandLabel}
             yearsToRetire={yearsToRetire} requiredAtRetire={requiredAtRetire}
@@ -1750,6 +1940,9 @@ export default function FeeCalculator() {
             currProb={currProb} targetProb={targetProb}
             effectiveContrib={effectiveContrib} effectiveGrowth={effectiveGrowth}
             applyRebalancing={applyRebalancing}
+            undoRebalance={undoRebalance}
+            canUndo={preRebalanceSnapshot !== null}
+            resetToPreload={resetToPreload}
           />
         </div>
       </div>
