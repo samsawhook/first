@@ -66,15 +66,18 @@ function calcBuffett(capital: number, years: number, grossMoic: number): Result 
   return { mgmtFee: 0, gpCarry, lpNet, lpNetMoic, lpNetIrr, gpTotal: gpCarry, hurdle, hurdleMet, exitValue };
 }
 
-function Slider({ label, value, min, max, step, onChange, display }: {
+function Slider({ label, value, min, max, step, onChange, display, sub }: {
   label: string; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; display: string;
+  onChange: (v: number) => void; display: string; sub?: string;
 }) {
   return (
     <div>
       <div className="flex justify-between items-baseline mb-1.5">
         <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">{label}</span>
-        <span className="text-sm font-semibold text-slate-100 tabular-nums">{display}</span>
+        <span className="text-right">
+          <span className="text-sm font-semibold text-slate-100 tabular-nums">{display}</span>
+          {sub && <span className="ml-2 text-xs text-slate-500 tabular-nums">{sub}</span>}
+        </span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
@@ -200,6 +203,7 @@ export default function FeeCalculator() {
           <Slider
             label="Gross MOIC" value={grossMoic} min={0.5} max={8} step={0.1}
             onChange={setGrossMoic} display={fmtX(grossMoic)}
+            sub={`${fmtPct(Math.pow(grossMoic, 1 / years) - 1)} p.a.`}
           />
         </div>
 
