@@ -221,12 +221,22 @@ function PortfolioChart({ years, capital, grossReturn, r2_20, rBuf, portAlloc, p
 
   const fundGross = Array.from({ length: years + 1 }, (_, t) => capital * Math.pow(1 + grossReturn, t));
 
+  // LP net trajectories: smooth compound interpolation from capital → lpNet
+  const lpTrajectory = (lpNet: number) => {
+    const moic = lpNet / capital;
+    return Array.from({ length: years + 1 }, (_, t) =>
+      capital * Math.pow(Math.max(moic, 0), t / Math.max(years, 1))
+    );
+  };
+  const lpNet2_20Values = lpTrajectory(r2_20.lpNet);
+  const lpNetBufValues  = lpTrajectory(rBuf.lpNet);
+
   const allVals = [
     ...seriesData.flatMap(s => s.values),
     ...(totalValues ?? []),
     ...fundGross,
-    r2_20.lpNet,
-    rBuf.lpNet,
+    ...lpNet2_20Values,
+    ...lpNetBufValues,
     capital,
   ].filter(v => isFinite(v) && v >= 0);
   const maxVal = Math.max(...allVals, capital * 1.1);
@@ -288,8 +298,16 @@ function PortfolioChart({ years, capital, grossReturn, r2_20, rBuf, portAlloc, p
         <path d={mkPath(totalValues)} fill="none" stroke="#E2E8F0" strokeWidth="1.5" strokeDasharray="5 3" opacity="0.4" />
       )}
 
-      {/* Fund gross NAV (dashed slate) */}
-      <path d={mkPath(fundGross)} fill="none" stroke="#64748B" strokeWidth="1.5" strokeDasharray="4 3" />
+      {/* Fund LP net area fills */}
+      <path d={mkArea(lpNet2_20Values)} fill="#6366F1" fillOpacity="0.07" />
+      <path d={mkArea(lpNetBufValues)}  fill="#F59E0B" fillOpacity="0.07" />
+
+      {/* Fund gross NAV (faint dashed reference) */}
+      <path d={mkPath(fundGross)} fill="none" stroke="#64748B" strokeWidth="1" strokeDasharray="3 3" opacity="0.55" />
+
+      {/* Fund LP net trajectories (solid) */}
+      <path d={mkPath(lpNet2_20Values)} fill="none" stroke="#6366F1" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={mkPath(lpNetBufValues)}  fill="none" stroke="#F59E0B" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />
 
       {/* LP net endpoint dots */}
       <circle cx={xS(years)} cy={y2_20} r="5.5" fill="#6366F1" />
@@ -462,18 +480,18 @@ export default function FeeCalculator() {
               </p>
               <div className="flex items-center gap-2">
                 <svg width="20" height="6" className="shrink-0">
-                  <line x1="0" y1="3" x2="20" y2="3" stroke="#64748B" strokeWidth="1.5" strokeDasharray="4 2" />
+                  <line x1="0" y1="3" x2="20" y2="3" stroke="#64748B" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
                 </svg>
                 <span className="text-xs text-slate-500 flex-1">Gross NAV at Yr {years}</span>
                 <span className="text-xs text-slate-400 tabular-nums font-medium">{fmt(capital * Math.pow(1 + grossReturn, years))}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
+                <svg width="20" height="6" className="shrink-0"><line x1="0" y1="3" x2="20" y2="3" stroke="#6366F1" strokeWidth="2.25" strokeLinecap="round" /></svg>
                 <span className="text-xs text-slate-500 flex-1">2/20 LP net at Yr {years}</span>
                 <span className="text-xs text-indigo-400 tabular-nums font-medium">{fmt(r2_20.lpNet)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                <svg width="20" height="6" className="shrink-0"><line x1="0" y1="3" x2="20" y2="3" stroke="#F59E0B" strokeWidth="2.25" strokeLinecap="round" /></svg>
                 <span className="text-xs text-slate-500 flex-1">0/50 LP net at Yr {years}</span>
                 <span className="text-xs text-amber-400 tabular-nums font-medium">{fmt(rBuf.lpNet)}</span>
               </div>
