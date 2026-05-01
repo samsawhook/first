@@ -384,7 +384,7 @@ export default function Dashboard() {
               const lpHypoDenom = LP_TOTAL_UNITS + lpHypo;               // new total outstanding
               const lpHypoPct   = lpHypoTotal > 0 ? lpHypoTotal / lpHypoDenom : 0;
               // Active pct: prefer hypo-adjusted when hypothetical units are set
-              const activePct    = lpViewMode === "current" && lpCurrentPct > 0
+              const activePct    = lpViewMode === "current" && (lpCurrentPct > 0 || lpHypo > 0)
                 ? (lpHypo > 0 ? lpHypoPct : lpCurrentPct)
                 : 1;
               const lpMultiplier = activePct;
@@ -586,7 +586,7 @@ export default function Dashboard() {
                       <input
                         type="number" min={0} placeholder="units"
                         value={lpHypotheticalUnits}
-                        onChange={e => setLpHypotheticalUnits(e.target.value)}
+                        onChange={e => { setLpHypotheticalUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("current"); }}
                         className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
@@ -1572,7 +1572,7 @@ export default function Dashboard() {
               const lpHypoDenom = LP_TOTAL_UNITS + lpHypo;               // new total outstanding
               const lpHypoPct   = lpHypoTotal > 0 ? lpHypoTotal / lpHypoDenom : 0;
               // Active pct: prefer hypo-adjusted when hypothetical units are set
-              const activePct    = lpViewMode === "current" && lpCurrentPct > 0
+              const activePct    = lpViewMode === "current" && (lpCurrentPct > 0 || lpHypo > 0)
                 ? (lpHypo > 0 ? lpHypoPct : lpCurrentPct)
                 : 1;
               const lpMultiplier = activePct;
@@ -1774,7 +1774,7 @@ export default function Dashboard() {
                       <input
                         type="number" min={0} placeholder="units"
                         value={lpHypotheticalUnits}
-                        onChange={e => setLpHypotheticalUnits(e.target.value)}
+                        onChange={e => { setLpHypotheticalUnits(e.target.value); if (parseFloat(e.target.value) > 0) setLpViewMode("current"); }}
                         className="w-24 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2 py-1 text-xs text-slate-200 tabular-nums focus:outline-none focus:border-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
