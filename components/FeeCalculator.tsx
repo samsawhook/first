@@ -451,45 +451,214 @@ function PortfolioChart({
 }
 
 // =========================================================
-//   Allocation suggestion box — compares current % vs target %
+//   Retirement planning math
 // =========================================================
-function AllocationSuggestions({
-  rows, targets, totalValue,
+type RiskTolerance = "conservative" | "moderate" | "aggressive";
+
+// Risk-adjusted target portfolios (must sum to 1.0)
+const RISK_TARGETS: Record<RiskTolerance, Record<AssetKey, number>> = {
+  conservative: {
+    fund: 0.10, sp500: 0.25, realestate: 0.15, privCredit: 0.25,
+    privEquity: 0.05, crypto: 0.02, cash: 0.18,
+  },
+  moderate: {
+    fund: 0.15, sp500: 0.35, realestate: 0.15, privCredit: 0.10,
+    privEquity: 0.10, crypto: 0.10, cash: 0.05,
+  },
+  aggressive: {
+    fund: 0.20, sp500: 0.30, realestate: 0.10, privCredit: 0.05,
+    privEquity: 0.20, crypto: 0.13, cash: 0.02,
+  },
+};
+
+// Standard normal CDF (Abramowitz–Stegun 7.1.26)
+function normalCdf(x: number): number {
+  const sign = x < 0 ? -1 : 1;
+  const a = Math.abs(x) / Math.sqrt(2);
+  const t = 1.0 / (1.0 + 0.3275911 * a);
+  const erf = 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a);
+  return 0.5 * (1.0 + sign * erf);
+}
+
+// Future value of a present sum + an annual contribution stream (end-of-year)
+function projectFV(present: number, contribAnnual: number, rate: number, years: number): number {
+  if (years <= 0) return present;
+  if (Math.abs(rate) < 1e-9) return present + contribAnnual * years;
+  const factor = Math.pow(1 + rate, years);
+  return present * factor + contribAnnual * (factor - 1) / rate;
+}
+
+// Probability that a lognormal terminal value exceeds the target
+function probMeetGoal(meanFV: number, vol: number, years: number, target: number): number {
+  if (target <= 0) return 1;
+  if (meanFV <= 0) return 0;
+  if (vol <= 0 || years <= 0) return meanFV >= target ? 1 : 0;
+  const logVol = vol * Math.sqrt(years);
+  const z = (Math.log(target) - Math.log(meanFV)) / logVol;
+  return 1 - normalCdf(z);
+}
+
+// Weighted-average expected return + portfolio vol (assumes uncorrelated assets)
+function portfolioStats(
+  weights: Record<string, number>,
+  returns: Record<string, number>,
+  vols: Record<string, number>,
+): { expRet: number; vol: number } {
+  let expRet = 0;
+  let variance = 0;
+  for (const a of ASSET_CLASSES) {
+    const w = weights[a.key] ?? 0;
+    const r = returns[a.key] ?? 0;
+    const v = vols[a.key] ?? 0;
+    expRet += w * r;
+    variance += w * w * v * v;
+  }
+  return { expRet, vol: Math.sqrt(Math.max(variance, 0)) };
+}
+
+// =========================================================
+//   Profile slider (personal inputs)
+// =========================================================
+function ProfileSlider({
+  label, value, setValue, min, max, step, format,
 }: {
-  rows: PortfolioInputs[];
-  targets: Record<string, number>;
-  totalValue: number;
+  label: string;
+  value: number;
+  setValue: (v: number) => void;
+  min: number; max: number; step: number;
+  format: (v: number) => string;
+}) {
+  return (
+    <div>
+      <div className="flex justify-between items-baseline mb-1">
+        <span className="text-[10px] uppercase tracking-wide text-slate-500">{label}</span>
+        <span className="text-xs tabular-nums font-semibold text-slate-200">{format(value)}</span>
+      </div>
+      <input
+        type="range"
+        min={min} max={max} step={step} value={value}
+        onChange={e => setValue(parseFloat(e.target.value))}
+        className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+          [&::-webkit-slider-thumb]:appearance-none
+          [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400
+          [&::-webkit-slider-thumb]:cursor-pointer"
+      />
+    </div>
+  );
+}
+
+// =========================================================
+//   Stat card (current vs target with delta)
+// =========================================================
+function StatCard({
+  title, current, target, delta, better, neutral, highlight,
+}: {
+  title: string;
+  current: string;
+  target: string;
+  delta: string;
+  better?: boolean;
+  neutral?: boolean;
+  highlight?: boolean;
+}) {
+  const deltaColor = neutral ? "text-slate-400" : better ? "text-emerald-400" : "text-rose-400";
+  return (
+    <div className={`rounded-lg border p-3 space-y-1 ${
+      highlight ? "border-emerald-700/40 bg-emerald-900/10" : "border-slate-800 bg-slate-950/40"
+    }`}>
+      <p className="text-[10px] uppercase tracking-widest text-slate-600">{title}</p>
+      <div className="flex justify-between items-baseline">
+        <span className="text-[10px] text-slate-500">Current</span>
+        <span className="text-sm font-semibold tabular-nums text-slate-200">{current}</span>
+      </div>
+      <div className="flex justify-between items-baseline">
+        <span className="text-[10px] text-slate-500">Target</span>
+        <span className="text-sm font-semibold tabular-nums text-slate-200">{target}</span>
+      </div>
+      <div className="flex justify-between items-baseline pt-1 border-t border-slate-800/60">
+        <span className="text-[10px] text-slate-600">Δ</span>
+        <span className={`text-xs tabular-nums font-medium ${deltaColor}`}>{delta}</span>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================
+//   Retirement Planner — combines personal profile, outlook,
+//   shortfall analysis, and rebalancing actions
+// =========================================================
+function RetirementPlanner({
+  // Profile
+  age, setAge, retireAge, setRetireAge,
+  retireIncome, setRetireIncome,
+  annualSavings, setAnnualSavings,
+  riskTolerance, setRiskTolerance,
+  // Portfolio
+  rows, totalValue, targets,
+  // Pre-computed outlook
+  yearsToRetire, requiredAtRetire,
+  currStats, targetStats, currFV, targetFV, currProb, targetProb,
+}: {
+  age: number; setAge: (n: number) => void;
+  retireAge: number; setRetireAge: (n: number) => void;
+  retireIncome: number; setRetireIncome: (n: number) => void;
+  annualSavings: number; setAnnualSavings: (n: number) => void;
+  riskTolerance: RiskTolerance; setRiskTolerance: (v: RiskTolerance) => void;
+  rows: PortfolioInputs[]; totalValue: number;
+  targets: Record<AssetKey, number>;
+  yearsToRetire: number; requiredAtRetire: number;
+  currStats: { expRet: number; vol: number };
+  targetStats: { expRet: number; vol: number };
+  currFV: number; targetFV: number;
+  currProb: number; targetProb: number;
 }) {
   if (totalValue <= 0) {
     return (
       <p className="text-xs text-slate-600">
-        Add allocations across the asset rows to see balanced-portfolio rebalancing suggestions.
+        Add allocations across the asset rows to see retirement-planning analysis.
       </p>
     );
   }
+
+  // Rebalancing items
   const items = ASSET_CLASSES.map(a => {
     const row = rows.find(r => r.key === a.key);
     const current = row?.amount ?? 0;
     const currentPct = current / totalValue;
     const targetPct = targets[a.key] ?? 0;
-    const deltaPct = currentPct - targetPct;             // + means overweight
+    const deltaPct = currentPct - targetPct;
     const targetDollar = targetPct * totalValue;
-    const deltaDollar = current - targetDollar;          // + overweight, − underweight
+    const deltaDollar = current - targetDollar;
     return { asset: a, current, currentPct, targetPct, deltaPct, deltaDollar };
   });
 
-  const TOL = 0.02; // ±2pp = "on target"
+  const TOL = 0.02;
   const sorted = [...items].sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
-  const overweight = sorted.filter(i => i.deltaPct > TOL).slice(0, 4);
+  const overweight  = sorted.filter(i => i.deltaPct >  TOL).slice(0, 4);
   const underweight = sorted.filter(i => i.deltaPct < -TOL).slice(0, 4);
-  const onTarget = items.filter(i => Math.abs(i.deltaPct) <= TOL && i.current > 0);
+
+  // Shortfall analysis
+  const currGap   = currFV - requiredAtRetire;     // positive = surplus
+  const targetGap = targetFV - requiredAtRetire;
+  const onTrack   = currGap >= 0;
+  const fvShortfall = Math.max(0, requiredAtRetire - currFV);
+  const fvUplift = targetFV - currFV;              // dollars gained by rebalancing
+  const yearsAddedReturn = currStats.expRet < targetStats.expRet
+    ? (targetStats.expRet - currStats.expRet) * 100  // pp/yr return foregone
+    : 0;
+
+  const fmtPct1 = (n: number) => `${(n * 100).toFixed(1)}%`;
+  const fmtPct0 = (n: number) => `${(n * 100).toFixed(0)}%`;
+  const fmtPP  = (n: number) => `${n >= 0 ? "+" : ""}${(n * 100).toFixed(1)}pp`;
+  const fmtSign = (n: number) => `${n >= 0 ? "+" : ""}${fmt(Math.abs(n))}`;
 
   const Row = ({ kind, item }: { kind: "over" | "under"; item: typeof items[number] }) => (
     <div className="flex items-baseline gap-2 py-1">
       <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: item.asset.color }} />
       <span className="text-xs text-slate-300 font-medium w-32 shrink-0 truncate">{item.asset.label}</span>
       <span className="text-[10px] text-slate-500 tabular-nums w-24">
-        {fmtPct(item.currentPct, 1)} <span className="text-slate-700">vs</span> {fmtPct(item.targetPct, 0)}
+        {fmtPct1(item.currentPct)} <span className="text-slate-700">vs</span> {fmtPct0(item.targetPct)}
       </span>
       <span className={`text-[11px] tabular-nums font-semibold flex-1 ${kind === "over" ? "text-rose-400" : "text-emerald-400"}`}>
         {kind === "over" ? "↓ reduce" : "↑ add"} ~{fmt(Math.abs(item.deltaDollar))}
@@ -501,14 +670,157 @@ function AllocationSuggestions({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Allocation Suggestions</p>
-        <p className="text-[10px] text-slate-600">vs. balanced growth target</p>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+          Allocation Suggestions <span className="text-slate-700">·</span> Retirement Planning
+        </p>
+        <p className="text-[10px] text-slate-600">
+          Goal: <span className="text-slate-400 font-semibold">{fmt(requiredAtRetire)}</span>
+          {" "}({fmt(retireIncome)}/yr × 25, 4% rule)
+        </p>
       </div>
-      {underweight.length === 0 && overweight.length === 0 ? (
-        <p className="text-xs text-emerald-400">All positions within ±2pp of target — portfolio is well-balanced.</p>
-      ) : (
+
+      {/* Personal Profile */}
+      <div className="rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-4 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <ProfileSlider
+            label="Current Age"
+            value={age} setValue={v => { setAge(v); if (retireAge <= v) setRetireAge(v + 1); }}
+            min={25} max={75} step={1}
+            format={v => `${v} yrs`}
+          />
+          <ProfileSlider
+            label="Retire at Age"
+            value={retireAge} setValue={setRetireAge}
+            min={Math.max(45, age + 1)} max={80} step={1}
+            format={v => `${v} yrs`}
+          />
+          <ProfileSlider
+            label="Income/yr in Retirement"
+            value={retireIncome} setValue={setRetireIncome}
+            min={30_000} max={500_000} step={5_000}
+            format={v => fmt(v)}
+          />
+          <ProfileSlider
+            label="Annual Contribution"
+            value={annualSavings} setValue={setAnnualSavings}
+            min={0} max={500_000} step={5_000}
+            format={v => fmt(v)}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-800/60">
+          <span className="text-[10px] uppercase tracking-widest text-slate-500">Risk tolerance</span>
+          <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
+            {(["conservative", "moderate", "aggressive"] as const).map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRiskTolerance(r)}
+                className={`px-3 py-1 text-xs font-medium rounded capitalize transition-colors ${
+                  riskTolerance === r
+                    ? "bg-slate-700/40 text-slate-100 ring-1 ring-slate-600"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] text-slate-600 ml-auto tabular-nums">
+            {yearsToRetire > 0 ? `${yearsToRetire} years to retirement` : "Already retired"}
+          </span>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          title="Expected Annual Return"
+          current={fmtPct1(currStats.expRet)}
+          target={fmtPct1(targetStats.expRet)}
+          delta={fmtPP(targetStats.expRet - currStats.expRet)}
+          better={targetStats.expRet > currStats.expRet}
+        />
+        <StatCard
+          title="Portfolio Volatility"
+          current={fmtPct1(currStats.vol)}
+          target={fmtPct1(targetStats.vol)}
+          delta={fmtPP(targetStats.vol - currStats.vol)}
+          neutral
+        />
+        <StatCard
+          title={`FV @ Age ${retireAge}`}
+          current={fmt(currFV)}
+          target={fmt(targetFV)}
+          delta={fmtSign(targetFV - currFV)}
+          better={targetFV > currFV}
+        />
+        <StatCard
+          title="P(Reach Goal)"
+          current={fmtPct0(currProb)}
+          target={fmtPct0(targetProb)}
+          delta={`${targetProb - currProb >= 0 ? "+" : ""}${((targetProb - currProb) * 100).toFixed(0)}pp`}
+          better={targetProb > currProb}
+          highlight
+        />
+      </div>
+
+      {/* Shortfall callout */}
+      <div className={`rounded-lg border px-4 py-3 ${
+        onTrack
+          ? "border-emerald-700/40 bg-emerald-900/10"
+          : "border-amber-700/40 bg-amber-900/10"
+      }`}>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+          {onTrack ? (
+            <>
+              <span className="text-emerald-300 font-semibold">✓ On track —</span>
+              <span className="text-slate-300">
+                projected to exceed goal by{" "}
+                <span className="text-emerald-300 tabular-nums font-semibold">{fmt(currGap)}</span>{" "}
+                at age {retireAge}.
+              </span>
+              {targetFV > currFV && (
+                <span className="text-slate-500 text-xs">
+                  Rebalancing to target adds another{" "}
+                  <span className="text-emerald-400 tabular-nums">{fmt(fvUplift)}</span>{" "}
+                  ({fmtPct0((targetProb - currProb))} more probability).
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-amber-300 font-semibold">⚠ Falls short by</span>
+              <span className="text-amber-300 tabular-nums font-semibold text-base">{fmt(fvShortfall)}</span>
+              <span className="text-slate-400">at age {retireAge}.</span>
+              {targetGap >= 0 ? (
+                <span className="text-emerald-400 text-xs">
+                  → Rebalancing to target closes the gap (P(success) {fmtPct0(currProb)} → {fmtPct0(targetProb)}).
+                </span>
+              ) : targetFV > currFV ? (
+                <span className="text-amber-400 text-xs">
+                  → Target reduces shortfall to {fmt(Math.abs(targetGap))}; consider raising contributions or extending horizon.
+                </span>
+              ) : (
+                <span className="text-rose-400 text-xs">
+                  → Target alone insufficient; raise contributions or extend horizon.
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        {yearsAddedReturn > 0 && (
+          <p className="text-[10px] text-slate-500 mt-2">
+            Current allocation forgoes ~{yearsAddedReturn.toFixed(1)}pp/yr in expected return vs target —
+            roughly {fmt(totalValue * (targetStats.expRet - currStats.expRet))} in year-1 dollars on a {fmt(totalValue)} portfolio.
+          </p>
+        )}
+      </div>
+
+      {/* Rebalancing actions */}
+      {(underweight.length > 0 || overweight.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
           <div>
             {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight</p>}
@@ -520,11 +832,16 @@ function AllocationSuggestions({
           </div>
         </div>
       )}
+      {underweight.length === 0 && overweight.length === 0 && (
+        <p className="text-xs text-emerald-400">All positions within ±2pp of target — portfolio is well-balanced.</p>
+      )}
 
-      {/* Target allocation bar */}
+      {/* Target portfolio bar */}
       <div>
-        <div className="flex items-center justify-between mb-1.5 mt-2">
-          <span className="text-[10px] uppercase tracking-widest text-slate-600">Target portfolio</span>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-slate-600">
+            Target portfolio · <span className="capitalize text-slate-500">{riskTolerance}</span>
+          </span>
           <span className="text-[10px] text-slate-600 tabular-nums">100%</span>
         </div>
         <div className="w-full h-2 rounded-md overflow-hidden flex bg-slate-900">
@@ -547,11 +864,12 @@ function AllocationSuggestions({
         </div>
       </div>
 
-      {onTarget.length > 0 && (
-        <p className="text-[10px] text-slate-600 pt-1">
-          On target ({onTarget.length}): {onTarget.map(i => i.asset.label).join(" · ")}
-        </p>
-      )}
+      <p className="text-[10px] text-slate-600 leading-relaxed pt-1">
+        <span className="text-slate-500">Method:</span> deterministic future-value projection of current portfolio + annual
+        contributions, assuming the weighted expected return holds. P(success) uses a lognormal terminal distribution with
+        portfolio Vol. scaled by √horizon, where Vol. = √(Σ wᵢ²σᵢ²) (independence). Required portfolio uses the 4% rule
+        (25× target income).
+      </p>
     </div>
   );
 }
@@ -610,6 +928,13 @@ export default function FeeCalculator() {
   // Per-asset slider expansion state
   const [expandedAssets, setExpandedAssets] = useState<Set<AssetKey>>(new Set());
 
+  // ---- Retirement planning state ----
+  const [age, setAge] = useState(45);
+  const [retireAge, setRetireAge] = useState(65);
+  const [retireIncome, setRetireIncome] = useState(120_000);
+  const [annualSavings, setAnnualSavings] = useState(50_000);
+  const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
+
   // Build PortfolioInputs rows used by chart + suggestions
   const fundRow: PortfolioInputs = {
     key: "fund",
@@ -635,8 +960,36 @@ export default function FeeCalculator() {
   // Total portfolio value (current)
   const totalValue = allRows.reduce((s, r) => s + r.amount, 0);
 
-  // Targets map
-  const targets = Object.fromEntries(ASSET_CLASSES.map(a => [a.key, a.targetPct]));
+  // Risk-adjusted targets
+  const targets = RISK_TARGETS[riskTolerance];
+
+  // Returns/vols by asset key, with the fund using selected-net IRR / fund Vol.
+  const allReturnsMap: Record<string, number> = {
+    fund: selectedResult.lpNetIrr,
+    sp500: portReturn.sp500, realestate: portReturn.realestate,
+    privCredit: portReturn.privCredit, privEquity: portReturn.privEquity,
+    crypto: portReturn.crypto, cash: portReturn.cash,
+  };
+  const allVolsMap: Record<string, number> = {
+    fund: portVol.fund, sp500: portVol.sp500, realestate: portVol.realestate,
+    privCredit: portVol.privCredit, privEquity: portVol.privEquity,
+    crypto: portVol.crypto, cash: portVol.cash,
+  };
+
+  // Current weights (by amount)
+  const currentWeights: Record<string, number> = totalValue > 0
+    ? Object.fromEntries(allRows.map(r => [r.key, r.amount / totalValue]))
+    : Object.fromEntries(ASSET_CLASSES.map(a => [a.key, 0]));
+
+  // Retirement projections
+  const yearsToRetire = Math.max(0, retireAge - age);
+  const requiredAtRetire = retireIncome * 25; // 4% rule
+  const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap);
+  const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap);
+  const currFV  = projectFV(totalValue, annualSavings, currStats.expRet,  yearsToRetire);
+  const targetFV = projectFV(totalValue, annualSavings, targetStats.expRet, yearsToRetire);
+  const currProb   = probMeetGoal(currFV,  currStats.vol,  yearsToRetire, requiredAtRetire);
+  const targetProb = probMeetGoal(targetFV, targetStats.vol, yearsToRetire, requiredAtRetire);
 
   // Fund accessors (special bindings)
   const setFundAmount = (v: number) => setCapital(Math.max(100_000, Math.min(10_000_000, v)));
@@ -914,7 +1267,18 @@ export default function FeeCalculator() {
 
         {/* Allocation suggestions footer */}
         <div className="px-6 py-5 border-t border-slate-800 bg-slate-950/40">
-          <AllocationSuggestions rows={allRows} targets={targets} totalValue={totalValue} />
+          <RetirementPlanner
+            age={age} setAge={setAge}
+            retireAge={retireAge} setRetireAge={setRetireAge}
+            retireIncome={retireIncome} setRetireIncome={setRetireIncome}
+            annualSavings={annualSavings} setAnnualSavings={setAnnualSavings}
+            riskTolerance={riskTolerance} setRiskTolerance={setRiskTolerance}
+            rows={allRows} totalValue={totalValue} targets={targets}
+            yearsToRetire={yearsToRetire} requiredAtRetire={requiredAtRetire}
+            currStats={currStats} targetStats={targetStats}
+            currFV={currFV} targetFV={targetFV}
+            currProb={currProb} targetProb={targetProb}
+          />
         </div>
       </div>
 
