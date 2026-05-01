@@ -89,8 +89,8 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
           [&::-webkit-slider-thumb]:cursor-pointer"
       />
       <div className="flex justify-between mt-0.5">
-        <span className="text-[10px] text-slate-600">{min === 100000 ? "$100k" : min === 1 ? "1yr" : `${min}×`}</span>
-        <span className="text-[10px] text-slate-600">{min === 100000 ? "$10M" : min === 1 ? "15 yrs" : `${max}×`}</span>
+        <span className="text-[10px] text-slate-600">{min === 100000 ? "$100k" : min === 1 ? "1yr" : min === 0 ? "0%" : `${min}×`}</span>
+        <span className="text-[10px] text-slate-600">{min === 100000 ? "$10M" : min === 1 ? "15 yrs" : min === 0 ? "30%" : `${max}×`}</span>
       </div>
     </div>
   );
@@ -170,7 +170,9 @@ function ResultCard({ title, label, accentColor, result, capital }: {
 export default function FeeCalculator() {
   const [capital, setCapital] = useState(1_000_000);
   const [years, setYears] = useState(5);
-  const [grossMoic, setGrossMoic] = useState(3.0);
+  const [grossReturn, setGrossReturn] = useState(0.25); // annual return %
+
+  const grossMoic = Math.pow(1 + grossReturn, years);
 
   const r2_20 = useMemo(() => calc2_20(capital, years, grossMoic), [capital, years, grossMoic]);
   const rBuf  = useMemo(() => calcBuffett(capital, years, grossMoic), [capital, years, grossMoic]);
@@ -201,9 +203,10 @@ export default function FeeCalculator() {
             onChange={setYears} display={`${years} yr${years !== 1 ? "s" : ""}`}
           />
           <Slider
-            label="Gross MOIC" value={grossMoic} min={0.5} max={8} step={0.1}
-            onChange={setGrossMoic} display={fmtX(grossMoic)}
-            sub={`${fmtPct(Math.pow(grossMoic, 1 / years) - 1)} p.a.`}
+            label="Gross Annual Return" value={grossReturn} min={0} max={0.30} step={0.005}
+            onChange={setGrossReturn}
+            display={fmtPct(grossReturn)}
+            sub={`${fmtX(grossMoic)} MOIC`}
           />
         </div>
 
