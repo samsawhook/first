@@ -826,10 +826,10 @@ export const portfolio: PortfolioCompany[] = [
     impliedValuation: 0,
     accentColor: "#D97706",
     website: "https://nuecesbrewing.com",
-    revenue: 2_177_752,                         // FY 2025 sum of Q1-Q4
-    revenueGrowth: 0.4,                          // FY 2024 ($2,584,054) vs FY 2025 — actually flat / slight decline; placeholder
-    ebitda: 211_468,                             // FY 2025 sum of NOI Q1-Q4
-    financialsAsOf: "Apr 2026",
+    revenue: 2_619_138,                          // FY 2025 sum of Q1-Q4
+    revenueGrowth: 1.4,                          // FY 2024 ($2,584,054) → FY 2025 ($2,619,138)
+    ebitda: 331_528,                             // FY 2025 SDE (with $120k officer comp added back in Q4)
+    financialsAsOf: "Mar 2026",
     financialHistory: [
       { period: "Q4 2017", periodType: "quarterly", revenue: 0, costOfRevenue: 0, grossProfit: 0, operatingExpenses: 8_323, ebitda: -8_323, netIncome: -8_323 },
       { period: "Q1 2018", periodType: "quarterly", revenue: 0, costOfRevenue: 0, grossProfit: 0, operatingExpenses: 0, ebitda: 0, netIncome: 0 },
@@ -863,9 +863,8 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Q1 2025", periodType: "quarterly", revenue: 635_394, costOfRevenue: 165_252, grossProfit: 470_142, operatingExpenses: 359_333, ebitda: 110_809, netIncome: 111_076 },
       { period: "Q2 2025", periodType: "quarterly", revenue: 718_007, costOfRevenue: 184_089, grossProfit: 533_918, operatingExpenses: 328_941, ebitda: 204_977, netIncome: 205_092 },
       { period: "Q3 2025", periodType: "quarterly", revenue: 661_175, costOfRevenue: 196_014, grossProfit: 465_161, operatingExpenses: 377_151, ebitda: 88_010, netIncome: 101_457 },
-      { period: "Q4 2025", periodType: "quarterly", revenue: 604_562, costOfRevenue: 260_875, grossProfit: 343_687, operatingExpenses: 535_955, ebitda: -192_268, depreciation: 4_000, netIncome: -200_100 },
+      { period: "Q4 2025", periodType: "quarterly", revenue: 604_562, costOfRevenue: 260_875, grossProfit: 343_687, operatingExpenses: 415_955, ebitda: -72_268, depreciation: 4_000, netIncome: -80_100 },
       { period: "Q1 2026", periodType: "quarterly", revenue: 612_608, costOfRevenue: 162_396, grossProfit: 450_212, operatingExpenses: 317_294, ebitda: 132_918, netIncome: 133_216 },
-      { period: "Q2 2026", periodType: "quarterly", revenue: 205_474, costOfRevenue: 46_193, grossProfit: 159_280, operatingExpenses: 67_543, ebitda: 91_737, netIncome: 91_838 },
     ] satisfies FinancialPeriod[],
   },
 ];

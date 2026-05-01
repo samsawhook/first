@@ -224,7 +224,7 @@ function HeroSection({ company }: { company: PortfolioCompany }) {
             <KpiChip label="Revenue" value={fmtM(company.revenue)} sub={company.revenueGrowth != null ? `${company.revenueGrowth > 0 ? "+" : ""}${company.revenueGrowth}% YoY` : undefined} color="#10B981" />
           )}
           {company.ebitda !== undefined && (
-            <KpiChip label="EBITDA" value={fmtM(company.ebitda)} sub={company.ebitda >= 0 ? "Profitable" : "Pre-profit"} color={company.ebitda >= 0 ? "#10B981" : "#F59E0B"} />
+            <KpiChip label={company.id === "nueces-brewing" ? "SDE" : "EBITDA"} value={fmtM(company.ebitda)} sub={company.ebitda >= 0 ? "Profitable" : "Pre-profit"} color={company.ebitda >= 0 ? "#10B981" : "#F59E0B"} />
           )}
           {gm && <KpiChip label="Gross Margin" value={gm} />}
           {company.balanceSheet?.cash && (
@@ -249,7 +249,7 @@ const MON_TO_Q: Record<string, number> = {
   Jul: 3, Aug: 3, Sep: 3, Oct: 4, Nov: 4, Dec: 4,
 };
 
-function PLHistoryChart({ history, accentColor }: { history: FinancialPeriod[]; accentColor: string }) {
+function PLHistoryChart({ history, accentColor, profitLabel = "EBITDA" }: { history: FinancialPeriod[]; accentColor: string; profitLabel?: string }) {
   const PAD = { top: 24, right: 12, bottom: 36, left: 56 };
   const W = 620, H = 200;
   const CW = W - PAD.left - PAD.right;
@@ -344,7 +344,7 @@ function PLHistoryChart({ history, accentColor }: { history: FinancialPeriod[]; 
         <text x={PAD.left + 13} y={13} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">Revenue</text>
         <rect x={PAD.left + 68} y={4} width={10} height={10} rx={2} fill="#10B981" opacity={0.8} />
         <rect x={PAD.left + 68} y={4} width={10} height={10} rx={2} fill="#F59E0B" opacity={0.0} />
-        <text x={PAD.left + 81} y={13} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">EBITDA</text>
+        <text x={PAD.left + 81} y={13} fontSize="9" fill="#94A3B8" fontFamily="Poppins,sans-serif">{profitLabel}</text>
         <text x={W - PAD.right} y={13} textAnchor="end" fontSize="8" fill="#334155" fontFamily="Poppins,sans-serif">
           Emerald = profitable · Amber = pre-profit
         </text>
@@ -450,7 +450,7 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
     { label: "Cost of Revenue",     value: -is.costOfRevenue,       cls: "text-slate-400",         margin: null },
     { label: "Gross Profit",        value: is.grossProfit,          cls: "text-slate-200 font-medium", margin: pct(is.grossProfit, is.revenue) },
     { label: "Operating Expenses",  value: -is.operatingExpenses,   cls: "text-slate-400",         margin: null },
-    { label: "EBITDA",              value: is.ebitda,               cls: `font-semibold ${colorBySign(is.ebitda)}`, margin: pct(is.ebitda, is.revenue) },
+    { label: company.id === "nueces-brewing" ? "SDE" : "EBITDA", value: is.ebitda, cls: `font-semibold ${colorBySign(is.ebitda)}`, margin: pct(is.ebitda, is.revenue) },
     { label: "Depreciation & Amort.", value: -is.depreciation,     cls: "text-slate-500",         margin: null },
     { label: "Net Income",          value: is.netIncome,            cls: `font-semibold ${colorBySign(is.netIncome)}`, margin: pct(is.netIncome, is.revenue) },
   ] : [];
@@ -460,8 +460,8 @@ function FinancialsSection({ company }: { company: PortfolioCompany }) {
       {/* P&L history chart */}
       {hist && hist.length > 0 && (
         <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl p-5">
-          <SectionHeader title="Revenue & EBITDA History" />
-          <PLHistoryChart history={hist} accentColor={company.accentColor} />
+          <SectionHeader title={`Revenue & ${company.id === "nueces-brewing" ? "SDE" : "EBITDA"} History`} />
+          <PLHistoryChart history={hist} accentColor={company.accentColor} profitLabel={company.id === "nueces-brewing" ? "SDE" : "EBITDA"} />
           <p className="text-[10px] text-slate-600 mt-2">
             Source: Modified Cash Export · QuickBooks{company.financialsAsOf ? ` · as of ${company.financialsAsOf}` : ""}
           </p>
