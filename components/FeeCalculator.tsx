@@ -23,7 +23,13 @@ interface Result {
   exitValue: number;
 }
 
+const ZERO_RESULT: Result = {
+  mgmtFee: 0, gpCarry: 0, lpNet: 0, lpNetMoic: 0, lpNetIrr: 0,
+  gpTotal: 0, hurdle: 0, hurdleMet: false, exitValue: 0,
+};
+
 function calc2_20(capital: number, years: number, grossMoic: number): Result {
+  if (capital <= 0) return ZERO_RESULT;
   const exitValue = capital * grossMoic;
   const totalProfit = exitValue - capital;
   const mgmtFee = 0.02 * capital * years;
@@ -49,6 +55,7 @@ function calc2_20(capital: number, years: number, grossMoic: number): Result {
 }
 
 function calcBuffett(capital: number, years: number, grossMoic: number): Result {
+  if (capital <= 0) return ZERO_RESULT;
   const exitValue = capital * grossMoic;
   const totalProfit = exitValue - capital;
   const hurdle = capital * (Math.pow(1.06, years) - 1);
@@ -91,9 +98,9 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
   label: string; value: number; min: number; max: number; step: number;
   onChange: (v: number) => void; display: string; sub?: string;
 }) {
-  const isCapital = min === 100_000;
-  const isHorizon = min === 1;
-  const minLabel  = isCapital ? "$100k" : isHorizon ? "1 yr"   : "0%";
+  const isCapital = max === 10_000_000;
+  const isHorizon = max === 25 && step === 1;
+  const minLabel  = isCapital ? "$0"    : isHorizon ? "1 yr"   : "0%";
   const maxLabel  = isCapital ? "$10M"  : isHorizon ? "25 yrs" : "35%";
 
   return (
@@ -455,21 +462,46 @@ function PortfolioChart({
 // =========================================================
 type RiskTolerance = "conservative" | "moderate" | "aggressive";
 
-// Risk-adjusted target portfolios (must sum to 1.0)
-const RISK_TARGETS: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: {
-    fund: 0.10, sp500: 0.25, realestate: 0.15, privCredit: 0.25,
-    privEquity: 0.05, crypto: 0.02, cash: 0.18,
-  },
-  moderate: {
-    fund: 0.15, sp500: 0.35, realestate: 0.15, privCredit: 0.10,
-    privEquity: 0.10, crypto: 0.10, cash: 0.05,
-  },
-  aggressive: {
-    fund: 0.20, sp500: 0.30, realestate: 0.10, privCredit: 0.05,
-    privEquity: 0.20, crypto: 0.13, cash: 0.02,
-  },
+// Wealth-band-aware target portfolios. Each band reflects realistic
+// constraints: accreditation thresholds for private investments, minimum
+// fund commitment sizes, and adequate liquidity buffers at lower wealth.
+//   Starter (<$200k): no privates (not accredited), heavier cash buffer
+//   Builder ($200k-$1M): partial private exposure
+//   Established ($1M+): full diversification
+// All rows must sum to 1.00 within each tolerance.
+const TARGETS_STARTER: Record<RiskTolerance, Record<AssetKey, number>> = {
+  conservative: { fund: 0,    sp500: 0.50, realestate: 0.15, privCredit: 0,    privEquity: 0,    crypto: 0.02, cash: 0.33 },
+  moderate:     { fund: 0,    sp500: 0.65, realestate: 0.10, privCredit: 0,    privEquity: 0,    crypto: 0.05, cash: 0.20 },
+  aggressive:   { fund: 0,    sp500: 0.70, realestate: 0.10, privCredit: 0,    privEquity: 0,    crypto: 0.10, cash: 0.10 },
 };
+const TARGETS_BUILDER: Record<RiskTolerance, Record<AssetKey, number>> = {
+  conservative: { fund: 0.05, sp500: 0.35, realestate: 0.15, privCredit: 0.15, privEquity: 0.05, crypto: 0.02, cash: 0.23 },
+  moderate:     { fund: 0.07, sp500: 0.45, realestate: 0.15, privCredit: 0.08, privEquity: 0.08, crypto: 0.07, cash: 0.10 },
+  aggressive:   { fund: 0.13, sp500: 0.35, realestate: 0.12, privCredit: 0.05, privEquity: 0.18, crypto: 0.12, cash: 0.05 },
+};
+const TARGETS_ESTABLISHED: Record<RiskTolerance, Record<AssetKey, number>> = {
+  conservative: { fund: 0.10, sp500: 0.25, realestate: 0.15, privCredit: 0.25, privEquity: 0.05, crypto: 0.02, cash: 0.18 },
+  moderate:     { fund: 0.15, sp500: 0.35, realestate: 0.15, privCredit: 0.10, privEquity: 0.10, crypto: 0.10, cash: 0.05 },
+  aggressive:   { fund: 0.20, sp500: 0.30, realestate: 0.10, privCredit: 0.05, privEquity: 0.20, crypto: 0.13, cash: 0.02 },
+};
+
+function getWealthBand(wealth: number): "starter" | "builder" | "established" {
+  if (wealth < 200_000)   return "starter";
+  if (wealth < 1_000_000) return "builder";
+  return "established";
+}
+function getWealthBandLabel(wealth: number): string {
+  const b = getWealthBand(wealth);
+  if (b === "starter")     return "Starter (<$200k)";
+  if (b === "builder")     return "Builder ($200k–$1M)";
+  return "Established ($1M+)";
+}
+function getTargets(wealth: number, tolerance: RiskTolerance): Record<AssetKey, number> {
+  const b = getWealthBand(wealth);
+  if (b === "starter")     return TARGETS_STARTER[tolerance];
+  if (b === "builder")     return TARGETS_BUILDER[tolerance];
+  return TARGETS_ESTABLISHED[tolerance];
+}
 
 // Standard normal CDF (Abramowitz–Stegun 7.1.26)
 function normalCdf(x: number): number {
@@ -480,12 +512,23 @@ function normalCdf(x: number): number {
   return 0.5 * (1.0 + sign * erf);
 }
 
-// Future value of a present sum + an annual contribution stream (end-of-year)
-function projectFV(present: number, contribAnnual: number, rate: number, years: number): number {
+// Future value of a present sum + an annual contribution stream (end-of-year).
+// If `growthRate` > 0, contributions grow at that rate each year (e.g. raises),
+// which is the "growing annuity" formula.
+function projectFV(present: number, contribFirstYear: number, rate: number, years: number, growthRate: number = 0): number {
   if (years <= 0) return present;
-  if (Math.abs(rate) < 1e-9) return present + contribAnnual * years;
   const factor = Math.pow(1 + rate, years);
-  return present * factor + contribAnnual * (factor - 1) / rate;
+  if (contribFirstYear === 0) return present * factor;
+  if (Math.abs(rate - growthRate) < 1e-9) {
+    // Special case r == g: FV(growing annuity) = C × N × (1+r)^(N-1)
+    return present * factor + contribFirstYear * years * Math.pow(1 + rate, years - 1);
+  }
+  if (Math.abs(rate) < 1e-9) {
+    // No growth on existing wealth, but contribs may grow geometrically
+    if (Math.abs(growthRate) < 1e-9) return present + contribFirstYear * years;
+    return present + contribFirstYear * (Math.pow(1 + growthRate, years) - 1) / growthRate;
+  }
+  return present * factor + contribFirstYear * (factor - Math.pow(1 + growthRate, years)) / (rate - growthRate);
 }
 
 // Probability that a lognormal terminal value exceeds the target
@@ -593,25 +636,39 @@ function RetirementPlanner({
   age, setAge, retireAge, setRetireAge,
   retireIncome, setRetireIncome,
   annualSavings, setAnnualSavings,
+  contribMode, setContribMode,
+  salary, setSalary,
+  savingsRate, setSavingsRate,
+  raiseRate, setRaiseRate,
   riskTolerance, setRiskTolerance,
   // Portfolio
-  rows, totalValue, targets,
+  rows, totalValue, targets, wealthBandLabel,
   // Pre-computed outlook
   yearsToRetire, requiredAtRetire,
   currStats, targetStats, currFV, targetFV, currProb, targetProb,
+  effectiveContrib, effectiveGrowth,
+  // Actions
+  applyRebalancing,
 }: {
   age: number; setAge: (n: number) => void;
   retireAge: number; setRetireAge: (n: number) => void;
   retireIncome: number; setRetireIncome: (n: number) => void;
   annualSavings: number; setAnnualSavings: (n: number) => void;
+  contribMode: "flat" | "growing"; setContribMode: (m: "flat" | "growing") => void;
+  salary: number; setSalary: (n: number) => void;
+  savingsRate: number; setSavingsRate: (n: number) => void;
+  raiseRate: number; setRaiseRate: (n: number) => void;
   riskTolerance: RiskTolerance; setRiskTolerance: (v: RiskTolerance) => void;
   rows: PortfolioInputs[]; totalValue: number;
   targets: Record<AssetKey, number>;
+  wealthBandLabel: string;
   yearsToRetire: number; requiredAtRetire: number;
   currStats: { expRet: number; vol: number };
   targetStats: { expRet: number; vol: number };
   currFV: number; targetFV: number;
   currProb: number; targetProb: number;
+  effectiveContrib: number; effectiveGrowth: number;
+  applyRebalancing: () => void;
 }) {
   if (totalValue <= 0) {
     return (
@@ -698,18 +755,73 @@ function RetirementPlanner({
             format={v => `${v} yrs`}
           />
           <ProfileSlider
-            label="Income/yr in Retirement"
+            label="Required Income / yr"
             value={retireIncome} setValue={setRetireIncome}
             min={30_000} max={500_000} step={5_000}
             format={v => fmt(v)}
           />
-          <ProfileSlider
-            label="Annual Contribution"
-            value={annualSavings} setValue={setAnnualSavings}
-            min={0} max={500_000} step={5_000}
-            format={v => fmt(v)}
-          />
+          {/* Annual contribution: flat or growing */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                Annual Contribution
+              </span>
+              <select
+                value={contribMode}
+                onChange={e => setContribMode(e.target.value as "flat" | "growing")}
+                className="text-[9px] uppercase tracking-wider bg-slate-900 border border-slate-800 rounded px-1 py-0.5 text-slate-400 focus:outline-none focus:border-slate-600"
+              >
+                <option value="flat">flat</option>
+                <option value="growing">growing</option>
+              </select>
+            </div>
+            {contribMode === "flat" ? (
+              <>
+                <div className="text-right text-xs tabular-nums font-semibold text-slate-200 mb-1">
+                  {fmt(annualSavings)}
+                </div>
+                <input
+                  type="range" min={0} max={500_000} step={5_000} value={annualSavings}
+                  onChange={e => setAnnualSavings(parseFloat(e.target.value))}
+                  className="w-full h-1 rounded-full appearance-none cursor-pointer bg-slate-800
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                    [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+                    [&::-webkit-slider-thumb]:bg-amber-400 [&::-webkit-slider-thumb]:cursor-pointer"
+                />
+              </>
+            ) : (
+              <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
+                {fmt(salary * savingsRate)}
+                <span className="text-[9px] text-slate-600 ml-1 font-normal">yr 1 → grows {(raiseRate * 100).toFixed(1)}%/yr</span>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Growing-contribution sub-sliders (visible only in growing mode) */}
+        {contribMode === "growing" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-3 border-t border-slate-800/60">
+            <ProfileSlider
+              label="Income (salary)"
+              value={salary} setValue={setSalary}
+              min={50_000} max={1_000_000} step={5_000}
+              format={v => fmt(v)}
+            />
+            <ProfileSlider
+              label="Savings Rate"
+              value={savingsRate} setValue={setSavingsRate}
+              min={0} max={0.50} step={0.005}
+              format={v => `${(v * 100).toFixed(1)}%`}
+            />
+            <ProfileSlider
+              label="Annual Raise"
+              value={raiseRate} setValue={setRaiseRate}
+              min={0} max={0.10} step={0.0025}
+              format={v => `${(v * 100).toFixed(2)}%`}
+            />
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-800/60">
           <span className="text-[10px] uppercase tracking-widest text-slate-500">Risk tolerance</span>
           <div className="inline-flex rounded-md border border-slate-800 bg-slate-950/60 p-0.5">
@@ -821,14 +933,26 @@ function RetirementPlanner({
 
       {/* Rebalancing actions */}
       {(underweight.length > 0 || overweight.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
-          <div>
-            {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight</p>}
-            {underweight.map(i => <Row key={i.asset.key} kind="under" item={i} />)}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500">Rebalance to Target</p>
+            <button
+              type="button"
+              onClick={applyRebalancing}
+              className="px-3 py-1.5 text-xs font-semibold rounded bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-500/25 hover:text-indigo-200 transition-colors"
+            >
+              Apply rebalancing →
+            </button>
           </div>
-          <div>
-            {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight</p>}
-            {overweight.map(i => <Row key={i.asset.key} kind="over" item={i} />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+            <div>
+              {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight</p>}
+              {underweight.map(i => <Row key={i.asset.key} kind="under" item={i} />)}
+            </div>
+            <div>
+              {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight</p>}
+              {overweight.map(i => <Row key={i.asset.key} kind="over" item={i} />)}
+            </div>
           </div>
         </div>
       )}
@@ -836,11 +960,57 @@ function RetirementPlanner({
         <p className="text-xs text-emerald-400">All positions within ±2pp of target — portfolio is well-balanced.</p>
       )}
 
+      {/* Marginal contribution allocation */}
+      {effectiveContrib > 0 && (
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500">
+              Ideal Marginal Allocation · per {fmt(effectiveContrib)}/yr saved
+            </p>
+            <p className="text-[10px] text-slate-600">
+              {effectiveGrowth > 0
+                ? `Year-1 contribution; grows at ${(effectiveGrowth * 100).toFixed(2)}%/yr`
+                : `Constant annual contribution`}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1.5">
+            {ASSET_CLASSES
+              .filter(a => (targets[a.key] ?? 0) > 0.005)
+              .map(a => {
+                const pct = targets[a.key] ?? 0;
+                const dollars = effectiveContrib * pct;
+                return (
+                  <div key={a.key} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: a.color }} />
+                    <span className="text-[11px] text-slate-400 flex-1 truncate">{a.label}</span>
+                    <span className="text-[11px] tabular-nums text-slate-200 font-medium">{fmt(dollars)}</span>
+                    <span className="text-[10px] tabular-nums text-slate-600 w-9 text-right">{(pct * 100).toFixed(0)}%</span>
+                  </div>
+                );
+              })}
+          </div>
+          {yearsToRetire > 0 && (
+            <p className="text-[10px] text-slate-600 mt-3 pt-2 border-t border-slate-800/60">
+              Cumulative contributions over {yearsToRetire} yrs ≈{" "}
+              <span className="text-slate-400 tabular-nums font-medium">
+                {fmt(
+                  effectiveGrowth > 0 && Math.abs(effectiveGrowth) > 1e-9
+                    ? effectiveContrib * (Math.pow(1 + effectiveGrowth, yearsToRetire) - 1) / effectiveGrowth
+                    : effectiveContrib * yearsToRetire
+                )}
+              </span>{" "}
+              (undiscounted, future dollars).
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Target portfolio bar */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] uppercase tracking-widest text-slate-600">
             Target portfolio · <span className="capitalize text-slate-500">{riskTolerance}</span>
+            {" · "}<span className="text-slate-500">{wealthBandLabel}</span>
           </span>
           <span className="text-[10px] text-slate-600 tabular-nums">100%</span>
         </div>
@@ -934,6 +1104,11 @@ export default function FeeCalculator() {
   const [retireIncome, setRetireIncome] = useState(120_000);
   const [annualSavings, setAnnualSavings] = useState(50_000);
   const [riskTolerance, setRiskTolerance] = useState<RiskTolerance>("moderate");
+  // Growing-contribution mode
+  const [contribMode, setContribMode] = useState<"flat" | "growing">("flat");
+  const [salary, setSalary] = useState(200_000);
+  const [savingsRate, setSavingsRate] = useState(0.20);
+  const [raiseRate, setRaiseRate] = useState(0.03);
 
   // Build PortfolioInputs rows used by chart + suggestions
   const fundRow: PortfolioInputs = {
@@ -960,8 +1135,9 @@ export default function FeeCalculator() {
   // Total portfolio value (current)
   const totalValue = allRows.reduce((s, r) => s + r.amount, 0);
 
-  // Risk-adjusted targets
-  const targets = RISK_TARGETS[riskTolerance];
+  // Wealth-band-aware targets
+  const targets = getTargets(totalValue, riskTolerance);
+  const wealthBandLabel = getWealthBandLabel(totalValue);
 
   // Returns/vols by asset key, with the fund using selected-net IRR / fund Vol.
   const allReturnsMap: Record<string, number> = {
@@ -981,18 +1157,37 @@ export default function FeeCalculator() {
     ? Object.fromEntries(allRows.map(r => [r.key, r.amount / totalValue]))
     : Object.fromEntries(ASSET_CLASSES.map(a => [a.key, 0]));
 
+  // Effective contribution stream (year 1 dollars + growth rate)
+  const effectiveContrib = contribMode === "growing" ? salary * savingsRate : annualSavings;
+  const effectiveGrowth  = contribMode === "growing" ? raiseRate : 0;
+
   // Retirement projections
   const yearsToRetire = Math.max(0, retireAge - age);
   const requiredAtRetire = retireIncome * 25; // 4% rule
   const currStats = portfolioStats(currentWeights, allReturnsMap, allVolsMap);
   const targetStats = portfolioStats(targets, allReturnsMap, allVolsMap);
-  const currFV  = projectFV(totalValue, annualSavings, currStats.expRet,  yearsToRetire);
-  const targetFV = projectFV(totalValue, annualSavings, targetStats.expRet, yearsToRetire);
+  const currFV  = projectFV(totalValue, effectiveContrib, currStats.expRet,  yearsToRetire, effectiveGrowth);
+  const targetFV = projectFV(totalValue, effectiveContrib, targetStats.expRet, yearsToRetire, effectiveGrowth);
   const currProb   = probMeetGoal(currFV,  currStats.vol,  yearsToRetire, requiredAtRetire);
   const targetProb = probMeetGoal(targetFV, targetStats.vol, yearsToRetire, requiredAtRetire);
 
+  // Apply target rebalancing — sets capital and portAlloc to match target weights
+  const applyRebalancing = () => {
+    if (totalValue <= 0) return;
+    setCapital(totalValue * targets.fund);
+    setPortAlloc({
+      fund: 0,                                  // unused; fund position is via `capital`
+      sp500:      totalValue * targets.sp500,
+      realestate: totalValue * targets.realestate,
+      privCredit: totalValue * targets.privCredit,
+      privEquity: totalValue * targets.privEquity,
+      crypto:     totalValue * targets.crypto,
+      cash:       totalValue * targets.cash,
+    });
+  };
+
   // Fund accessors (special bindings)
-  const setFundAmount = (v: number) => setCapital(Math.max(100_000, Math.min(10_000_000, v)));
+  const setFundAmount = (v: number) => setCapital(Math.max(0, Math.min(10_000_000, v)));
   const setFundReturn = (v: number) => setGrossReturn(Math.max(0, Math.min(0.35, v)));
   const setFundVol    = (v: number) => setPortVol(prev => ({ ...prev, fund: Math.max(0, Math.min(1, v)) }));
 
@@ -1012,9 +1207,9 @@ export default function FeeCalculator() {
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-5">Assumptions</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <Slider
-            label="Committed Capital" value={capital} min={100_000} max={10_000_000} step={100_000}
+            label="Committed Capital" value={capital} min={0} max={10_000_000} step={25_000}
             onChange={setCapital}
-            display={capital >= 1_000_000 ? `$${(capital / 1_000_000).toFixed(1)}M` : `$${(capital / 1_000).toFixed(0)}k`}
+            display={capital >= 1_000_000 ? `$${(capital / 1_000_000).toFixed(2)}M` : `$${(capital / 1_000).toFixed(0)}k`}
           />
           <Slider
             label="Investment Horizon" value={years} min={1} max={25} step={1}
@@ -1160,15 +1355,10 @@ export default function FeeCalculator() {
                       color={a.color}
                       title={isFund ? `Edit gross return; current gross ${(retRate * 100).toFixed(1)}%` : undefined}
                     />
-                    {/* Vol (inline editable) */}
-                    <InlineNum
-                      value={vol}
-                      displayFn={v => `Vol. ${(v * 100).toFixed(0)}%`}
-                      editFn={v => (v * 100).toFixed(0)}
-                      parseFn={raw => parseFloat(raw) / 100}
-                      onChange={setVol}
-                      widthClass="w-16"
-                    />
+                    {/* Current % of total portfolio (display only; Vol moved to dropdown) */}
+                    <span className="text-xs tabular-nums w-12 text-right text-slate-400 px-1">
+                      {totalValue > 0 ? `${((amount / totalValue) * 100).toFixed(0)}%` : "—"}
+                    </span>
                     {/* Expand toggle */}
                     <button
                       type="button"
@@ -1191,7 +1381,7 @@ export default function FeeCalculator() {
                         prefix="$"
                         value={amount}
                         setValue={setAmt}
-                        min={isFund ? 100_000 : 0} max={10_000_000} step={25_000}
+                        min={0} max={10_000_000} step={25_000}
                       />
                       <SliderRow
                         prefix="%"
@@ -1272,12 +1462,19 @@ export default function FeeCalculator() {
             retireAge={retireAge} setRetireAge={setRetireAge}
             retireIncome={retireIncome} setRetireIncome={setRetireIncome}
             annualSavings={annualSavings} setAnnualSavings={setAnnualSavings}
+            contribMode={contribMode} setContribMode={setContribMode}
+            salary={salary} setSalary={setSalary}
+            savingsRate={savingsRate} setSavingsRate={setSavingsRate}
+            raiseRate={raiseRate} setRaiseRate={setRaiseRate}
             riskTolerance={riskTolerance} setRiskTolerance={setRiskTolerance}
             rows={allRows} totalValue={totalValue} targets={targets}
+            wealthBandLabel={wealthBandLabel}
             yearsToRetire={yearsToRetire} requiredAtRetire={requiredAtRetire}
             currStats={currStats} targetStats={targetStats}
             currFV={currFV} targetFV={targetFV}
             currProb={currProb} targetProb={targetProb}
+            effectiveContrib={effectiveContrib} effectiveGrowth={effectiveGrowth}
+            applyRebalancing={applyRebalancing}
           />
         </div>
       </div>
