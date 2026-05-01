@@ -295,6 +295,15 @@ function PLHistoryChart({ history, accentColor, profitLabel = "EBITDA" }: { hist
   const tickCount = 5;
   const ticks = Array.from({ length: tickCount + 1 }, (_, i) => minVal + (i / tickCount) * range);
 
+  // Annual label groups (show year label once per year, centered)
+  const yearGroups: { year: string; startIdx: number; endIdx: number }[] = [];
+  displayHistory.forEach((p, i) => {
+    const year = p.period.match(/\d{4}/)?.[0] ?? p.period;
+    const last = yearGroups[yearGroups.length - 1];
+    if (last && last.year === year) { last.endIdx = i; }
+    else yearGroups.push({ year, startIdx: i, endIdx: i });
+  });
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 320 }}>
       {/* Grid + Y ticks */}
@@ -308,33 +317,43 @@ function PLHistoryChart({ history, accentColor, profitLabel = "EBITDA" }: { hist
         </g>
       ))}
 
+      {/* Year divider lines */}
+      {yearGroups.slice(1).map(({ year, startIdx }) => {
+        const x = PAD.left + startIdx * groupW;
+        return (
+          <line key={`div-${year}`} x1={x} y1={PAD.top} x2={x} y2={H - PAD.bottom + 20}
+            stroke="#1E2D3D" strokeWidth={1} strokeDasharray="2,2" />
+        );
+      })}
+
       {/* Bars per period */}
       {displayHistory.map((period, i) => {
         const gx = PAD.left + i * groupW;
         const rx = gx + groupW * 0.08;
         const ex = rx + barW + gap;
 
-        // Revenue bar (always positive, above baseline)
         const ry = toY(period.revenue);
         const rh = Math.max(baseline - ry, 1);
-
-        // EBITDA bar
         const ey = period.ebitda >= 0 ? toY(period.ebitda) : baseline;
         const eh = Math.max(Math.abs(toY(period.ebitda) - baseline), 1);
         const ebitdaColor = period.ebitda >= 0 ? "#10B981" : "#F59E0B";
 
         return (
           <g key={period.period}>
-            {/* Revenue bar */}
             <rect x={rx} y={ry} width={barW} height={rh} fill={accentColor} opacity={0.7} rx={2} />
-            {/* EBITDA bar */}
             <rect x={ex} y={ey} width={barW} height={eh} fill={ebitdaColor} opacity={0.8} rx={2} />
-            {/* X label */}
-            <text x={gx + groupW / 2} y={H - PAD.bottom + 14} textAnchor="middle" fontSize="9"
-              fill="#475569" fontFamily="Poppins,sans-serif">
-              {period.period}
-            </text>
           </g>
+        );
+      })}
+
+      {/* Annual x-axis labels */}
+      {yearGroups.map(({ year, startIdx, endIdx }) => {
+        const x = PAD.left + ((startIdx + endIdx) / 2 + 0.5) * groupW;
+        return (
+          <text key={year} x={x} y={H - PAD.bottom + 14} textAnchor="middle" fontSize="9"
+            fill="#64748B" fontFamily="Poppins,sans-serif">
+            {year}
+          </text>
         );
       })}
 
