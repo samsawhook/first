@@ -29,9 +29,8 @@ export default function NDAGate({ children }: { children: React.ReactNode }) {
         <div className="mb-6 space-y-3 text-sm text-slate-400 leading-relaxed">
           <p>
             The information contained in this portal, including but not limited to financial statements,
-            portfolio company data, investment terms, and business information relating to{" "}
-            <span className="text-slate-200 font-medium">Nueces Brewing (Third Coast Brewing LLC)</span>{" "}
-            and other portfolio companies, is strictly confidential and proprietary.
+            portfolio company data, investment terms, and business information relating to portfolio
+            companies, is strictly confidential and proprietary.
           </p>
           <p>
             By entering, you agree to hold all information in strict confidence, to use it solely for
