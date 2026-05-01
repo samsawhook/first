@@ -213,7 +213,6 @@ export default function Dashboard() {
   });
   const [editingVarianceId, setEditingVarianceId] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set<string>());
-  const [navDiscountPct, setNavDiscountPct] = useState<number>(25);
 
   // ── User-set valuations (persistent) ─────────────────────────────────────────
   const [userValuations, setUserValuations] = useState<Record<string, number>>(() => {
@@ -518,31 +517,6 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{totalPositions} positions</p>
                   </div>
                 </div>
-
-                {/* ── NAV Discount banner — My Share mode only ── */}
-                {isLpView && (
-                  <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 sm:px-5 py-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[9px] text-amber-300 uppercase tracking-widest font-semibold leading-tight">My Share — NAV at Discount</p>
-                        <p className="text-xl font-bold tabular-nums text-amber-200 mt-1">{fmt(displayTotal * (1 - navDiscountPct / 100))}</p>
-                        <p className="text-[10px] text-amber-300/70 mt-0.5 tabular-nums">
-                          {fmt(displayTotal)} fund-share NAV · {navDiscountPct}% illiquidity / secondary discount
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <label className="text-[10px] text-amber-300/70 uppercase tracking-widest">Discount</label>
-                        <input
-                          type="number" min={0} max={100} step={1}
-                          value={navDiscountPct}
-                          onChange={e => setNavDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                          className="w-16 bg-[#080E1A] border border-amber-500/40 rounded-lg px-2 py-1 text-xs text-amber-200 tabular-nums focus:outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-[10px] text-amber-300/70">%</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* ── LP Unit Calculator ── */}
                 <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-3 bg-[#080E1A]">
@@ -1706,31 +1680,6 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{totalPositions} positions</p>
                   </div>
                 </div>
-
-                {/* ── NAV Discount banner — My Share mode only ── */}
-                {isLpView && (
-                  <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 sm:px-5 py-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[9px] text-amber-300 uppercase tracking-widest font-semibold leading-tight">My Share — NAV at Discount</p>
-                        <p className="text-xl font-bold tabular-nums text-amber-200 mt-1">{fmt(displayTotal * (1 - navDiscountPct / 100))}</p>
-                        <p className="text-[10px] text-amber-300/70 mt-0.5 tabular-nums">
-                          {fmt(displayTotal)} fund-share NAV · {navDiscountPct}% illiquidity / secondary discount
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <label className="text-[10px] text-amber-300/70 uppercase tracking-widest">Discount</label>
-                        <input
-                          type="number" min={0} max={100} step={1}
-                          value={navDiscountPct}
-                          onChange={e => setNavDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                          className="w-16 bg-[#080E1A] border border-amber-500/40 rounded-lg px-2 py-1 text-xs text-amber-200 tabular-nums focus:outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-[10px] text-amber-300/70">%</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* ── LP Unit Calculator ── */}
                 <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-3 bg-[#080E1A]">

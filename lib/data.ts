@@ -820,7 +820,7 @@ export const portfolio: PortfolioCompany[] = [
     ownership: 0,
     stage: "Growth",
     founded: 2017,
-    employees: 0,
+    employees: 12,
     status: "active",
     secondaryAvailable: false,
     impliedValuation: 0,
