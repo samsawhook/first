@@ -32,7 +32,7 @@ import {
   managedFundPositions,
 } from "@/lib/data";
 import { investors } from "@/lib/investors";
-import type { Investor, ShareTransaction, PortfolioCompany, DebtPosition } from "@/lib/types";
+import type { Investor, ShareTransaction, DebtPosition } from "@/lib/types";
 
 const portfolio = basePortfolio;
 const fund = baseFund;
@@ -50,37 +50,14 @@ const PROPOSAL_AUDILY_PREFERRED: DebtPosition = {
   notes: "Proposed follow-on preferred share purchase.",
 };
 
-const PROPOSAL_NUECES_BREWING: PortfolioCompany = {
-  id: "nueces-brewing",
-  name: "Nueces Brewing",
-  legalName: "Nueces Brewing Co.",
-  initials: "NB",
-  sector: "Consumer / Beverage",
-  tagline: "Independent craft brewery",
-  description:
-    "Independent craft brewery — proposed new portfolio addition. Details to be filled in as diligence progresses.",
-  invested: 200_000,
+const PROPOSAL_NUECES_PREFERRED: DebtPosition = {
+  id: "nueces-pref-proposal",
+  date: "May 2026",
+  instrument: "Preferred",
+  principal: 200_000,
+  status: "Current",
   currentValue: 200_000,
-  ownership: 0,
-  stage: "Seed",
-  founded: new Date().getFullYear(),
-  employees: 0,
-  status: "active",
-  secondaryAvailable: false,
-  impliedValuation: 0,
-  accentColor: "#D97706",
-  shareTransactions: [],
-  debtPositions: [
-    {
-      id: "nueces-pref-proposal",
-      date: "May 2026",
-      instrument: "Preferred",
-      principal: 200_000,
-      status: "Current",
-      currentValue: 200_000,
-      notes: "Proposed initial preferred share purchase.",
-    },
-  ],
+  notes: "Proposed initial preferred share purchase.",
 };
 
 const PROPOSAL_LP_BASIS_ADD = 350_000;   // $1/unit par value
@@ -1533,11 +1510,20 @@ export default function Dashboard() {
 
         {!activeCompany && activeTab === "proposal" && (() => {
           // ── Proposal scenario shadowing ──────────────────────────────────────
-          const portfolio = basePortfolio
-            .map(c => c.id === "audily"
-              ? { ...c, debtPositions: [...(c.debtPositions ?? []), PROPOSAL_AUDILY_PREFERRED] }
-              : c)
-            .concat([PROPOSAL_NUECES_BREWING]);
+          const portfolio = basePortfolio.map(c => {
+            if (c.id === "audily") {
+              return { ...c, debtPositions: [...(c.debtPositions ?? []), PROPOSAL_AUDILY_PREFERRED] };
+            }
+            if (c.id === "nueces-brewing") {
+              return {
+                ...c,
+                invested: 200_000,
+                currentValue: 200_000,
+                debtPositions: [...(c.debtPositions ?? []), PROPOSAL_NUECES_PREFERRED],
+              };
+            }
+            return c;
+          });
           const LP_TOTAL_UNITS = BASE_LP_TOTAL_UNITS + PROPOSAL_LP_BASIS_ADD;
           const FUND_LEVERAGE  = BASE_FUND_LEVERAGE  + PROPOSAL_LEVERAGE_ADD;
           const fund = { ...baseFund, calledCapital: baseFund.calledCapital + PROPOSAL_LP_BASIS_ADD };
