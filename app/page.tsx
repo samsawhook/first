@@ -79,9 +79,7 @@ type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "s
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Proposal",  icon: <LayoutDashboard size={15} /> },
-  { id: "scenario",   label: "Scenario",   icon: <LayoutDashboard size={15} /> },
-  { id: "scenario-b", label: "Scenario B", icon: <LayoutDashboard size={15} /> },
-  { id: "letters",    label: "Letters",    icon: <BookOpen size={15} /> },
+  { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 
 const fmt = (n: number) =>
