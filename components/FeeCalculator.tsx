@@ -948,21 +948,21 @@ function RetirementPlanner({
 
           {/* Retirement Target cell with chevron-expandable detail */}
           <div className={`space-y-1 ${targetExpanded ? "col-span-2 lg:col-span-1" : ""}`}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-baseline justify-between gap-2 mb-1">
               <span className="text-[10px] uppercase tracking-wide text-slate-500">
                 Retirement Target
               </span>
-              <button
-                type="button"
-                onClick={() => setTargetExpanded(v => !v)}
-                className="p-1.5 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
-                aria-label={targetExpanded ? "Collapse details" : "Expand details"}
-              >
-                <ChevronDown size={12} className={`transition-transform ${targetExpanded ? "rotate-180" : ""}`} />
-              </button>
-            </div>
-            <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
-              {fmt(retireTarget)}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs tabular-nums font-semibold text-slate-200">{fmt(retireTarget)}</span>
+                <button
+                  type="button"
+                  onClick={() => setTargetExpanded(v => !v)}
+                  className="p-1.5 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
+                  aria-label={targetExpanded ? "Collapse details" : "Expand details"}
+                >
+                  <ChevronDown size={12} className={`transition-transform ${targetExpanded ? "rotate-180" : ""}`} />
+                </button>
+              </div>
             </div>
             <input
               type="range" min={500_000} max={20_000_000} step={50_000} value={retireTarget}
@@ -1002,24 +1002,26 @@ function RetirementPlanner({
 
           {/* Annual Contribution cell with chevron-expandable detail */}
           <div className={`space-y-1 ${contribExpanded ? "col-span-2 lg:col-span-1" : ""}`}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-baseline justify-between gap-2 mb-1">
               <span className="text-[10px] uppercase tracking-wide text-slate-500">
                 Annual Contribution
               </span>
-              <button
-                type="button"
-                onClick={() => setContribExpanded(v => !v)}
-                className="p-1.5 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
-                aria-label={contribExpanded ? "Collapse details" : "Expand details"}
-              >
-                <ChevronDown size={12} className={`transition-transform ${contribExpanded ? "rotate-180" : ""}`} />
-              </button>
-            </div>
-            <div className="text-right text-xs tabular-nums font-semibold text-slate-200">
-              {fmt(effectiveContrib)}
-              {contribMode === "growing" && (
-                <span className="text-[9px] text-slate-600 ml-1 font-normal">yr 1</span>
-              )}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs tabular-nums font-semibold text-slate-200">
+                  {fmt(effectiveContrib)}
+                  {contribMode === "growing" && (
+                    <span className="text-[9px] text-slate-600 ml-1 font-normal">yr 1</span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setContribExpanded(v => !v)}
+                  className="p-1.5 -m-1 text-slate-500 hover:text-slate-200 active:text-slate-100 transition-colors"
+                  aria-label={contribExpanded ? "Collapse details" : "Expand details"}
+                >
+                  <ChevronDown size={12} className={`transition-transform ${contribExpanded ? "rotate-180" : ""}`} />
+                </button>
+              </div>
             </div>
             {contribMode === "flat" ? (
               <input
