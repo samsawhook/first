@@ -22,9 +22,69 @@ import SecondaryMarket from "@/components/SecondaryMarket";
 import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
 import InvestorPortal from "@/components/InvestorPortal";
-import { portfolio, navHistory, fund, cashPositions, LP_TOTAL_UNITS, FUND_LEVERAGE, managedFundPositions } from "@/lib/data";
+import {
+  portfolio as basePortfolio,
+  navHistory,
+  fund as baseFund,
+  cashPositions,
+  LP_TOTAL_UNITS as BASE_LP_TOTAL_UNITS,
+  FUND_LEVERAGE as BASE_FUND_LEVERAGE,
+  managedFundPositions,
+} from "@/lib/data";
 import { investors } from "@/lib/investors";
-import type { Investor, ShareTransaction } from "@/lib/types";
+import type { Investor, ShareTransaction, PortfolioCompany, DebtPosition } from "@/lib/types";
+
+const portfolio = basePortfolio;
+const fund = baseFund;
+const LP_TOTAL_UNITS = BASE_LP_TOTAL_UNITS;
+const FUND_LEVERAGE = BASE_FUND_LEVERAGE;
+
+// ── Proposal scenario additions (Proposal tab only) ───────────────────────────
+const PROPOSAL_AUDILY_PREFERRED: DebtPosition = {
+  id: "audily-pref-proposal",
+  date: "May 2026",
+  instrument: "Preferred",
+  principal: 150_000,
+  status: "Current",
+  currentValue: 150_000,
+  notes: "Proposed follow-on preferred share purchase.",
+};
+
+const PROPOSAL_NUECES_BREWING: PortfolioCompany = {
+  id: "nueces-brewing",
+  name: "Nueces Brewing",
+  legalName: "Nueces Brewing Co.",
+  initials: "NB",
+  sector: "Consumer / Beverage",
+  tagline: "Independent craft brewery",
+  description:
+    "Independent craft brewery — proposed new portfolio addition. Details to be filled in as diligence progresses.",
+  invested: 200_000,
+  currentValue: 200_000,
+  ownership: 0,
+  stage: "Seed",
+  founded: new Date().getFullYear(),
+  employees: 0,
+  status: "active",
+  secondaryAvailable: false,
+  impliedValuation: 0,
+  accentColor: "#D97706",
+  shareTransactions: [],
+  debtPositions: [
+    {
+      id: "nueces-pref-proposal",
+      date: "May 2026",
+      instrument: "Preferred",
+      principal: 200_000,
+      status: "Current",
+      currentValue: 200_000,
+      notes: "Proposed initial preferred share purchase.",
+    },
+  ],
+};
+
+const PROPOSAL_LP_BASIS_ADD = 350_000;   // $1/unit par value
+const PROPOSAL_LEVERAGE_ADD  = 120_000;
 
 type Tab = "overview" | "proposal" | "pipeline" | "secondary" | "letters" | "investor";
 
@@ -1471,7 +1531,17 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!activeCompany && activeTab === "proposal" && (
+        {!activeCompany && activeTab === "proposal" && (() => {
+          // ── Proposal scenario shadowing ──────────────────────────────────────
+          const portfolio = basePortfolio
+            .map(c => c.id === "audily"
+              ? { ...c, debtPositions: [...(c.debtPositions ?? []), PROPOSAL_AUDILY_PREFERRED] }
+              : c)
+            .concat([PROPOSAL_NUECES_BREWING]);
+          const LP_TOTAL_UNITS = BASE_LP_TOTAL_UNITS + PROPOSAL_LP_BASIS_ADD;
+          const FUND_LEVERAGE  = BASE_FUND_LEVERAGE  + PROPOSAL_LEVERAGE_ADD;
+          const fund = { ...baseFund, calledCapital: baseFund.calledCapital + PROPOSAL_LP_BASIS_ADD };
+          return (
           <div className="space-y-8">
             {/* ── Overview Hero ── */}
             {(() => {
@@ -2598,7 +2668,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {!activeCompany && activeTab === "pipeline" && (
           <div className="space-y-6">
