@@ -172,7 +172,7 @@ export const portfolio: PortfolioCompany[] = [
       ],
     } satisfies CapTableSummary,
     shareTransactions: [
-      { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 1, certificateNumber: "CS-01" },
+      { date: "Aug 2022", type: "Common", shares: 7_023_990, amount: 1 },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "falconer-loc-1", date: "Mar 2026", instrument: "Line of Credit", principal: 245,
@@ -277,7 +277,7 @@ export const portfolio: PortfolioCompany[] = [
       ],
     } satisfies CapTableSummary,
     shareTransactions: [
-      { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 1, certificateNumber: "CS-02" },
+      { date: "Jun 2022", type: "Common", shares: 6_530_527, amount: 1 },
     ] satisfies ShareTransaction[],
     news: [
       { source: "LinkedIn", date: "2024", headline: "Merchant Boxes partners with Qwik Tape for factory-direct pricing", snippet: "Merchant Boxes formalized a partnership with Qwik Tape, enabling factory-direct pricing on all Qwik Tape products.", url: "https://www.linkedin.com/company/merchant-boxes" },
@@ -403,7 +403,7 @@ export const portfolio: PortfolioCompany[] = [
       ],
     } satisfies CapTableSummary,
     shareTransactions: [
-      { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 1, certificateNumber: "CS-03" },
+      { date: "Mar 2022", type: "Common", shares: 4_350_663, amount: 1 },
     ] satisfies ShareTransaction[],
   },
   {
@@ -492,8 +492,8 @@ export const portfolio: PortfolioCompany[] = [
       { period: "Q4'25", cash:  48_804, totalCurrentAssets: 386_603, totalAssets:   912_213, totalCurrentLiabilities: 298_319, totalLiabilities: 633_669, totalEquity:  278_544 },
     ] satisfies BalanceSheetSnapshot[],
     shareTransactions: [
-      { date: "Sep 2021", type: "Common", shares: 9_500_000, amount: 36_837, certificateNumber: "CS-04", notes: "95/245 × $95K deal (options + equity)" },
-      { date: "Sep 2021", type: "Common", shares: 7_037_717, amount: 1,      certificateNumber: "CS-04", notes: "Nominal $1 founders consideration" },
+      { date: "Sep 2021", type: "Common", shares: 9_500_000, amount: 36_837, notes: "95/245 × $95K deal (options + equity)" },
+      { date: "Sep 2021", type: "Common", shares: 7_037_717, amount: 1, notes: "Nominal $1 founders consideration" },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "audily-pref-a", date: "Dec 2024", instrument: "Preferred", principal: 115_000,
@@ -680,7 +680,7 @@ export const portfolio: PortfolioCompany[] = [
     contact: "john@sbr2th.com",
     accentColor: "#EC4899",
     shareTransactions: [
-      { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 1, certificateNumber: "CS-05" },
+      { date: "Apr 2022", type: "Common", shares: 4_617_214, amount: 1 },
     ] satisfies ShareTransaction[],
     debtPositions: [
       { id: "sbr2th-note-1", date: "Feb 2026", instrument: "Term Loan", principal: 8_000,
@@ -802,7 +802,7 @@ export const portfolio: PortfolioCompany[] = [
       ],
     } satisfies CapTableSummary,
     shareTransactions: [
-      { date: "UNK", type: "Common", shares: 125_000, amount: 1, certificateNumber: "CS-22",
+      { date: "UNK", type: "Common", shares: 125_000, amount: 1,
         notes: "0.40% of common outstanding (125,000 ÷ 31,000,000)" },
     ] satisfies ShareTransaction[],
     debtPositions: [

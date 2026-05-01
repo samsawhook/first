@@ -956,9 +956,6 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 pl-11">
                                             <div className="flex flex-col gap-0.5">
                                               <span className="text-[11px] text-slate-500">{t.date} · {t.type}</span>
-                                              {t.certificateNumber && (
-                                                <span className="text-[10px] font-mono text-slate-600 tracking-wide">{t.certificateNumber}</span>
-                                              )}
                                             </div>
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
@@ -1545,7 +1542,6 @@ export default function Dashboard() {
                     type: "Common" as const,
                     shares: 50_000,
                     amount: 320_000,
-                    certificateNumber: "CS-1",
                     notes: "Proposed initial common share purchase — 50% of economic and voting.",
                   },
                 ],
@@ -2137,9 +2133,6 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 pl-11">
                                             <div className="flex flex-col gap-0.5">
                                               <span className="text-[11px] text-slate-500">{t.date} · {t.type}</span>
-                                              {t.certificateNumber && (
-                                                <span className="text-[10px] font-mono text-slate-600 tracking-wide">{t.certificateNumber}</span>
-                                              )}
                                             </div>
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
@@ -2726,7 +2719,7 @@ export default function Dashboard() {
                 debtPositions: [...(c.debtPositions ?? []), PROPOSAL_AUDILY_PREFERRED, SCENARIO_AUDILY_PREFERRED],
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_AUDILY_SHARES, amount: audilyAmt, certificateNumber: "CS-SCN-A", notes: "Scenario additional common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_AUDILY_SHARES, amount: audilyAmt, notes: "Scenario additional common share purchase." },
                 ],
               };
             }
@@ -2742,7 +2735,7 @@ export default function Dashboard() {
                 totalShares: 100_000,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: 50_000, amount: 320_000, certificateNumber: "CS-1", notes: "Proposed initial common share purchase — 50% of economic and voting." },
+                  { date: "May 2026", type: "Common" as const, shares: 50_000, amount: 320_000, notes: "Proposed initial common share purchase — 50% of economic and voting." },
                 ],
               };
             }
@@ -2753,7 +2746,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + mbAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_MB_SHARES, amount: mbAmt, certificateNumber: "CS-SCN-MB", notes: "Scenario common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_MB_SHARES, amount: mbAmt, notes: "Scenario common share purchase." },
                 ],
               };
             }
@@ -2764,7 +2757,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + sbr2thAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_SBR2TH_SHARES, amount: sbr2thAmt, certificateNumber: "CS-SCN-S", notes: "Scenario common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_SBR2TH_SHARES, amount: sbr2thAmt, notes: "Scenario common share purchase." },
                 ],
               };
             }
@@ -2775,7 +2768,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + pigeonAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_PIGEON_SHARES, amount: pigeonAmt, certificateNumber: "CS-SCN-P", notes: "Scenario common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_PIGEON_SHARES, amount: pigeonAmt, notes: "Scenario common share purchase." },
                 ],
               };
             }
@@ -2786,7 +2779,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + falconerAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_FALCONER_SHARES, amount: falconerAmt, certificateNumber: "CS-SCN-F", notes: "Scenario common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIO_FALCONER_SHARES, amount: falconerAmt, notes: "Scenario common share purchase." },
                 ],
               };
             }
@@ -3401,9 +3394,6 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 pl-11">
                                             <div className="flex flex-col gap-0.5">
                                               <span className="text-[11px] text-slate-500">{t.date} · {t.type}</span>
-                                              {t.certificateNumber && (
-                                                <span className="text-[10px] font-mono text-slate-600 tracking-wide">{t.certificateNumber}</span>
-                                              )}
                                             </div>
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
@@ -3995,7 +3985,7 @@ export default function Dashboard() {
                 totalShares: 100_000,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: 50_000, amount: 320_000, certificateNumber: "CS-1", notes: "Proposed initial common share purchase — 50% of economic and voting." },
+                  { date: "May 2026", type: "Common" as const, shares: 50_000, amount: 320_000, notes: "Proposed initial common share purchase — 50% of economic and voting." },
                 ],
               };
             }
@@ -4006,7 +3996,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + pigeonAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_PIGEON_SHARES, amount: pigeonAmt, certificateNumber: "CS-SCN2-P", notes: "Scenario B common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_PIGEON_SHARES, amount: pigeonAmt, notes: "Scenario B common share purchase." },
                 ],
               };
             }
@@ -4017,7 +4007,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + falconerAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_FALCONER_SHARES, amount: falconerAmt, certificateNumber: "CS-SCN2-F", notes: "Scenario B common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_FALCONER_SHARES, amount: falconerAmt, notes: "Scenario B common share purchase." },
                 ],
               };
             }
@@ -4028,7 +4018,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + sbr2thAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_SBR2TH_SHARES, amount: sbr2thAmt, certificateNumber: "CS-SCN2-S", notes: "Scenario B common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_SBR2TH_SHARES, amount: sbr2thAmt, notes: "Scenario B common share purchase." },
                 ],
               };
             }
@@ -4039,7 +4029,7 @@ export default function Dashboard() {
                 currentValue: c.currentValue + mbAmt,
                 shareTransactions: [
                   ...(c.shareTransactions ?? []),
-                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_MB_SHARES, amount: mbAmt, certificateNumber: "CS-SCN2-MB", notes: "Scenario B common share purchase." },
+                  { date: "May 2026", type: "Common" as const, shares: SCENARIOB_MB_SHARES, amount: mbAmt, notes: "Scenario B common share purchase." },
                 ],
               };
             }
@@ -4624,9 +4614,6 @@ export default function Dashboard() {
                                           <td className="py-2 px-3 pl-11">
                                             <div className="flex flex-col gap-0.5">
                                               <span className="text-[11px] text-slate-500">{t.date} · {t.type}</span>
-                                              {t.certificateNumber && (
-                                                <span className="text-[10px] font-mono text-slate-600 tracking-wide">{t.certificateNumber}</span>
-                                              )}
                                             </div>
                                           </td>
                                           <td className="py-2 px-3 text-[11px] text-slate-400 tabular-nums">{t.shares !== undefined ? t.shares.toLocaleString() : "—"}</td>
