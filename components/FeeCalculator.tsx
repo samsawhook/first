@@ -312,27 +312,26 @@ function PortfolioChart({
   const innerH = H - PT - PB;
   const T = Math.max(years, 1);
 
-  // Per-asset median trajectory at each time t (0..years)
-  const medians: { row: PortfolioInputs; values: number[] }[] = rows.map(r => ({
-    row: r,
-    values: Array.from({ length: years + 1 }, (_, t) => r.amount * Math.pow(1 + r.retRate, t)),
-  }));
+  // Per-asset median + lognormal 90% bounds. Lognormal lower is bounded
+  // at 0 by construction, so per-asset values can never go negative.
+  const Z = 1.645; // ~90% two-sided
+  const medians: { row: PortfolioInputs; values: number[]; lows: number[]; highs: number[] }[] = rows.map(r => {
+    const values = Array.from({ length: years + 1 }, (_, t) => r.amount * Math.pow(1 + r.retRate, t));
+    const lows   = values.map((v, t) => v * Math.exp(-Z * r.vol * Math.sqrt(t)));
+    const highs  = values.map((v, t) => v * Math.exp(+Z * r.vol * Math.sqrt(t)));
+    return { row: r, values, lows, highs };
+  });
 
-  // Total median + variance/std (independence approximation)
+  // Total = sum of per-asset values/lows/highs (sum of lognormal bounds).
   const totalMedian = Array.from({ length: years + 1 }, (_, t) =>
     medians.reduce((s, m) => s + m.values[t], 0)
   );
-  const totalStd = Array.from({ length: years + 1 }, (_, t) => {
-    const v = medians.reduce((s, m) => {
-      const median = m.values[t];
-      const sigma  = m.row.vol;
-      return s + median * median * (Math.exp(sigma * sigma * t) - 1);
-    }, 0);
-    return Math.sqrt(Math.max(v, 0));
-  });
-  const Z = 1.645; // ~90% two-sided
-  const totalHigh = totalMedian.map((m, t) => m + Z * totalStd[t]);
-  const totalLow  = totalMedian.map((m, t) => Math.max(0, m - Z * totalStd[t]));
+  const totalLow = Array.from({ length: years + 1 }, (_, t) =>
+    medians.reduce((s, m) => s + m.lows[t], 0)
+  );
+  const totalHigh = Array.from({ length: years + 1 }, (_, t) =>
+    medians.reduce((s, m) => s + m.highs[t], 0)
+  );
 
   // y-axis max
   const allY: number[] =
@@ -893,8 +892,9 @@ export default function FeeCalculator() {
             </div>
             {portfolioView === "variable" && (
               <p className="text-[10px] text-slate-600 mt-2 px-2">
-                Bands shown are ±1.645 × Vol. (90% CI) on terminal portfolio value, assuming asset
-                returns are lognormal and uncorrelated. Per-asset Vol. is editable above.
+                Bands shown are 90% CI on each asset&rsquo;s terminal value (lognormal, summed).
+                Lognormal floors each asset at $0, so the band can&rsquo;t go negative even at high Vol.
+                Per-asset Vol. is editable above.
               </p>
             )}
           </div>
