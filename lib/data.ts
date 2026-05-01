@@ -823,7 +823,9 @@ export const portfolio: PortfolioCompany[] = [
     employees: 12,
     status: "active",
     secondaryAvailable: false,
-    impliedValuation: 0,
+    impliedValuation: 640_000,                   // proposed purchase price (50% of co. for $320k → $640k post-money)
+    customPricePerShare: 6.40,
+    totalShares: 100_000,
     accentColor: "#D97706",
     website: "https://nuecesbrewing.com",
     logoUrl: "/logos/nueces-brewing.png",
@@ -831,6 +833,24 @@ export const portfolio: PortfolioCompany[] = [
     revenueGrowth: 1.4,                          // FY 2024 ($2,584,054) → FY 2025 ($2,619,138)
     ebitda: 331_528,                             // FY 2025 SDE (with $120k officer comp added back in Q4)
     financialsAsOf: "Mar 2026",
+    valuationRefs: [
+      {
+        label: "Revenue Multiple",
+        low: 2_095_310,                          // 2,619,138 × 0.8
+        high: 3_928_707,                         // 2,619,138 × 1.5
+        note: "0.8× – 1.5× FY 2025 revenue ($2.6M)",
+        isEnterpriseValue: true,                 // EV → equity via debt/cash bridge
+        color: "#6366F1",
+      },
+      {
+        label: "SDE Multiple",
+        low: 828_820,                            // 331,528 × 2.5
+        high: 1_326_112,                         // 331,528 × 4.0
+        note: "2.5× – 4.0× FY 2025 SDE ($332K)",
+        isEnterpriseValue: true,
+        color: "#F59E0B",
+      },
+    ],
     balanceSheet: {
       asOf: "March 31, 2026",
       cash: 162_232,                  // sum of bank accounts (incl. ATM, petty cash, Prosperity, Simmons)
