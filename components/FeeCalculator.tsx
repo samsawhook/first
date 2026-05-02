@@ -115,7 +115,7 @@ function calcBuffett(capital: number, years: number, grossMoic: number): Result 
 // =========================================================
 const ASSET_CLASSES = [
   { key: "fund",       label: "Co-Owner Fund",       color: "#A855F7", defaultReturn: 0.20,  defaultVol: 0.25, isFund: true,  targetPct: 0.15 },
-  { key: "sp500",      label: "S&P 500",             color: "#60A5FA", defaultReturn: 0.09,  defaultVol: 0.16, isFund: false, targetPct: 0.35 },
+  { key: "sp500",      label: "Public Equities",     color: "#60A5FA", defaultReturn: 0.09,  defaultVol: 0.16, isFund: false, targetPct: 0.35 },
   { key: "bonds",      label: "Bonds",               color: "#14B8A6", defaultReturn: 0.05,  defaultVol: 0.05, isFund: false, targetPct: 0.10 },
   { key: "realestate", label: "Real Estate",         color: "#34D399", defaultReturn: 0.07,  defaultVol: 0.12, isFund: false, targetPct: 0.15 },
   { key: "privCredit", label: "Private Credit",      color: "#A78BFA", defaultReturn: 0.09,  defaultVol: 0.06, isFund: false, targetPct: 0.10 },
@@ -128,6 +128,46 @@ type AssetKey = typeof ASSET_CLASSES[number]["key"];
 
 // Stacked-area draw order: bottom (most stable) to top (most volatile)
 const STACK_ORDER: AssetKey[] = ["cash", "bonds", "privCredit", "sp500", "realestate", "privEquity", "fund", "crypto"];
+
+// Asset grouping for rebalancing recommendations: Co-Owner Fund and other
+// private equity are treated as a single "Private Equity" exposure so the
+// recommender doesn't suggest splitting an existing fund position into
+// generic PE, or vice versa.
+type GroupKey = "private" | AssetKey;
+const ASSET_GROUP: Partial<Record<AssetKey, GroupKey>> = {
+  fund: "private",
+  privEquity: "private",
+};
+function groupOf(k: AssetKey): GroupKey {
+  return ASSET_GROUP[k] ?? k;
+}
+const GROUP_LABEL: Record<GroupKey, string> = {
+  private: "Private Equity",
+  fund: "Co-Owner Fund",
+  sp500: "Public Equities",
+  bonds: "Bonds",
+  realestate: "Real Estate",
+  privCredit: "Private Credit",
+  privEquity: "Other Priv. Equity",
+  crypto: "Crypto",
+  cash: "Cash / Money Market",
+};
+const GROUP_COLOR: Record<GroupKey, string> = {
+  private: "#A855F7",
+  fund: "#A855F7",
+  sp500: "#60A5FA",
+  bonds: "#14B8A6",
+  realestate: "#34D399",
+  privCredit: "#A78BFA",
+  privEquity: "#F87171",
+  crypto: "#FBBF24",
+  cash: "#94A3B8",
+};
+
+// Illiquid groups — selling these is hard / costly, so the recommender
+// prefers to hold current value and use marginal contributions to balance
+// rather than recommend reductions when these are over-target.
+const ILLIQUID_GROUPS: GroupKey[] = ["private", "realestate"];
 
 // =========================================================
 //   Slider (top-level fee-calc assumptions)
@@ -859,7 +899,6 @@ function RetirementPlanner({
   savingsRate, setSavingsRate,
   raiseRate, setRaiseRate,
   riskTolerance, setRiskTolerance,
-  glidePathEnabled, setGlidePathEnabled,
   planningOpen, setPlanningOpen,
   rows, totalValue, targets, wealthBandLabel,
   yearsToRetire, requiredAtRetire,
@@ -879,7 +918,6 @@ function RetirementPlanner({
   savingsRate: number; setSavingsRate: (n: number) => void;
   raiseRate: number; setRaiseRate: (n: number) => void;
   riskTolerance: RiskTolerance; setRiskTolerance: (v: RiskTolerance) => void;
-  glidePathEnabled: boolean; setGlidePathEnabled: (v: boolean) => void;
   planningOpen: boolean; setPlanningOpen: (v: boolean) => void;
   rows: PortfolioInputs[]; totalValue: number;
   targets: Record<AssetKey, number>;
@@ -936,22 +974,58 @@ function RetirementPlanner({
     );
   }
 
-  // Rebalancing items
-  const items = ASSET_CLASSES.map(a => {
-    const row = rows.find(r => r.key === a.key);
-    const current = row?.amount ?? 0;
-    const currentPct = current / totalValue;
-    const targetPct = targets[a.key] ?? 0;
-    const deltaPct = currentPct - targetPct;
-    const targetDollar = targetPct * totalValue;
-    const deltaDollar = current - targetDollar;
-    return { asset: a, current, currentPct, targetPct, deltaPct, deltaDollar };
-  });
+  // Group assets for rebalancing — Co-Owner Fund + Other Priv. Equity → "Private Equity".
+  // Each group sums its constituent currents and target weights; we surface
+  // group-level recommendations rather than per-asset within a group.
+  type Item = {
+    group: GroupKey;
+    label: string;
+    color: string;
+    current: number;
+    currentPct: number;
+    targetPct: number;
+    deltaPct: number;
+    deltaDollar: number;
+    illiquid: boolean;
+  };
+  const groupItems: Item[] = (() => {
+    const byGroup = new Map<GroupKey, { current: number; targetPct: number }>();
+    for (const a of ASSET_CLASSES) {
+      const g = groupOf(a.key);
+      const row = rows.find(r => r.key === a.key);
+      const cur = row?.amount ?? 0;
+      const tgt = targets[a.key] ?? 0;
+      const acc = byGroup.get(g) ?? { current: 0, targetPct: 0 };
+      acc.current += cur;
+      acc.targetPct += tgt;
+      byGroup.set(g, acc);
+    }
+    return Array.from(byGroup.entries()).map(([g, v]) => {
+      const currentPct = totalValue > 0 ? v.current / totalValue : 0;
+      const deltaPct = currentPct - v.targetPct;
+      const deltaDollar = v.current - v.targetPct * totalValue;
+      return {
+        group: g,
+        label: GROUP_LABEL[g],
+        color: GROUP_COLOR[g],
+        current: v.current,
+        currentPct,
+        targetPct: v.targetPct,
+        deltaPct,
+        deltaDollar,
+        illiquid: ILLIQUID_GROUPS.includes(g),
+      };
+    });
+  })();
 
   const TOL = 0.02;
-  const sorted = [...items].sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
-  const overweight  = sorted.filter(i => i.deltaPct >  TOL).slice(0, 4);
+  const sorted = [...groupItems].sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+  // Underweight: always actionable (add).
   const underweight = sorted.filter(i => i.deltaPct < -TOL).slice(0, 4);
+  // Overweight: only LIQUID groups produce sell recommendations. Illiquid
+  // overweights become "hold" notes — don't sell, just stop adding.
+  const overweight  = sorted.filter(i => i.deltaPct >  TOL && !i.illiquid).slice(0, 4);
+  const holdNotes   = sorted.filter(i => i.deltaPct >  TOL &&  i.illiquid).slice(0, 4);
 
   // Shortfall analysis
   const currGap   = currFV - requiredAtRetire;     // positive = surplus
@@ -968,21 +1042,26 @@ function RetirementPlanner({
   const fmtPP  = (n: number) => `${n >= 0 ? "+" : ""}${(n * 100).toFixed(1)}pp`;
   const fmtSign = (n: number) => `${n >= 0 ? "+" : ""}${fmt(Math.abs(n))}`;
 
-  const Row = ({ kind, item }: { kind: "over" | "under"; item: typeof items[number] }) => (
-    <div className="flex items-baseline gap-2 py-1">
-      <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: item.asset.color }} />
-      <span className="text-xs text-slate-300 font-medium w-32 shrink-0 truncate">{item.asset.label}</span>
-      <span className="text-[10px] text-slate-500 tabular-nums w-24">
-        {fmtPct1(item.currentPct)} <span className="text-slate-700">vs</span> {fmtPct0(item.targetPct)}
-      </span>
-      <span className={`text-[11px] tabular-nums font-semibold flex-1 ${kind === "over" ? "text-rose-400" : "text-emerald-400"}`}>
-        {kind === "over" ? "↓ reduce" : "↑ add"} ~{fmt(Math.abs(item.deltaDollar))}
-      </span>
-      <span className="text-[10px] text-slate-600 tabular-nums">
-        {item.deltaPct > 0 ? "+" : ""}{(item.deltaPct * 100).toFixed(1)} pp
-      </span>
-    </div>
-  );
+  const Row = ({ kind, item }: { kind: "over" | "under" | "hold"; item: Item }) => {
+    const dollar = fmt(Math.abs(item.deltaDollar));
+    const labelColor = kind === "over" ? "text-rose-400" : kind === "under" ? "text-emerald-400" : "text-amber-400";
+    const action = kind === "over" ? "↓ reduce" : kind === "under" ? "↑ add" : "✓ hold (illiquid)";
+    return (
+      <div className="flex items-baseline gap-2 py-1">
+        <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: item.color }} />
+        <span className="text-xs text-slate-300 font-medium w-32 shrink-0 truncate">{item.label}</span>
+        <span className="text-[10px] text-slate-500 tabular-nums w-24">
+          {fmtPct1(item.currentPct)} <span className="text-slate-700">vs</span> {fmtPct0(item.targetPct)}
+        </span>
+        <span className={`text-[11px] tabular-nums font-semibold flex-1 ${labelColor}`}>
+          {action} {kind !== "hold" && <>~{dollar}</>}
+        </span>
+        <span className="text-[10px] text-slate-600 tabular-nums">
+          {item.deltaPct > 0 ? "+" : ""}{(item.deltaPct * 100).toFixed(1)} pp
+        </span>
+      </div>
+    );
+  };
 
   // Plain-English narrative — 2 sentences describing the situation.
   const probColor = currProb >= 0.75 ? "text-emerald-300" : currProb >= 0.5 ? "text-amber-300" : "text-rose-300";
@@ -1217,15 +1296,6 @@ function RetirementPlanner({
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-500 cursor-pointer select-none" title="Glide path: as retirement nears, the target portfolio gradually shifts toward the conservative target for the same wealth band. Linear blend, full conservative at 0 yrs, full chosen-tolerance at 20+ yrs.&#10;&#10;NOTE — Pfau & Kitces (2014) showed that once basic retirement is funded (Social Security covers essentials, P(success) ≥ ~90%), retirees can comfortably RAISE equity exposure post-retirement. The conventional declining-equity glide path actually leaves money on the table in many scenarios. Consider increasing risk tolerance once the goal is comfortably in reach.">
-            <input
-              type="checkbox"
-              checked={glidePathEnabled}
-              onChange={e => setGlidePathEnabled(e.target.checked)}
-              className="w-3 h-3 accent-amber-400 cursor-pointer"
-            />
-            Glide path
-          </label>
           <span className="text-[10px] text-slate-600 ml-auto tabular-nums">
             {yearsToRetire > 0 ? `${yearsToRetire} years to retirement` : "Already retired"}
           </span>
@@ -1322,44 +1392,30 @@ function RetirementPlanner({
       </div>
 
       {/* Rebalancing actions */}
-      {(underweight.length > 0 || overweight.length > 0) && (
+      {(underweight.length > 0 || overweight.length > 0 || holdNotes.length > 0) && (
         <div>
-          <div className="flex items-center justify-between mb-2 gap-2">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500">Rebalance to Target</p>
-            <div className="flex items-center gap-2">
-              {canUndo && (
-                <button
-                  type="button"
-                  onClick={undoRebalance}
-                  className="px-3 py-1.5 text-xs font-medium rounded bg-slate-800/60 text-slate-300 ring-1 ring-slate-700 hover:bg-slate-800 hover:text-slate-100 transition-colors"
-                  title="Restore the allocation as it was before the last apply or reset."
-                >
-                  ↺ Undo
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={applyRebalancing}
-                className="px-3 py-1.5 text-xs font-semibold rounded bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-500/25 hover:text-indigo-200 transition-colors"
-                title="Replace the current asset amounts with target weights × current total. Snapshot is saved so you can Undo."
-              >
-                Apply rebalancing →
-              </button>
-            </div>
-          </div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Rebalance to Target</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
             <div>
-              {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight</p>}
-              {underweight.map(i => <Row key={i.asset.key} kind="under" item={i} />)}
+              {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight · add</p>}
+              {underweight.map(i => <Row key={i.group} kind="under" item={i} />)}
             </div>
             <div>
-              {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight</p>}
-              {overweight.map(i => <Row key={i.asset.key} kind="over" item={i} />)}
+              {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight · trim liquid</p>}
+              {overweight.map(i => <Row key={i.group} kind="over" item={i} />)}
+              {holdNotes.length > 0 && <p className="text-[10px] uppercase tracking-widest text-amber-500/80 mb-1 mt-2">Overweight · illiquid (hold)</p>}
+              {holdNotes.map(i => <Row key={i.group} kind="hold" item={i} />)}
             </div>
           </div>
+          {holdNotes.length > 0 && (
+            <p className="text-[10px] text-slate-600 leading-relaxed pt-2">
+              Illiquid groups (Private Equity, Real Estate) are held at current value rather than reduced.
+              Use future contributions to balance underweights instead of selling these positions.
+            </p>
+          )}
         </div>
       )}
-      {underweight.length === 0 && overweight.length === 0 && (
+      {underweight.length === 0 && overweight.length === 0 && holdNotes.length === 0 && (
         <p className="text-xs text-emerald-400">All positions within ±2pp of target — portfolio is well-balanced.</p>
       )}
 
@@ -1545,12 +1601,6 @@ export default function FeeCalculator() {
   const [salary, setSalary] = usePersistedState("salary", 200_000);
   const [savingsRate, setSavingsRate] = usePersistedState("savingsRate", 0.20);
   const [raiseRate, setRaiseRate] = usePersistedState("raiseRate", 0.03);
-  // Glide path — gradual shift toward conservative as retirement nears.
-  // Default ON (Bogleheads / target-date convention). Note that recent
-  // research (Pfau & Kitces, 2014; "Reducing Retirement Risk with a Rising
-  // Equity Glide Path") suggests retirees may benefit from RAISING equity
-  // post-retirement once basic income is funded — see tooltip on the toggle.
-  const [glidePathEnabled, setGlidePathEnabled] = usePersistedState<boolean>("glidePath", true);
   // Section collapse state
   const [portfolioBodyOpen, setPortfolioBodyOpen] = usePersistedState<boolean>("portfolioBodyOpen", true);
   const [planningOpen, setPlanningOpen] = usePersistedState<boolean>("planningOpen", true);
@@ -1569,7 +1619,6 @@ export default function FeeCalculator() {
     riskTolerance: RiskTolerance;
     contribMode: "flat" | "growing";
     salary: number; savingsRate: number; raiseRate: number;
-    glidePathEnabled: boolean;
     feeStruct: "2/20" | "0/50";
     years: number; grossReturn: number;
   };
@@ -1581,7 +1630,7 @@ export default function FeeCalculator() {
     age, retireAge, retireTarget, retireIncome,
     inflationRate, drawdownRate, annualSavings, riskTolerance,
     contribMode, salary, savingsRate, raiseRate,
-    glidePathEnabled, feeStruct, years, grossReturn,
+    feeStruct, years, grossReturn,
   });
   const loadScenario = (s: Scenario) => {
     setCapital(s.capital);
@@ -1594,7 +1643,7 @@ export default function FeeCalculator() {
     setAnnualSavings(s.annualSavings); setRiskTolerance(s.riskTolerance);
     setContribMode(s.contribMode);
     setSalary(s.salary); setSavingsRate(s.savingsRate); setRaiseRate(s.raiseRate);
-    setGlidePathEnabled(s.glidePathEnabled); setFeeStruct(s.feeStruct);
+    setFeeStruct(s.feeStruct);
     setYears(s.years); setGrossReturn(s.grossReturn);
   };
   const saveScenario = (name: string) => {
@@ -1634,13 +1683,12 @@ export default function FeeCalculator() {
   // Total portfolio value (current)
   const totalValue = allRows.reduce((s, r) => s + r.amount, 0);
 
-  // Wealth-band-aware targets, optionally glide-pathed toward conservative
-  // as retirement nears (linear blend over 0..20 yrs to retirement).
+  // Wealth-band-aware targets, blended toward conservative as retirement nears
+  // (linear over 0..20 yrs to retirement).
   const yearsToRetire = Math.max(0, retireAge - age);
-  const baseTargets = getTargets(totalValue, riskTolerance);
-  const consTargets = getTargets(totalValue, "conservative");
   const targets: Record<AssetKey, number> = (() => {
-    if (!glidePathEnabled) return baseTargets;
+    const baseTargets = getTargets(totalValue, riskTolerance);
+    const consTargets = getTargets(totalValue, "conservative");
     const blend = Math.max(0, Math.min(1, yearsToRetire / 20));
     const out = {} as Record<AssetKey, number>;
     for (const a of ASSET_CLASSES) {
@@ -1690,19 +1738,59 @@ export default function FeeCalculator() {
   const [recentlyChanged, setRecentlyChanged] = useState<boolean>(false);
 
   // Apply target rebalancing — sets capital and portAlloc to match target weights
+  // Smart rebalance: don't sell illiquid (PE / RE) when overweight; hold them
+  // at current value and rebalance the rest. For Private Equity (Co-Owner Fund
+  // + Other Priv. Equity), allocate combined-bucket additions according to the
+  // current Fund:OtherPE ratio; if both are zero, default to all-Fund.
   const applyRebalancing = () => {
     if (totalValue <= 0) return;
     setPreRebalanceSnapshot({ capital, portAlloc: { ...portAlloc } });
-    setCapital(totalValue * targets.fund);
+
+    // 1) Compute combined "private" current and target.
+    const currentByKey: Record<AssetKey, number> = {
+      fund: capital,
+      sp500: portAlloc.sp500, bonds: portAlloc.bonds, realestate: portAlloc.realestate,
+      privCredit: portAlloc.privCredit, privEquity: portAlloc.privEquity,
+      crypto: portAlloc.crypto, cash: portAlloc.cash,
+    };
+    const privateCurrent = currentByKey.fund + currentByKey.privEquity;
+    const privateTarget  = (targets.fund + targets.privEquity) * totalValue;
+    const reTarget       = targets.realestate * totalValue;
+    const reCurrent      = currentByKey.realestate;
+
+    // 2) Lock illiquid at max(current, target) — never sell, but build up to target.
+    const lockedPrivate = Math.max(privateCurrent, privateTarget);
+    const lockedRE      = Math.max(reCurrent,      reTarget);
+
+    // 3) Within the private bucket, split between Fund and Other PE in the
+    //    current ratio (if both zero, all-Fund).
+    let fundNew: number; let pEqNew: number;
+    if (privateCurrent > 0) {
+      const fundShare = currentByKey.fund / privateCurrent;
+      fundNew = lockedPrivate * fundShare;
+      pEqNew  = lockedPrivate * (1 - fundShare);
+    } else {
+      fundNew = lockedPrivate;
+      pEqNew  = 0;
+    }
+
+    // 4) Liquid budget = remaining wealth after locking illiquid.
+    const liquidBudget = Math.max(0, totalValue - lockedPrivate - lockedRE);
+    const liquidTargetSum =
+      (targets.sp500 + targets.bonds + targets.privCredit + targets.crypto + targets.cash);
+    const liquidShare = (k: AssetKey) =>
+      liquidTargetSum > 0 ? (targets[k] || 0) / liquidTargetSum : 0;
+
+    setCapital(fundNew);
     setPortAlloc({
-      fund: 0,
-      sp500:      totalValue * targets.sp500,
-      bonds:      totalValue * targets.bonds,
-      realestate: totalValue * targets.realestate,
-      privCredit: totalValue * targets.privCredit,
-      privEquity: totalValue * targets.privEquity,
-      crypto:     totalValue * targets.crypto,
-      cash:       totalValue * targets.cash,
+      fund:       0,
+      sp500:      liquidBudget * liquidShare("sp500"),
+      bonds:      liquidBudget * liquidShare("bonds"),
+      realestate: lockedRE,
+      privCredit: liquidBudget * liquidShare("privCredit"),
+      privEquity: pEqNew,
+      crypto:     liquidBudget * liquidShare("crypto"),
+      cash:       liquidBudget * liquidShare("cash"),
     });
     setRecentlyChanged(true);
     setTimeout(() => setRecentlyChanged(false), 1400);
@@ -1765,61 +1853,13 @@ export default function FeeCalculator() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-100">Allocator</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Model fee structures, compare LP and GP economics, and stress-test the Co-Owner Fund
-            against the rest of your portfolio. State auto-saves to this browser; use Scenarios to
-            snapshot &amp; switch between named what-ifs.
-          </p>
-        </div>
-
-        {/* Scenarios toolbar */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Save and switch between named portfolio + plan snapshots, persisted in this browser.">
-            Scenarios
-          </span>
-          <select
-            value={activeScenario ?? ""}
-            onChange={e => {
-              const name = e.target.value;
-              if (!name) { setActiveScenario(null); return; }
-              const s = scenarios.find(x => x.name === name);
-              if (s) loadScenario(s);
-              setActiveScenario(name);
-            }}
-            className="text-xs bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-slate-600 max-w-[12rem]"
-          >
-            <option value="">— current —</option>
-            {scenarios.map(s => (
-              <option key={s.name} value={s.name}>{s.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => {
-              const name = window.prompt("Name this scenario:", activeScenario ?? "Base");
-              if (name) saveScenario(name);
-            }}
-            className="text-xs px-2 py-1 rounded bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40 hover:bg-emerald-500/25 transition-colors"
-            title="Save current state under a new (or existing) name."
-          >
-            + Save
-          </button>
-          {activeScenario && (
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm(`Delete scenario "${activeScenario}"?`)) deleteScenario(activeScenario);
-              }}
-              className="text-xs px-2 py-1 rounded text-rose-400 ring-1 ring-rose-700/50 hover:bg-rose-500/10 transition-colors"
-              title="Delete the active scenario."
-            >
-              Delete
-            </button>
-          )}
-        </div>
+      <div>
+        <h1 className="text-xl font-semibold text-slate-100">Allocator</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Model fee structures, compare LP and GP economics, and stress-test the Co-Owner Fund
+          against the rest of your portfolio. State auto-saves to this browser; use Scenarios
+          (under the chart) to snapshot &amp; switch between named what-ifs.
+        </p>
       </div>
 
       {/* Sliders */}
@@ -1992,31 +2032,47 @@ export default function FeeCalculator() {
                       color={a.color}
                       title={isFund ? `Edit gross return; current gross ${(retRate * 100).toFixed(1)}%` : undefined}
                     />
-                    {/* Current % of total + Δ$ vs target (display only; Vol moved to dropdown) */}
+                    {/* Current % of total + Δ$ vs target. For Fund/Other PE,
+                         use the COMBINED Private Equity bucket (Co-Owner Fund +
+                         Other Priv. Equity) so the delta isn't double-counted.
+                         For illiquid (PE / RE) overweights, show ✓ hold rather
+                         than ↓ reduce — we don't recommend selling. */}
                     {(() => {
-                      const targetPct = targets[a.key] ?? 0;
+                      const g = groupOf(a.key);
+                      const isPrivate = g === "private";
+                      const groupCurrent = isPrivate ? capital + portAlloc.privEquity : amount;
+                      const groupTargetPct = isPrivate ? (targets.fund + targets.privEquity) : (targets[a.key] ?? 0);
+                      const groupTargetDollar = groupTargetPct * totalValue;
                       const currPct = totalValue > 0 ? amount / totalValue : 0;
-                      const deltaDollar = totalValue > 0 ? amount - targetPct * totalValue : 0;
-                      const deltaPP = currPct - targetPct;
+                      const groupCurrPct = totalValue > 0 ? groupCurrent / totalValue : 0;
+                      const groupDeltaPP = groupCurrPct - groupTargetPct;
+                      const groupDeltaDollar = totalValue > 0 ? groupCurrent - groupTargetDollar : 0;
                       const ON_TARGET = 0.02;
-                      const isOn = Math.abs(deltaPP) < ON_TARGET;
-                      const isOver = deltaPP >= ON_TARGET;
-                      const dColor = isOn ? "text-slate-600" : isOver ? "text-rose-400" : "text-emerald-400";
-                      const dArrow = isOn ? "✓" : isOver ? "↓" : "↑";
+                      const isOn = Math.abs(groupDeltaPP) < ON_TARGET;
+                      const isOver = groupDeltaPP >= ON_TARGET;
+                      const isIlliquid = ILLIQUID_GROUPS.includes(g);
+                      const showHold = isOver && isIlliquid;
+                      const dColor = isOn ? "text-slate-600" : showHold ? "text-amber-400" : isOver ? "text-rose-400" : "text-emerald-400";
+                      const dArrow = isOn ? "✓" : showHold ? "✓" : isOver ? "↓" : "↑";
+                      // For combined PE, only show the delta on the Fund row.
+                      const showDelta = isPrivate ? (a.key === "fund") : true;
+                      const titleText = isPrivate
+                        ? `Combined Private Equity target ${(groupTargetPct * 100).toFixed(0)}% (${fmt(groupTargetDollar)}). Currently ${(groupCurrPct * 100).toFixed(1)}%.`
+                        : `Target ${(groupTargetPct * 100).toFixed(0)}% (${fmt(groupTargetDollar)}). Currently ${(currPct * 100).toFixed(1)}%.`;
                       return (
                         <>
                           <span className="text-xs tabular-nums w-9 text-right text-slate-400 shrink-0">
                             {totalValue > 0 ? `${(currPct * 100).toFixed(0)}%` : "—"}
                           </span>
-                          {totalValue > 0 && targetPct > 0.005 && (
+                          {totalValue > 0 && groupTargetPct > 0.005 && showDelta && (
                             <span
                               className={`text-[10px] tabular-nums ${dColor} w-12 text-right shrink-0 hidden md:inline-block`}
-                              title={`Target ${(targetPct * 100).toFixed(0)}% (${fmt(targetPct * totalValue)}). Currently ${(currPct * 100).toFixed(1)}%.`}
+                              title={titleText}
                             >
-                              {dArrow} {isOn ? "" : fmt(Math.abs(deltaDollar))}
+                              {dArrow} {isOn || showHold ? (showHold ? "hold" : "") : fmt(Math.abs(groupDeltaDollar))}
                             </span>
                           )}
-                          {totalValue > 0 && targetPct <= 0.005 && (
+                          {totalValue > 0 && (groupTargetPct <= 0.005 || !showDelta) && (
                             <span className="text-[10px] text-slate-600 w-12 text-right shrink-0 hidden md:inline-block">—</span>
                           )}
                         </>
@@ -2130,7 +2186,6 @@ export default function FeeCalculator() {
                 <div className="text-center">
                   <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-1">
                     Optimized · <span className="capitalize text-slate-500">{riskTolerance}</span>
-                    {glidePathEnabled && <span className="text-slate-600 normal-case"> · glide</span>}
                   </p>
                   <AllocationPie
                     rows={ASSET_CLASSES.map(a => ({
@@ -2146,23 +2201,40 @@ export default function FeeCalculator() {
                   />
                 </div>
               </div>
-              {/* Key rebalancing moves */}
+              {/* Key rebalancing moves — grouped by bucket; illiquid overweight = hold */}
               {(() => {
-                const items = ASSET_CLASSES.map(a => {
-                  const row = allRows.find(r => r.key === a.key);
-                  const current = row?.amount ?? 0;
-                  const targetPct = targets[a.key] ?? 0;
-                  const targetDollar = targetPct * totalValue;
-                  return { asset: a, current, targetPct, currPct: totalValue > 0 ? current / totalValue : 0, deltaDollar: current - targetDollar };
+                const byGroup = new Map<GroupKey, { current: number; targetPct: number }>();
+                for (const a of ASSET_CLASSES) {
+                  const g = groupOf(a.key);
+                  const cur = (allRows.find(r => r.key === a.key)?.amount) ?? 0;
+                  const tgt = targets[a.key] ?? 0;
+                  const acc = byGroup.get(g) ?? { current: 0, targetPct: 0 };
+                  acc.current += cur;
+                  acc.targetPct += tgt;
+                  byGroup.set(g, acc);
+                }
+                const items = Array.from(byGroup.entries()).map(([g, v]) => {
+                  const targetDollar = v.targetPct * totalValue;
+                  const currPct = totalValue > 0 ? v.current / totalValue : 0;
+                  return {
+                    group: g,
+                    label: GROUP_LABEL[g],
+                    color: GROUP_COLOR[g],
+                    illiquid: ILLIQUID_GROUPS.includes(g),
+                    current: v.current,
+                    currPct,
+                    targetPct: v.targetPct,
+                    deltaDollar: v.current - targetDollar,
+                  };
                 });
                 const tol = totalValue * 0.02;
                 const moves = items
                   .filter(i => Math.abs(i.deltaDollar) > tol)
                   .sort((a, b) => Math.abs(b.deltaDollar) - Math.abs(a.deltaDollar))
-                  .slice(0, 4);
+                  .slice(0, 5);
                 if (moves.length === 0) return (
                   <p className="text-[11px] text-emerald-400 pt-2 border-t border-slate-800/60 mt-1">
-                    ✓ Allocation is within ±2% of target across all assets.
+                    ✓ Allocation is within ±2% of target across all groups.
                   </p>
                 );
                 return (
@@ -2171,18 +2243,28 @@ export default function FeeCalculator() {
                     <ul className="space-y-1">
                       {moves.map(m => {
                         const isOver = m.deltaDollar > 0;
+                        const showHold = isOver && m.illiquid;
+                        const arrow = showHold ? "✓" : isOver ? "↓" : "↑";
+                        const color = showHold ? "text-amber-400" : isOver ? "text-rose-400" : "text-emerald-400";
                         return (
-                          <li key={m.asset.key} className="text-[11px] flex items-baseline gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5" style={{ background: m.asset.color }} />
-                            <span className={`shrink-0 font-semibold ${isOver ? "text-rose-400" : "text-emerald-400"}`}>
-                              {isOver ? "↓" : "↑"}
-                            </span>
+                          <li key={m.group} className="text-[11px] flex items-baseline gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5" style={{ background: m.color }} />
+                            <span className={`shrink-0 font-semibold ${color}`}>{arrow}</span>
                             <span className="text-slate-300 flex-1">
-                              <span className="tabular-nums font-semibold text-slate-100">{fmt(Math.abs(m.deltaDollar))}</span>{" "}
-                              {isOver ? "out of" : "into"} {m.asset.label}
-                              <span className="text-slate-600 tabular-nums">
-                                {" "}({(m.currPct * 100).toFixed(0)}% → {(m.targetPct * 100).toFixed(0)}%)
-                              </span>
+                              {showHold ? (
+                                <>
+                                  Hold {m.label} (illiquid; {(m.currPct * 100).toFixed(0)}% vs {(m.targetPct * 100).toFixed(0)}% target);
+                                  <span className="text-slate-500"> use future contributions to balance.</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="tabular-nums font-semibold text-slate-100">{fmt(Math.abs(m.deltaDollar))}</span>{" "}
+                                  {isOver ? "out of" : "into"} {m.label}
+                                  <span className="text-slate-600 tabular-nums">
+                                    {" "}({(m.currPct * 100).toFixed(0)}% → {(m.targetPct * 100).toFixed(0)}%)
+                                  </span>
+                                </>
+                              )}
                             </span>
                           </li>
                         );
@@ -2225,11 +2307,76 @@ export default function FeeCalculator() {
             </div>
             {portfolioView === "variable" && (
               <p className="text-[10px] text-slate-600 mt-2 px-2">
-                Spaghetti = 30 sample paths from a 200-path Monte Carlo (lognormal, uncorrelated annual log
-                returns, drift μ = ln(1+r) so path median = (1+r)<sup>t</sup>). Dashed envelope is the empirical
-                5/95 percentile. Per-asset Vol. is editable above.
+                Spaghetti = 60 sample paths from a 400-path Monte Carlo at monthly resolution (lognormal,
+                uncorrelated, drift μ = ln(1+r)/12 so path median = (1+r)<sup>t</sup>). Dashed envelope is
+                the empirical 5/95 percentile of the simulated total. Per-asset Vol. is editable above.
               </p>
             )}
+
+            {/* Action toolbar — rebalancing + scenarios, attached to the chart */}
+            <div className="flex flex-wrap items-center gap-2 mt-4 px-2 pt-3 border-t border-slate-800/60">
+              <button
+                type="button"
+                onClick={applyRebalancing}
+                className="px-3 py-1.5 text-xs font-semibold rounded bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-500/25 hover:text-indigo-200 transition-colors"
+                title="Rebalance liquid assets to the target allocation. Illiquid groups (Private Equity, Real Estate) are held at current value rather than reduced. Snapshot saved so you can Undo."
+              >
+                Apply rebalancing →
+              </button>
+              {preRebalanceSnapshot !== null && (
+                <button
+                  type="button"
+                  onClick={undoRebalance}
+                  className="px-3 py-1.5 text-xs font-medium rounded bg-slate-800/60 text-slate-300 ring-1 ring-slate-700 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+                  title="Restore the allocation as it was before the last apply or reset."
+                >
+                  ↺ Undo
+                </button>
+              )}
+              <span className="hidden sm:block w-px h-6 bg-slate-800 mx-1" />
+              <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Save and switch between named portfolio + plan snapshots, persisted in this browser.">
+                Scenarios
+              </span>
+              <select
+                value={activeScenario ?? ""}
+                onChange={e => {
+                  const name = e.target.value;
+                  if (!name) { setActiveScenario(null); return; }
+                  const s = scenarios.find(x => x.name === name);
+                  if (s) loadScenario(s);
+                  setActiveScenario(name);
+                }}
+                className="text-xs bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-slate-600 max-w-[12rem]"
+              >
+                <option value="">— current —</option>
+                {scenarios.map(s => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  const name = window.prompt("Name this scenario:", activeScenario ?? "Base");
+                  if (name) saveScenario(name);
+                }}
+                className="text-xs px-2 py-1 rounded bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40 hover:bg-emerald-500/25 transition-colors"
+                title="Save current state under a new (or existing) name."
+              >
+                + Save
+              </button>
+              {activeScenario && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Delete scenario "${activeScenario}"?`)) deleteScenario(activeScenario);
+                  }}
+                  className="text-xs px-2 py-1 rounded text-rose-400 ring-1 ring-rose-700/50 hover:bg-rose-500/10 transition-colors"
+                  title="Delete the active scenario."
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           </div>
         </div>
         )}
@@ -2249,7 +2396,6 @@ export default function FeeCalculator() {
             savingsRate={savingsRate} setSavingsRate={setSavingsRate}
             raiseRate={raiseRate} setRaiseRate={setRaiseRate}
             riskTolerance={riskTolerance} setRiskTolerance={setRiskTolerance}
-            glidePathEnabled={glidePathEnabled} setGlidePathEnabled={setGlidePathEnabled}
             planningOpen={planningOpen} setPlanningOpen={setPlanningOpen}
             rows={allRows} totalValue={totalValue} targets={targets}
             wealthBandLabel={wealthBandLabel}
