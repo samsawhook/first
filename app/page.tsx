@@ -38,7 +38,7 @@ import {
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction, DebtPosition } from "@/lib/types";
 
-const portfolio = basePortfolio;
+const portfolio = withAudilyAccrued(basePortfolio);
 const fund = baseFund;
 const LP_TOTAL_UNITS = BASE_LP_TOTAL_UNITS;
 const FUND_LEVERAGE = BASE_FUND_LEVERAGE;
@@ -80,13 +80,28 @@ const SCENARIOB_MB_SHARES        = 4_804_351;
 type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "letters" | "investor" | "fees";
 
 // Audily Series A Preferred — dividends began accruing 03/18/2026.
-// Accrued amount is informational only and is NOT marked into NAV.
+// Accrued amount is computed dynamically and folded into the position's
+// currentValue so it flows through NAV, donut allocations, and convertible
+// breakdowns consistently.
 const AUDILY_PREFERRED_ACCRUAL_START = new Date("2026-03-18T00:00:00Z");
-function audilyPreferredAccrued(p: typeof basePortfolio): number {
-  const pref = p.find(c => c.id === "audily")?.debtPositions?.find(d => d.id === "audily-pref-a");
+function audilyPreferredAccrued(): number {
+  const pref = basePortfolio.find(c => c.id === "audily")?.debtPositions?.find(d => d.id === "audily-pref-a");
   if (!pref?.interestRate) return 0;
   const days = Math.max(0, (Date.now() - AUDILY_PREFERRED_ACCRUAL_START.getTime()) / 86_400_000);
   return pref.principal * (pref.interestRate / 100) * (days / 365);
+}
+function withAudilyAccrued<T extends typeof basePortfolio[number]>(p: T[]): T[] {
+  const accrued = audilyPreferredAccrued();
+  if (accrued <= 0) return p;
+  return p.map(c => {
+    if (c.id !== "audily") return c;
+    return {
+      ...c,
+      debtPositions: (c.debtPositions ?? []).map(d =>
+        d.id === "audily-pref-a" ? { ...d, currentValue: d.currentValue + accrued } : d
+      ),
+    };
+  });
 }
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -524,10 +539,10 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
                     {(() => {
-                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      const accrued = audilyPreferredAccrued() * lpMultiplier;
                       return accrued > 0 ? (
-                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
-                          + {fmt(accrued)} accrued (off-NAV)
+                        <p className="text-[9px] text-slate-600 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 at 13.4% — included in NAV.">
+                          incl. {fmt(accrued)} accrued
                         </p>
                       ) : null;
                     })()}
@@ -1542,7 +1557,7 @@ export default function Dashboard() {
 
         {!activeCompany && activeTab === "proposal" && (() => {
           // ── Proposal scenario shadowing ──────────────────────────────────────
-          const portfolio = basePortfolio.map(c => {
+          const portfolio = withAudilyAccrued(basePortfolio).map(c => {
             if (c.id === "audily") {
               return { ...c, debtPositions: [...(c.debtPositions ?? []), PROPOSAL_AUDILY_PREFERRED] };
             }
@@ -1709,10 +1724,10 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
                     {(() => {
-                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      const accrued = audilyPreferredAccrued() * lpMultiplier;
                       return accrued > 0 ? (
-                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
-                          + {fmt(accrued)} accrued (off-NAV)
+                        <p className="text-[9px] text-slate-600 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 at 13.4% — included in NAV.">
+                          incl. {fmt(accrued)} accrued
                         </p>
                       ) : null;
                     })()}
@@ -2739,7 +2754,7 @@ export default function Dashboard() {
           const pigeonAmt   = Math.round(SCENARIO_PIGEON_SHARES   * pigeonPps);
           const falconerAmt = Math.round(SCENARIO_FALCONER_SHARES * falconerPps);
           const scenarioEquityBasis = mbAmt + audilyAmt + sbr2thAmt + pigeonAmt + falconerAmt + 300_000;
-          const portfolio = basePortfolio.map(c => {
+          const portfolio = withAudilyAccrued(basePortfolio).map(c => {
             if (c.id === "audily") {
               return {
                 ...c,
@@ -2978,10 +2993,10 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
                     {(() => {
-                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      const accrued = audilyPreferredAccrued() * lpMultiplier;
                       return accrued > 0 ? (
-                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
-                          + {fmt(accrued)} accrued (off-NAV)
+                        <p className="text-[9px] text-slate-600 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 at 13.4% — included in NAV.">
+                          incl. {fmt(accrued)} accrued
                         </p>
                       ) : null;
                     })()}
@@ -4006,7 +4021,7 @@ export default function Dashboard() {
           const sbr2thAmt   = Math.round(SCENARIOB_SBR2TH_SHARES   * sbr2thPps);
           const mbAmt       = Math.round(SCENARIOB_MB_SHARES        * mbPps);
           const scenarioBEquityBasis = pigeonAmt + falconerAmt + sbr2thAmt + mbAmt;
-          const portfolio = basePortfolio.map(c => {
+          const portfolio = withAudilyAccrued(basePortfolio).map(c => {
             if (c.id === "audily") {
               return { ...c, debtPositions: [...(c.debtPositions ?? []), PROPOSAL_AUDILY_PREFERRED] };
             }
@@ -4206,10 +4221,10 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
                     {(() => {
-                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      const accrued = audilyPreferredAccrued() * lpMultiplier;
                       return accrued > 0 ? (
-                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
-                          + {fmt(accrued)} accrued (off-NAV)
+                        <p className="text-[9px] text-slate-600 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 at 13.4% — included in NAV.">
+                          incl. {fmt(accrued)} accrued
                         </p>
                       ) : null;
                     })()}
