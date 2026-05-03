@@ -498,8 +498,8 @@ export const portfolio: PortfolioCompany[] = [
     debtPositions: [
       { id: "audily-pref-a", date: "Dec 2024", instrument: "Preferred", principal: 115_000,
         interestRate: 13.4,
-        status: "Accruing", currentValue: 134_700,
-        notes: "1,150 Series A Preferred shares at $100 face. 13.4% cumulative yield beginning 12/31/24. Converts to Class A Common at 1:1,000 per preferred share (1,150,000 common shares if fully converted)." },
+        status: "Accruing", currentValue: 115_000,
+        notes: "1,150 Series A Preferred shares at $100 face. 13.4% cumulative yield beginning 03/18/26. Converts to Class A Common at 1:1,000 per preferred share (1,150,000 common shares if fully converted). Accrued dividends are tracked separately and not marked into NAV." },
       { id: "audily-note-1", date: "Mar 2025", instrument: "Term Loan", principal: 8_000,
         status: "Current", currentValue: 8_000,
         notes: "1-year amortizing note." },

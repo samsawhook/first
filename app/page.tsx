@@ -79,6 +79,16 @@ const SCENARIOB_MB_SHARES        = 4_804_351;
 
 type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "letters" | "investor" | "fees";
 
+// Audily Series A Preferred — dividends began accruing 03/18/2026.
+// Accrued amount is informational only and is NOT marked into NAV.
+const AUDILY_PREFERRED_ACCRUAL_START = new Date("2026-03-18T00:00:00Z");
+function audilyPreferredAccrued(p: typeof basePortfolio): number {
+  const pref = p.find(c => c.id === "audily")?.debtPositions?.find(d => d.id === "audily-pref-a");
+  if (!pref?.interestRate) return 0;
+  const days = Math.max(0, (Date.now() - AUDILY_PREFERRED_ACCRUAL_START.getTime()) / 86_400_000);
+  return pref.principal * (pref.interestRate / 100) * (days / 365);
+}
+
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
@@ -513,6 +523,14 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossTotal * lpMultiplier)}</p>
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
+                    {(() => {
+                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      return accrued > 0 ? (
+                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
+                          + {fmt(accrued)} accrued (off-NAV)
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
@@ -1690,6 +1708,14 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossTotal * lpMultiplier)}</p>
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
+                    {(() => {
+                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      return accrued > 0 ? (
+                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
+                          + {fmt(accrued)} accrued (off-NAV)
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
@@ -2951,6 +2977,14 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossTotal * lpMultiplier)}</p>
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
+                    {(() => {
+                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      return accrued > 0 ? (
+                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
+                          + {fmt(accrued)} accrued (off-NAV)
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
@@ -4171,6 +4205,14 @@ export default function Dashboard() {
                     <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossTotal * lpMultiplier)}</p>
                     <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(FUND_LEVERAGE * lpMultiplier)}</p>
                     {isLpView && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(netTotal)}</p>}
+                    {(() => {
+                      const accrued = audilyPreferredAccrued(portfolio) * lpMultiplier;
+                      return accrued > 0 ? (
+                        <p className="text-[9px] text-amber-500/70 tabular-nums mt-0.5" title="Audily Series A Preferred dividends accrued since 03/18/26 — informational, excluded from NAV.">
+                          + {fmt(accrued)} accrued (off-NAV)
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   {/* LP Basis — fraction prominent in My Share mode */}
                   <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
@@ -5236,17 +5278,43 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="border-t border-[#1E2D3D] mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
-              This portal is for informational purposes only and is intended solely for accredited investors.
-              Nothing here constitutes an offer to sell or a solicitation to buy any security.
-              Past performance is not indicative of future results. nth Venture Inc. is not a
-              registered broker-dealer or investment adviser.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+          <div className="rounded-lg border border-[#1E2D3D] bg-[#080E1A] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1.5">
+              Important Disclosures
             </p>
-            <p className="text-xs text-slate-600 whitespace-nowrap">
-              © 2026 nth Venture Inc. · Confidential
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              <span className="font-semibold text-slate-400">No investment advice.</span>{" "}
+              The information presented in this portal is provided solely for informational and
+              illustrative purposes and does not constitute investment, legal, tax, or accounting
+              advice or any recommendation to buy, sell, or hold any security or to pursue any
+              investment strategy.{" "}
+              <span className="font-semibold text-slate-400">Not an offer.</span>{" "}
+              Nothing herein constitutes an offer to sell or a solicitation of an offer to buy any
+              securities or interests; any such offer or solicitation will be made only by means of
+              definitive offering documents to qualified investors and only in jurisdictions where
+              permitted.{" "}
+              <span className="font-semibold text-slate-400">Estimates and forward-looking statements.</span>{" "}
+              Valuations, projections, scenario analyses, Monte Carlo simulations, allocation
+              targets, and similar outputs are estimates based on assumptions that may prove
+              incorrect; actual results may differ materially. Past performance is not indicative of
+              future results. Private investments are illiquid, speculative, and may result in the
+              loss of all invested capital.{" "}
+              <span className="font-semibold text-slate-400">Beta software.</span>{" "}
+              This portal is a beta tool under active development and may contain calculation errors,
+              stale data, or display defects; figures are not audited and should not be relied upon
+              for financial, regulatory, or tax reporting. Users should independently verify any
+              information before acting on it and should consult their own qualified advisors.{" "}
+              <span className="font-semibold text-slate-400">Confidentiality.</span>{" "}
+              All content is confidential and intended only for the named recipient. nth Venture Inc.
+              is not a registered broker-dealer or investment adviser.
             </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <p className="text-[10px] text-slate-600">
+              © 2026 nth Venture Inc. · For accredited investors only · All rights reserved
+            </p>
+            <p className="text-[10px] text-slate-600 whitespace-nowrap">Confidential</p>
           </div>
         </div>
       </footer>
