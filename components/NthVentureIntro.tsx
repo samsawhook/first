@@ -278,6 +278,71 @@ function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: num
   );
 }
 
+// ── Advantages ───────────────────────────────────────────────────────────────
+const ADVANTAGES = [
+  {
+    num: "01",
+    headline: "Ownership is positive-sum.",
+    stat: "$1.7B distributed to frontline workers",
+    statSub: "Ownership Works coalition · 90+ companies",
+    body: "When KKR implemented broad employee ownership at Gardner Denver, factory workers averaged $175,000 each at exit — not because of charity, but because aligned incentives drive better businesses. Ownership Works, the nonprofit co-founded by KKR's Pete Stavros, has replicated this across industries. Employee-owned firms show higher productivity, lower turnover, and measurably superior financial performance. nth Venture operationalizes this from day one of every company we build.",
+  },
+  {
+    num: "02",
+    headline: "We already own the platforms.",
+    stat: "6 operating companies, no cold-start risk",
+    statSub: "Built and launched from scratch since 2021",
+    body: "Most funds raise capital and then hunt for deals. We built our portfolio companies ourselves, which means we understand their unit economics, their talent pools, and their growth constraints from the inside. Each platform is a natural magnet for bolt-on acquisitions — adjacent services, shared overhead, and customers who want more than we currently offer. We source deals others never see because we are already operating in the space.",
+  },
+  {
+    num: "03",
+    headline: "Small by design.",
+    stat: "3–5× earnings at acquisition",
+    statSub: "vs. 15–20× in public markets",
+    body: "The small business market is chronically undervalued. A company generating $500K in annual earnings might trade at 4× in a private sale — the same cash flow commands 15–20× in public markets or large-cap PE. By staying deliberately micro-cap, we access this arbitrage before institutional money can follow. Our overhead is minimal by design: no lavish offices, no army of analysts, no management fees to justify. Capital goes to work, not to us.",
+  },
+  {
+    num: "04",
+    headline: "Audit rigor from the nation's top institution.",
+    stat: "U.S. GAO · Comptroller General of the United States",
+    statSub: "Supreme audit authority — audits SEC, DoD, Treasury",
+    body: "The Government Accountability Office is the highest audit institution in the United States. Its principal trained there — conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That discipline means we don't skim offering documents or rely on management projections. We reconstruct cash flows, stress-test assumptions, and look for what sellers hope you won't find. Every investment is audited before it is made.",
+  },
+];
+
+function AdvantagesSection() {
+  return (
+    <section style={{ background: "#0f0f0e", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <FadeIn>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Structural advantages</p>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px", color: "#fdfcfa" }}>Why this approach works.</h2>
+          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#666", maxWidth: 580, marginBottom: 56, fontWeight: 300 }}>
+            These are not talking points. They are structural edges — built into how we operate, whom we hire, and what we buy.
+          </p>
+        </FadeIn>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))", gap: 2 }}>
+          {ADVANTAGES.map((a, i) => (
+            <FadeIn key={i} delay={i * 0.08}>
+              <div style={{ padding: "32px 36px", borderTop: `2px solid ${i < 2 ? "#c45a2d" : "#333"}`, background: i % 2 === 0 ? "#141412" : "#111110" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 18 }}>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d" }}>{a.num}</span>
+                  <h3 style={{ fontSize: 20, fontWeight: 400, color: "#fdfcfa", margin: 0, letterSpacing: -0.4, lineHeight: 1.3 }}>{a.headline}</h3>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 500, color: "#fdfcfa", margin: "0 0 3px" }}>{a.stat}</p>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#555", margin: 0 }}>{a.statSub}</p>
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.75, color: "#888", margin: 0 }}>{a.body}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Waterfall ─────────────────────────────────────────────────────────────────
 function WaterfallDiagram() {
   const steps = [
@@ -433,6 +498,8 @@ export default function NthVentureIntro() {
           ))}
         </div>
       </section>
+
+      <AdvantagesSection />
 
       {/* The Fund */}
       <section id="fund" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
