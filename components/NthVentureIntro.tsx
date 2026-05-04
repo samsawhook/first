@@ -655,9 +655,7 @@ export default function NthVentureIntro() {
                   { label: "Broad-Based Ownership at Scale", src: "Ownership Works", href: "https://ownershipworks.org" },
                   { label: "Employee Ownership Facts & Research", src: "National Center for Employee Ownership", href: "https://www.nceo.org" },
                   { label: "Equity Sharing & Worker Performance", src: "UPenn / Wharton", href: "https://knowledge.wharton.upenn.edu" },
-                  { label: "I muse about this often", src: "The Wrap with Sam — Substack", href: "https://sawhook.substack.com" },
                   { label: "Heart and soul of what we're doing", src: "nthventure.com", href: "https://www.nthventure.com" },
-                  { label: "Verify we do the paperwork correctly", src: "SEC EDGAR — nth Venture & Co-Owner Fund", href: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461" },
                 ].map((item, i) => (
                   <a
                     key={i}
