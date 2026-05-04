@@ -1603,7 +1603,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-amber-400">•</span>
-                  <span>Purchase <span className="text-white font-medium">50% of Nueces Brewing</span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span>
+                  <span>Purchase <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-amber-500/50 hover:decoration-amber-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-amber-400">•</span>
@@ -2848,7 +2848,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-amber-400">•</span>
-                  <span>Purchase <span className="text-white font-medium">50% of Nueces Brewing</span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span>
+                  <span>Purchase <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-amber-500/50 hover:decoration-amber-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-amber-400">•</span>
@@ -4101,7 +4101,7 @@ export default function Dashboard() {
               <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-3">Scenario B — Proposed Transactions</p>
               <ul className="space-y-2 text-sm text-slate-300">
                 <li className="flex items-start gap-2"><span className="mt-0.5 text-amber-400">•</span><span>Take in <span className="text-white font-medium">${(SCENARIOB_LP_ADD / 1000).toFixed(0)}k</span> of new LP capital (includes all positions below at default values)</span></li>
-                <li className="flex items-start gap-2"><span className="mt-0.5 text-amber-400">•</span><span>Purchase <span className="text-white font-medium">50% of Nueces Brewing</span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span></li>
+                <li className="flex items-start gap-2"><span className="mt-0.5 text-amber-400">•</span><span>Purchase <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-amber-500/50 hover:decoration-amber-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">$320k</span> (<span className="text-white font-medium">$120k seller note</span>)</span></li>
                 <li className="flex items-start gap-2"><span className="mt-0.5 text-amber-400">•</span><span>Purchase <span className="text-white font-medium">$150k</span> of <span className="text-white font-medium">Audily Preferred</span></span></li>
                 <li className="flex items-start gap-2"><span className="mt-0.5 text-amber-400">•</span><span>Purchase <span className="text-white font-medium">{SCENARIOB_PIGEON_SHARES.toLocaleString()}</span> shares of <span className="text-white font-medium">Pigeon Service</span> for <span className="text-white font-medium">${pigeonAmt.toLocaleString()}</span></span></li>
                 <li className="flex items-start gap-2"><span className="mt-0.5 text-amber-400">•</span><span>Purchase <span className="text-white font-medium">{SCENARIOB_FALCONER_SHARES.toLocaleString()}</span> shares of <span className="text-white font-medium">Falconer</span> for <span className="text-white font-medium">${falconerAmt.toLocaleString()}</span></span></li>
