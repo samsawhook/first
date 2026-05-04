@@ -477,25 +477,45 @@ function spreadYLabels(
   clampBottom: number,
 ): number[] {
   const n = naturalYs.length;
-  if (n <= 1) return [...naturalYs];
-  // Work on sorted (index, position) pairs
-  const items = naturalYs.map((y, i) => ({ i, y })).sort((a, b) => a.y - b.y);
-  for (let pass = 0; pass < 200; pass++) {
+  if (n <= 1) return [Math.max(clampTop, Math.min(clampBottom, naturalYs[0] ?? 0))];
+
+  // Clamp starting positions to bounds, preserve sorted order
+  const items = naturalYs
+    .map((y, i) => ({ i, y: Math.max(clampTop, Math.min(clampBottom, y)) }))
+    .sort((a, b) => a.y - b.y);
+
+  // Scale gap down if there isn't enough room for all labels
+  const available = clampBottom - clampTop;
+  const gap = Math.min(minGap, available / Math.max(n - 1, 1));
+
+  // Alternating forward/backward passes — boundaries enforced each step so
+  // clamping never collapses labels that were just spread apart.
+  for (let pass = 0; pass < 300; pass++) {
     let moved = false;
+
+    // Forward: each label must be at least gap below the one above it
     for (let j = 1; j < n; j++) {
-      const gap = items[j].y - items[j - 1].y;
-      if (gap < minGap) {
-        const push = (minGap - gap) / 2;
-        items[j - 1].y -= push;
-        items[j].y     += push;
+      const need = items[j - 1].y + gap;
+      if (items[j].y < need) {
+        items[j].y = Math.min(clampBottom, need);
         moved = true;
       }
     }
+
+    // Backward: each label must be at least gap above the one below it
+    for (let j = n - 2; j >= 0; j--) {
+      const need = items[j + 1].y - gap;
+      if (items[j].y > need) {
+        items[j].y = Math.max(clampTop, need);
+        moved = true;
+      }
+    }
+
     if (!moved) break;
   }
-  // Clamp and map back to original indices
+
   const out = new Array<number>(n);
-  for (const item of items) out[item.i] = Math.max(clampTop, Math.min(clampBottom, item.y));
+  for (const item of items) out[item.i] = item.y;
   return out;
 }
 
@@ -705,7 +725,7 @@ function PortfolioChart({
             if (idealMedianDet)
               labels.push({ dataY: yS(idealMedianDet[years]), text: `ideal ${fmt(idealMedianDet[years])}`, fill: "#F59E0B", fw: "700", fs: 9, dotR: 4, opacity: 1 });
             const naturalYs = labels.map(l => l.dataY - 10);
-            const adjYs = spreadYLabels(naturalYs, 13, PT + 4, PT + innerH - 4);
+            const adjYs = spreadYLabels(naturalYs, 14, PT + 4, PT + innerH - 4);
             return labels.map((l, i) => (
               <g key={i}>
                 <circle cx={xE} cy={l.dataY} r={l.dotR} fill={l.fill} fillOpacity={l.opacity} />
@@ -758,7 +778,7 @@ function PortfolioChart({
                 ? [{ dataY: yS(idealMedianMonthly[months]), naturalY: yS(idealMedianMonthly[months]) - 10, text: `ideal ${fmt(idealMedianMonthly[months])}`, fill: "#F59E0B", fw: "700", fs: 9, dotR: 0, opacity: 1 }]
                 : []),
             ];
-            const adjYs = spreadYLabels(labels.map(l => l.naturalY), 12, PT + 4, PT + innerH - 4);
+            const adjYs = spreadYLabels(labels.map(l => l.naturalY), 14, PT + 4, PT + innerH - 4);
             return labels.map((l, i) => (
               <g key={i}>
                 {l.dotR > 0 && <circle cx={xE} cy={l.dataY} r={l.dotR} fill={l.fill} fillOpacity={l.opacity} />}
