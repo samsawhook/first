@@ -1805,16 +1805,6 @@ export default function FeeCalculator() {
   // Total portfolio value (current)
   const totalValue = allRows.reduce((s, r) => s + r.amount, 0);
 
-  // Target-allocation rows for the ideal overlay (same total value, target weights)
-  const idealRows: PortfolioInputs[] = ASSET_CLASSES.map(a => ({
-    key: a.key,
-    label: a.label,
-    color: a.color,
-    amount: (targets[a.key] ?? 0) * totalValue,
-    retRate: allReturnsMap[a.key] ?? a.defaultReturn,
-    vol: allVolsMap[a.key] ?? a.defaultVol,
-  })).filter(r => r.amount > 0);
-
   // Wealth-band-aware targets, blended toward conservative as retirement nears
   // (linear over 0..20 yrs to retirement).
   const yearsToRetire = Math.max(0, retireAge - age);
@@ -1855,6 +1845,16 @@ export default function FeeCalculator() {
     privCredit: portVol.privCredit, privEquity: portVol.privEquity,
     crypto: portVol.crypto, cash: portVol.cash,
   };
+
+  // Target-allocation rows for the ideal overlay (same total value, target weights)
+  const idealRows: PortfolioInputs[] = ASSET_CLASSES.map(a => ({
+    key: a.key,
+    label: a.label,
+    color: a.color,
+    amount: (targets[a.key] ?? 0) * totalValue,
+    retRate: allReturnsMap[a.key] ?? a.defaultReturn,
+    vol: allVolsMap[a.key] ?? a.defaultVol,
+  })).filter(r => r.amount > 0);
 
   // Current weights (by amount)
   const currentWeights: Record<string, number> = totalValue > 0
@@ -2097,6 +2097,31 @@ export default function FeeCalculator() {
               >
                 Variable (90% CI)
               </button>
+            </div>
+            {/* Additional savings toggle */}
+            <div className="inline-flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/60 px-2 py-1">
+              <button
+                type="button"
+                onClick={() => setShowSavings(s => !s)}
+                className={`text-xs font-medium transition-colors ${showSavings ? "text-amber-400" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                + Savings
+              </button>
+              {showSavings && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-slate-600">$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={99999}
+                    step={100}
+                    value={additionalMonthly}
+                    onChange={e => setAdditionalMonthly(Math.max(0, Number(e.target.value)))}
+                    className="w-16 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-100 tabular-nums focus:border-amber-500 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-slate-600">/mo</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2433,6 +2458,8 @@ export default function FeeCalculator() {
                 years={years}
                 rows={activeRows}
                 accentColor={portfolioView === "variable" ? "#22D3EE" : selectedColor}
+                idealRows={idealRows}
+                monthlySavings={showSavings ? additionalMonthly : 0}
               />
             )}
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 px-2">
@@ -2454,7 +2481,8 @@ export default function FeeCalculator() {
               <p className="text-[10px] text-slate-600 mt-2 px-2">
                 Spaghetti = 60 sample paths from a 400-path Monte Carlo at monthly resolution (lognormal,
                 uncorrelated, drift μ = ln(1+r)/12 so path median = (1+r)<sup>t</sup>). Dashed envelope is
-                the empirical 5/95 percentile of the simulated total. Per-asset Vol. is editable above.
+                the empirical 5/95 percentile of the simulated total. Amber dashed line = ideal allocation median.
+                Per-asset Vol. is editable above.
               </p>
             )}
 
