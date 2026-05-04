@@ -1213,13 +1213,13 @@ export default function NthVentureIntro() {
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 16 }}>
             {[
-              { released: "2025", covers: "2024", title: "Third Annual Letter", quote: "Most death does not come in the form of a grand, fiery defeat. It comes from slow erosion, cynicism, and mediocrity.", highlight: "Co-Owner Fund LP announced", slug: "Third-Annual-Letter" },
-              { released: "2024", covers: "2023", title: "Second Annual Letter", quote: "I simply put my naked, stinking foot forward and say this is what I am doing.", highlight: "Written from deployment in Poland", slug: "Second-Annual-Letter" },
-              { released: "2023", covers: "2022", title: "First Annual Letter", quote: "Noblesse oblige — if you have the ability to act with honor and generosity, you incur the obligation to do so.", highlight: "$10K start, $500K in first-year revenue", slug: "2022-Annual-Letter" },
+              { released: "2025", covers: "2024", title: "Third Annual Letter", quote: "Most death does not come in the form of a grand, fiery defeat. It comes from slow erosion, cynicism, and mediocrity.", highlight: "Co-Owner Fund LP announced", slug: "https://static1.squarespace.com/static/64d98f1d96a44455a5eab9a8/t/6824eccd00ce1a0fc02ad947/1747250381663/nth+Venture+Third+Annual+Letter.pdf" },
+              { released: "2024", covers: "2023", title: "Second Annual Letter", quote: "I simply put my naked, stinking foot forward and say this is what I am doing.", highlight: "Written from deployment in Poland", slug: "https://static1.squarespace.com/static/64d98f1d96a44455a5eab9a8/t/65e5f6dcd0b76e6d7d861b16/1709569756594/nth+Venture+Second+Annual+Letter.pdf" },
+              { released: "2023", covers: "2022", title: "First Annual Letter", quote: "Noblesse oblige — if you have the ability to act with honor and generosity, you incur the obligation to do so.", highlight: "$10K start, $500K in first-year revenue", slug: "https://static1.squarespace.com/static/64d98f1d96a44455a5eab9a8/t/64d99aef0051ed7fd7dfd27a/1691982575632/nth+Venture+2022+Annual+Letter.pdf" },
             ].map((letter, i) => (
               <SlideIn key={i} delay={i * 0.08} from={i % 2 === 0 ? "left" : "right"}>
                 <a
-                  href={`https://www.nthventure.com/s/nth-Venture-${letter.slug}.pdf`}
+                  href={letter.slug}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ textDecoration: "none" }}
