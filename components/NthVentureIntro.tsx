@@ -1,8 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, RefObject } from "react";
 
-const SECTIONS = ["mission", "track", "fund", "approach", "story", "team", "letters", "contact"] as const;
-
 function useInView(ref: RefObject<HTMLDivElement | null>, threshold = 0.15): boolean {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -75,6 +73,20 @@ function useCountUp(target: number, enabled: boolean, duration = 1.2): number {
   return val;
 }
 
+// ── nth Venture logo (matches portal, inverted for light bg) ──────────────────
+function NthLogo({ size = 44 }: { size?: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
+      alt="nth Venture"
+      width={size}
+      height={size}
+      style={{ display: "block", filter: "brightness(0)", objectFit: "contain", flexShrink: 0 }}
+    />
+  );
+}
+
 // ── Annual revenue chart ──────────────────────────────────────────────────────
 const revenueData = [
   { label: "Year 1", total: 5 },
@@ -91,11 +103,10 @@ function RevenueChart() {
 
   return (
     <div ref={ref} style={{ padding: "2rem 0" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(24px, 6vw, 72px)", height: 240, justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(16px, 5vw, 64px)", height: 240, justifyContent: "center" }}>
         {revenueData.map((d, i) => {
           const hPct = d.total / max;
           const active = hovered === i;
-          const barH = hPct * 190;
           const delay = i * 0.09;
           return (
             <div
@@ -106,17 +117,16 @@ function RevenueChart() {
             >
               <span style={{
                 fontFamily: "'DM Mono', monospace",
-                fontSize: 13,
+                fontSize: "clamp(11px, 2vw, 13px)",
                 fontWeight: 500,
                 color: active ? "#c45a2d" : "#888",
                 transition: "color 0.2s",
-                minHeight: 18,
               }}>
                 ${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}
               </span>
               <div style={{
-                width: "clamp(44px, 10vw, 72px)",
-                height: visible ? `${barH}px` : "0px",
+                width: "clamp(36px, 9vw, 72px)",
+                height: visible ? `${hPct * 180}px` : "0px",
                 background: active
                   ? "linear-gradient(180deg, #c45a2d, #8b3a1a)"
                   : "linear-gradient(180deg, #2a2a2a, #1a1a1a)",
@@ -125,7 +135,7 @@ function RevenueChart() {
                 transform: active ? "scaleX(1.06)" : "scaleX(1)",
                 transformOrigin: "bottom",
               }} />
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#666", letterSpacing: 0.5 }}>{d.label}</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(10px, 2vw, 12px)", color: "#666", letterSpacing: 0.5 }}>{d.label}</span>
             </div>
           );
         })}
@@ -177,19 +187,6 @@ function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: num
   );
 }
 
-// ── Logo ─────────────────────────────────────────────────────────────────────
-function NthLogo({ size = 44, invert = false }: { size?: number; invert?: boolean }) {
-  const fg = invert ? "#fdfcfa" : "#1a1a1a";
-  const bg = invert ? "#1a1a1a" : "#fdfcfa";
-  return (
-    <svg viewBox="0 0 108 108" width={size} height={size} style={{ display: "block", flexShrink: 0 }}>
-      <rect x="2.5" y="2.5" width="103" height="103" fill={bg} stroke={fg} strokeWidth="4" rx="1" />
-      <text x="13" y="82" fontFamily="'Newsreader', Georgia, serif" fontSize="68" fontWeight="300" fill={fg} letterSpacing="-2">n</text>
-      <text x="68" y="42" fontFamily="'Newsreader', Georgia, serif" fontSize="26" fontWeight="400" fill={fg}>th</text>
-    </svg>
-  );
-}
-
 // ── Advantages ───────────────────────────────────────────────────────────────
 const ADVANTAGES = [
   {
@@ -224,28 +221,28 @@ const ADVANTAGES = [
 
 function AdvantagesSection() {
   return (
-    <section id="approach" style={{ background: "#0f0f0e", padding: "80px clamp(24px, 5vw, 80px)" }}>
+    <section id="approach" style={{ background: "#0f0f0e", padding: "80px clamp(20px, 5vw, 80px)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Why this approach works</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px", color: "#fdfcfa" }}>Structural advantages.</h2>
-          <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", maxWidth: 560, marginBottom: 56, fontWeight: 300 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px", color: "#fdfcfa" }}>Structural advantages.</h2>
+          <p style={{ fontSize: "clamp(14px, 2vw, 16px)", lineHeight: 1.75, color: "#555", maxWidth: 560, marginBottom: 48, fontWeight: 300 }}>
             These are structural edges built into how we operate, whom we hire, and what we buy.
           </p>
         </FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))", gap: 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(460px, 100%), 1fr))", gap: 2 }}>
           {ADVANTAGES.map((a, i) => (
             <SlideIn key={i} delay={i * 0.07} from={i % 2 === 0 ? "left" : "right"}>
-              <div style={{ padding: "32px 36px", borderTop: `2px solid ${i < 2 ? "#c45a2d" : "#333"}`, background: i % 2 === 0 ? "#141412" : "#111110" }}>
+              <div style={{ padding: "clamp(20px, 4vw, 32px) clamp(20px, 4vw, 36px)", borderTop: `2px solid ${i < 2 ? "#c45a2d" : "#333"}`, background: i % 2 === 0 ? "#141412" : "#111110" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 18 }}>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d" }}>{a.num}</span>
-                  <h3 style={{ fontSize: 20, fontWeight: 400, color: "#fdfcfa", margin: 0, letterSpacing: -0.4, lineHeight: 1.3 }}>{a.headline}</h3>
+                  <h3 style={{ fontSize: "clamp(17px, 2.5vw, 20px)", fontWeight: 400, color: "#fdfcfa", margin: 0, letterSpacing: -0.4, lineHeight: 1.3 }}>{a.headline}</h3>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 500, color: "#fdfcfa", margin: "0 0 3px" }}>{a.stat}</p>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(13px, 2vw, 16px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 3px" }}>{a.stat}</p>
                   <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#555", margin: 0 }}>{a.statSub}</p>
                 </div>
-                <p style={{ fontSize: 14, lineHeight: 1.75, color: "#888", margin: 0 }}>{a.body}</p>
+                <p style={{ fontSize: "clamp(13px, 1.8vw, 14px)", lineHeight: 1.75, color: "#888", margin: 0 }}>{a.body}</p>
               </div>
             </SlideIn>
           ))}
@@ -257,31 +254,11 @@ function AdvantagesSection() {
 
 // ── Investment Principles ─────────────────────────────────────────────────────
 const PRINCIPLES = [
-  {
-    num: "01",
-    title: "Invest for the long-term.",
-    body: "Compounding rewards patience. We commit capital the way an owner would — measured in decades, not quarters — and resist every pressure to trade short-term optionality for long-term value.",
-  },
-  {
-    num: "02",
-    title: "Minimize fees.",
-    body: "Every dollar lost to management fees is a dollar that doesn't compound for investors. We carry no management fee, no carried interest until a 6% hurdle is cleared, and no cost structure built to justify itself.",
-  },
-  {
-    num: "03",
-    title: "Ensure proper – but not excessive – diversification.",
-    body: "Diversification eliminates company-specific risk. But over-diversification merely mirrors an index at a higher cost. We hold enough positions to protect the portfolio without diluting conviction into meaninglessness.",
-  },
-  {
-    num: "04",
-    title: "Straightforward businesses.",
-    body: "We don't invest in things we don't understand. Simple models, recurring revenue, high free-cash-flow conversion. No moonshots, no black boxes, no businesses whose results depend on a single customer or contract.",
-  },
-  {
-    num: "05",
-    title: "Passionate, effective, high-integrity managers.",
-    body: "Strategy is cheap. Execution is everything. We back people who care deeply, operate well, and do what they say. Character is not negotiable — and it's the hardest thing to audit, so we start there.",
-  },
+  { num: "01", title: "Invest for the long-term.", body: "Compounding rewards patience. We commit capital the way an owner would — measured in decades, not quarters — and resist every pressure to trade short-term optionality for long-term value." },
+  { num: "02", title: "Minimize fees.", body: "Every dollar lost to management fees is a dollar that doesn't compound for investors. We carry no management fee, no carried interest until a 6% hurdle is cleared, and no cost structure built to justify itself." },
+  { num: "03", title: "Ensure proper – but not excessive – diversification.", body: "Diversification eliminates company-specific risk. But over-diversification merely mirrors an index at a higher cost. We hold enough positions to protect the portfolio without diluting conviction into meaninglessness." },
+  { num: "04", title: "Straightforward businesses.", body: "We don't invest in things we don't understand. Simple models, recurring revenue, high free-cash-flow conversion. No moonshots, no black boxes, no businesses whose results depend on a single customer or contract." },
+  { num: "05", title: "Passionate, effective, high-integrity managers.", body: "Strategy is cheap. Execution is everything. We back people who care deeply, operate well, and do what they say. Character is not negotiable — and it's the hardest thing to audit, so we start there." },
 ];
 
 // ── Stats counter ─────────────────────────────────────────────────────────────
@@ -291,80 +268,26 @@ function StatCounter({ val, label, suffix = "", prefix = "" }: { val: number; la
   const count = useCountUp(val, visible);
   return (
     <div ref={ref} style={{ textAlign: "center" }}>
-      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>
+      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 4vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>
         {prefix}{count}{suffix}
       </p>
-      <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>{label}</p>
+      <p style={{ fontSize: "clamp(10px, 1.5vw, 12px)", color: "#888", margin: 0, lineHeight: 1.4 }}>{label}</p>
     </div>
   );
 }
 
 // ── Portfolio companies ───────────────────────────────────────────────────────
 const COMPANIES = [
-  {
-    name: "Audily",
-    desc: "Full-service podcast & audio production studio. Home of Rococo Punch, Pop Ups Studio, and Pinwheel.",
-    logo: "/logos/audily.png",
-    site: "https://audily.com",
-  },
-  {
-    name: "SBR2TH Recruiting",
-    desc: "Specialized recruiting firm placing senior engineers, PMs, and data professionals at venture-backed companies.",
-    logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
-    site: "https://www.sbr2th.com",
-  },
-  {
-    name: "Falconer",
-    desc: "Investment advisory boutique serving individuals and institutions.",
-    logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
-    site: "https://falconer.io",
-  },
-  {
-    name: "Merchant Boxes",
-    desc: "Custom packaging design and sourcing for e-commerce and retail brands.",
-    logo: "/logos/merchant-boxes.png",
-    site: "https://www.merchantboxes.com",
-  },
-  {
-    name: "Pigeon Service",
-    desc: "Modern same-day delivery infrastructure for local commerce.",
-    logo: "/logos/pigeon.png",
-    site: "https://pigeonservice.com",
-  },
-  {
-    name: "Galileo Computing",
-    desc: "Intelligent compute orchestration for AI/ML workloads.",
-    logo: "/logos/galileo.webp",
-    site: "https://galileocomputing.com",
-  },
+  { name: "Audily", desc: "Full-service podcast & audio production. Home of Rococo Punch, Pop Ups Studio, and Pinwheel.", logo: "/logos/audily.png", site: "https://audily.com" },
+  { name: "SBR2TH Recruiting", desc: "Specialized recruiting for senior engineers, PMs, and data professionals at venture-backed companies.", logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg", site: "https://www.sbr2th.com" },
+  { name: "Falconer", desc: "Investment advisory boutique serving individuals and institutions.", logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png", site: "https://falconer.io" },
+  { name: "Merchant Boxes", desc: "Custom packaging design and sourcing for e-commerce and retail brands.", logo: "/logos/merchant-boxes.png", site: "https://www.merchantboxes.com" },
+  { name: "Pigeon Service", desc: "Modern same-day delivery infrastructure for local commerce.", logo: "/logos/pigeon.png", site: "https://pigeonservice.com" },
+  { name: "Galileo Computing", desc: "Intelligent compute orchestration for AI/ML workloads.", logo: "/logos/galileo.webp", site: "https://galileocomputing.com" },
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function NthVentureIntro() {
-  const [activeSection, setActiveSection] = useState<typeof SECTIONS[number]>("mission");
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    SECTIONS.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) setActiveSection(id); },
-        { threshold: 0.25 },
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
-    return () => observers.forEach(o => o.disconnect());
-  }, []);
-
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -374,57 +297,31 @@ export default function NthVentureIntro() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-      {/* Navigation */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: scrolled ? "rgba(253,252,250,0.92)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? "1px solid #e8e6e0" : "1px solid transparent", transition: "all 0.35s ease", padding: "0 clamp(24px, 5vw, 80px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
-          <div style={{ cursor: "pointer" }} onClick={() => scrollTo("mission")}>
-            <NthLogo size={38} />
-          </div>
-          <div style={{ display: "flex", gap: "clamp(10px, 2vw, 24px)", alignItems: "center" }}>
-            {([["Mission", "mission"], ["Track Record", "track"], ["Fund", "fund"], ["Approach", "approach"], ["Story", "story"], ["Team", "team"], ["Letters", "letters"], ["Contact", "contact"]] as [string, typeof SECTIONS[number]][]).map(([label, id]) => (
-              <button
-                key={id}
-                onClick={() => scrollTo(id)}
-                style={{ background: "none", border: "none", fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 0.5, color: "#888", cursor: "pointer", padding: "4px 0", borderBottom: activeSection === id ? "1.5px solid #c45a2d" : "1.5px solid transparent", transition: "all 0.2s" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#1a1a1a")}
-                onMouseLeave={e => (e.currentTarget.style.color = "#888")}
-              >
-                {label}
-              </button>
-            ))}
-            <a
-              href="/portal"
-              style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 0.5, color: "#fdfcfa", background: "#1a1a1a", border: "none", padding: "6px 14px", borderRadius: 5, cursor: "pointer", textDecoration: "none", transition: "background 0.2s", whiteSpace: "nowrap" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
-            >
-              Explore the Co-Owner Fund →
-            </a>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero */}
-      <section id="mission" style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px) 80px" }}>
+      <section id="mission" style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(48px, 8vh, 100px) clamp(20px, 5vw, 80px) 64px" }}>
         <SlideIn from="left">
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 20 }}>Corpus Christi, Texas · Est. 2021</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+            <NthLogo size={40} />
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", margin: 0 }}>Corpus Christi, Texas · Est. 2021</p>
+          </div>
         </SlideIn>
         <FadeIn delay={0.1}>
-          <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
+          <h1 style={{ fontSize: "clamp(32px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
             Set talented people free through the power of <span style={{ fontStyle: "italic", color: "#c45a2d" }}>ownership</span>.
           </h1>
         </FadeIn>
         <FadeIn delay={0.18}>
-          <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", maxWidth: 600, margin: "0 0 40px", fontWeight: 300 }}>
-            nth Venture builds and invests in employee-owned companies. A $10,000 check in 2021.
-            Six companies. $1.9M in portfolio revenue. We&apos;re proving that ownership changes everything.
+          <p style={{ fontSize: "clamp(16px, 2.5vw, 19px)", lineHeight: 1.7, color: "#555", maxWidth: 620, margin: "0 0 40px", fontWeight: 300 }}>
+            nth Venture builds and invests in employee-owned companies with radically aligned incentives.
+            From a $10,000 check and an idea in 2021 to nearly $2 million in portfolio revenue —
+            we&apos;re proving that ownership changes everything.
           </p>
         </FadeIn>
         <FadeIn delay={0.26}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
             <a
               href="/portal"
-              style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", textDecoration: "none" }}
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(12px, 1.8vw, 13px)", background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px clamp(16px, 3vw, 28px)", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", textDecoration: "none" }}
               onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
               onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
             >
@@ -432,7 +329,7 @@ export default function NthVentureIntro() {
             </a>
             <button
               onClick={() => scrollTo("letters")}
-              style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "transparent", color: "#1a1a1a", border: "1px solid #d0cec8", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5 }}
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(12px, 1.8vw, 13px)", background: "transparent", color: "#1a1a1a", border: "1px solid #d0cec8", padding: "12px clamp(16px, 3vw, 28px)", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5 }}
             >
               Read annual letters
             </button>
@@ -449,19 +346,19 @@ export default function NthVentureIntro() {
       </section>
 
       {/* Stats Strip */}
-      <section style={{ background: "#1a1a1a", padding: "52px clamp(24px, 5vw, 80px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32 }}>
+      <section style={{ background: "#1a1a1a", padding: "48px clamp(20px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "32px 24px" }}>
           <StatCounter val={86} label="3-yr revenue CAGR (2022–2025)" suffix="%" />
           <FadeIn delay={0.06}>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$5K → $1.9M</p>
-              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Since 2021</p>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 4vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$5K → $1.9M</p>
+              <p style={{ fontSize: "clamp(10px, 1.5vw, 12px)", color: "#888", margin: 0, lineHeight: 1.4 }}>Since 2021</p>
             </div>
           </FadeIn>
           <FadeIn delay={0.12}>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$0</p>
-              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Management fees</p>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 4vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$0</p>
+              <p style={{ fontSize: "clamp(10px, 1.5vw, 12px)", color: "#888", margin: 0, lineHeight: 1.4 }}>Management fees</p>
             </div>
           </FadeIn>
           <StatCounter val={20} label="Target IRR" suffix="%" />
@@ -469,11 +366,11 @@ export default function NthVentureIntro() {
       </section>
 
       {/* Track Record */}
-      <section id="track" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <section id="track" style={{ maxWidth: 1100, margin: "0 auto", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Track record</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>$5K to $1.9M in revenue</h2>
-          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 600, marginBottom: 48, fontWeight: 300 }}>
+          <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>$5K to $1.9M in revenue</h2>
+          <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 600, marginBottom: 40, fontWeight: 300 }}>
             Our portfolio companies operate on a simple philosophy: grow as much as you can without burning other people&apos;s money.
           </p>
         </FadeIn>
@@ -483,24 +380,24 @@ export default function NthVentureIntro() {
 
         {/* Press coverage */}
         <FadeIn delay={0.12}>
-          <div style={{ marginTop: 40, marginBottom: 40, padding: "24px 28px", background: "#1a1a1a", borderRadius: 8, display: "flex", flexWrap: "wrap", gap: 32, alignItems: "center" }}>
+          <div style={{ marginTop: 36, marginBottom: 36, padding: "20px clamp(16px, 4vw, 28px)", background: "#1a1a1a", borderRadius: 8, display: "flex", flexWrap: "wrap", gap: "16px 32px", alignItems: "center" }}>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", margin: 0, flexShrink: 0 }}>As covered by</p>
-            <div style={{ display: "flex", gap: 40, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <div style={{ display: "flex", gap: "16px 40px", flexWrap: "wrap" }}>
               <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px" }}>Bloomberg</p>
-                <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Podcast M&A — Rococo Punch acquisition by Audily</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 500, color: "#fdfcfa", margin: "0 0 2px" }}>Bloomberg</p>
+                <p style={{ fontSize: 12, color: "#888", margin: 0 }}>Podcast M&A — Rococo Punch acquisition by Audily</p>
               </div>
               <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px" }}>The Hollywood Reporter</p>
-                <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Coverage of Rococo Punch and the Audily network</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 500, color: "#fdfcfa", margin: "0 0 2px" }}>The Hollywood Reporter</p>
+                <p style={{ fontSize: 12, color: "#888", margin: 0 }}>Coverage of Rococo Punch and the Audily network</p>
               </div>
             </div>
           </div>
         </FadeIn>
 
         <FadeIn delay={0.15}>
-          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5 }}>Our companies</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+          <h3 style={{ fontSize: "clamp(17px, 2.5vw, 20px)", fontWeight: 400, marginBottom: 20, letterSpacing: -0.5 }}>Our companies</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 12 }}>
             {COMPANIES.map((co, i) => (
               <SlideIn key={i} delay={0.04 + i * 0.04} from={i % 2 === 0 ? "left" : "right"}>
                 <a
@@ -510,12 +407,12 @@ export default function NthVentureIntro() {
                   style={{ textDecoration: "none", display: "block", height: "100%" }}
                 >
                   <div
-                    style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px", height: "100%", boxSizing: "border-box", transition: "border-color 0.2s, transform 0.2s" }}
+                    style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "16px 18px", height: "100%", boxSizing: "border-box", transition: "border-color 0.2s, transform 0.2s" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#c45a2d60"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#e8e6e0"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 6, overflow: "hidden", background: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                      <div style={{ width: 32, height: 32, flexShrink: 0 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={co.logo}
@@ -525,7 +422,7 @@ export default function NthVentureIntro() {
                       </div>
                       <p style={{ fontWeight: 500, fontSize: 14, margin: 0, color: "#1a1a1a" }}>{co.name}</p>
                     </div>
-                    <p style={{ fontSize: 13, color: "#666", margin: "0 0 10px", lineHeight: 1.55 }}>{co.desc}</p>
+                    <p style={{ fontSize: 13, color: "#666", margin: "0 0 8px", lineHeight: 1.5 }}>{co.desc}</p>
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d" }}>{co.site.replace(/^https?:\/\//, "")} ↗</span>
                   </div>
                 </a>
@@ -535,9 +432,9 @@ export default function NthVentureIntro() {
         </FadeIn>
 
         <FadeIn delay={0.25}>
-          <div style={{ marginTop: 56, background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "28px 32px" }}>
+          <div style={{ marginTop: 48, background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "clamp(20px, 4vw, 28px) clamp(20px, 4vw, 32px)" }}>
             <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 16, letterSpacing: -0.3 }}>Real results</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20, fontSize: 14, lineHeight: 1.65, color: "#555" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(250px, 100%), 1fr))", gap: 20, fontSize: "clamp(13px, 1.8vw, 14px)", lineHeight: 1.65, color: "#555" }}>
               <p style={{ margin: 0 }}>A former valet earned over $85K doing work he&apos;d been doing as a passion project. He owns the company.</p>
               <p style={{ margin: 0 }}>An employee who lost everything caring for his late wife earned 2× median household income and moved his new family into a home on acreage. He owns the company.</p>
               <p style={{ margin: 0 }}>Our companies absorbed two struggling businesses, protected their investors, retained most employees, and generated $336K in earnings for four principals. They own the company.</p>
@@ -547,21 +444,21 @@ export default function NthVentureIntro() {
       </section>
 
       {/* The Fund */}
-      <section id="fund" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <section id="fund" style={{ background: "#f5f4f0", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <FadeIn>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>The Fund</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Co-Owner Fund LP</h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
+            <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>Co-Owner Fund LP</h2>
+            <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 40, fontWeight: 300 }}>
               A Texas limited partnership investing in businesses with long histories of free cash flow,
               at small-business multiples, with employee ownership and incentive alignment at the core.
               Seeded with ~$1M in equity transferred by the founder for $1.
             </p>
           </FadeIn>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginBottom: 56 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 24, marginBottom: 48 }}>
             <SlideIn delay={0.05} from="left">
-              <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
+              <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: "clamp(16px, 3vw, 24px)" }}>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Investment focus</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {["Acquisitions at single-digit P/E multiples", "Strategic credit at 20%+ yields", "Portfolio company growth financing", "Occasional ground-up launches"].map((item, i) => (
@@ -574,7 +471,7 @@ export default function NthVentureIntro() {
               </div>
             </SlideIn>
             <SlideIn delay={0.1} from="right">
-              <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
+              <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: "clamp(16px, 3vw, 24px)" }}>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Fund structure</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
@@ -601,18 +498,18 @@ export default function NthVentureIntro() {
           {/* Investment Principles */}
           <FadeIn delay={0.1}>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
-            <h3 style={{ fontSize: "clamp(22px, 3vw, 32px)", fontWeight: 300, letterSpacing: -0.8, margin: "0 0 12px" }}>Five principles.</h3>
-            <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 36, maxWidth: 580 }}>
+            <h3 style={{ fontSize: "clamp(20px, 3vw, 32px)", fontWeight: 300, letterSpacing: -0.8, margin: "0 0 10px" }}>Five principles.</h3>
+            <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 32, maxWidth: 580 }}>
               As laid out in the annual letters. Derived from the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
             </p>
           </FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 2 }}>
             {PRINCIPLES.map((p, i) => (
               <SlideIn key={i} delay={i * 0.06} from={i % 2 === 0 ? "left" : "right"}>
-                <div style={{ background: i % 2 === 0 ? "#fff" : "#fafaf8", border: "1px solid #e8e6e0", borderTop: "2px solid #c45a2d", padding: "24px 28px" }}>
+                <div style={{ background: i % 2 === 0 ? "#fff" : "#fafaf8", border: "1px solid #e8e6e0", borderTop: "2px solid #c45a2d", padding: "clamp(18px, 3vw, 24px) clamp(18px, 3vw, 28px)" }}>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", display: "block", marginBottom: 10 }}>{p.num}</span>
-                  <h4 style={{ fontSize: 18, fontWeight: 400, color: "#1a1a1a", margin: "0 0 12px", letterSpacing: -0.4, lineHeight: 1.3, fontStyle: "italic" }}>{p.title}</h4>
-                  <p style={{ fontSize: 14, lineHeight: 1.75, color: "#666", margin: 0 }}>{p.body}</p>
+                  <h4 style={{ fontSize: "clamp(16px, 2.2vw, 18px)", fontWeight: 400, color: "#1a1a1a", margin: "0 0 12px", letterSpacing: -0.4, lineHeight: 1.3, fontStyle: "italic" }}>{p.title}</h4>
+                  <p style={{ fontSize: "clamp(13px, 1.8vw, 14px)", lineHeight: 1.75, color: "#666", margin: 0 }}>{p.body}</p>
                 </div>
               </SlideIn>
             ))}
@@ -622,18 +519,18 @@ export default function NthVentureIntro() {
 
       <AdvantagesSection />
 
-      {/* Evolution: How We Got Here */}
-      <section id="story" style={{ background: "#fdfcfa", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      {/* How We Got Here */}
+      <section id="story" style={{ background: "#fdfcfa", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <FadeIn>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>How we got here</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>From studio to fund.</h2>
+            <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>From studio to fund.</h2>
           </FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 40 }}>
             <SlideIn delay={0.06} from="left">
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2021 — The venture studio</p>
-                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
+                <p style={{ fontSize: "clamp(14px, 2vw, 16px)", lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
                   nth Venture started with a single thesis: talented people accomplish more when they own what they build.
                   We launched our first companies from scratch — a $10,000 check and the belief that founder economics
                   should extend to every employee, not just the people at the top.
@@ -644,11 +541,11 @@ export default function NthVentureIntro() {
             <FadeIn delay={0.12}>
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2022–2023 — Proof of concept</p>
-                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
+                <p style={{ fontSize: "clamp(14px, 2vw, 16px)", lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
                   Over three years we launched and scaled a portfolio of employee-owned companies —
                   growing from $5K to $1.3M in revenue while absorbing two struggling businesses and
                   protecting their investors. Every company remained employee-owned.
-                  The model worked. We wrote about it honestly — in annual letters that didn&apos;t
+                  The model worked. We wrote about it honestly in annual letters that didn&apos;t
                   hide the failures alongside the wins.
                 </p>
               </div>
@@ -656,7 +553,7 @@ export default function NthVentureIntro() {
             <SlideIn delay={0.18} from="right">
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2024 — Co-Owner Fund LP</p>
-                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
+                <p style={{ fontSize: "clamp(14px, 2vw, 16px)", lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
                   We formalized our track record into the Co-Owner Fund LP — a Texas limited partnership
                   seeded with ~$1M in equity transferred by the founder for $1. The fund brings in aligned
                   outside capital to accelerate a strategy already generating results: acquiring small businesses
@@ -670,33 +567,33 @@ export default function NthVentureIntro() {
       </section>
 
       {/* Team */}
-      <section id="team" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <section id="team" style={{ background: "#f5f4f0", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <FadeIn>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Leadership</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Built by operators, not administrators</h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
+            <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>Built by operators, not administrators</h2>
+            <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 40, fontWeight: 300 }}>
               Our leadership team combines institutional investment management, startup operational experience, and financial audit discipline. Staff and advisors invest on the same terms as LPs.
             </p>
           </FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 12 }}>
             {teamMembers.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
           </div>
         </div>
       </section>
 
       {/* Annual Letters */}
-      <section id="letters" style={{ background: "#1a1a1a", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <section id="letters" style={{ background: "#1a1a1a", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <FadeIn>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Annual letters</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px", color: "#fdfcfa" }}>The full story, unfiltered</h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#999", maxWidth: 600, marginBottom: 48, fontWeight: 300 }}>
+            <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px", color: "#fdfcfa" }}>The full story, unfiltered</h2>
+            <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#999", maxWidth: 600, marginBottom: 40, fontWeight: 300 }}>
               Sam&apos;s annual letters report the unvarnished truth — the victories, the failures,
               the philosophy, and the human stories behind the numbers.
             </p>
           </FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 16 }}>
             {[
               { released: "2025", covers: "2024", title: "Third Annual Letter", quote: "Most death does not come in the form of a grand, fiery defeat. It comes from slow erosion, cynicism, and mediocrity.", highlight: "Co-Owner Fund LP announced", slug: "Third-Annual-Letter" },
               { released: "2024", covers: "2023", title: "Second Annual Letter", quote: "I simply put my naked, stinking foot forward and say this is what I am doing.", highlight: "Written from deployment in Poland", slug: "Second-Annual-Letter" },
@@ -710,16 +607,16 @@ export default function NthVentureIntro() {
                   style={{ textDecoration: "none" }}
                 >
                   <div
-                    style={{ background: "#242420", border: "1px solid #333", borderRadius: 8, padding: "24px 22px", cursor: "pointer", transition: "all 0.25s", height: "100%", display: "flex", flexDirection: "column" }}
+                    style={{ background: "#242420", border: "1px solid #333", borderRadius: 8, padding: "clamp(18px, 3vw, 24px) clamp(16px, 3vw, 22px)", cursor: "pointer", transition: "all 0.25s", height: "100%", display: "flex", flexDirection: "column", boxSizing: "border-box" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#c45a2d60"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#333"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
                       <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#c45a2d" }}>{letter.released}</span>
                       <span style={{ fontSize: 11, color: "#555" }}>covers {letter.covers} · ↗</span>
                     </div>
-                    <h4 style={{ fontSize: 17, fontWeight: 400, color: "#eee", margin: "0 0 12px" }}>{letter.title}</h4>
-                    <p style={{ fontSize: 13, fontStyle: "italic", color: "#888", lineHeight: 1.6, margin: "0 0 16px", flex: 1 }}>&ldquo;{letter.quote}&rdquo;</p>
+                    <h4 style={{ fontSize: "clamp(15px, 2vw, 17px)", fontWeight: 400, color: "#eee", margin: "0 0 10px" }}>{letter.title}</h4>
+                    <p style={{ fontSize: 13, fontStyle: "italic", color: "#888", lineHeight: 1.6, margin: "0 0 14px", flex: 1 }}>&ldquo;{letter.quote}&rdquo;</p>
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#666", background: "#1a1a18", padding: "4px 10px", borderRadius: 4, alignSelf: "flex-start" }}>{letter.highlight}</span>
                   </div>
                 </a>
@@ -727,7 +624,7 @@ export default function NthVentureIntro() {
             ))}
           </div>
           <FadeIn delay={0.35}>
-            <div style={{ marginTop: 32, display: "flex", gap: 32, flexWrap: "wrap", justifyContent: "center" }}>
+            <div style={{ marginTop: 28, display: "flex", gap: "16px 32px", flexWrap: "wrap", justifyContent: "center" }}>
               <a href="https://sawhook.substack.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#888", textDecoration: "none", borderBottom: "1px solid #444", paddingBottom: 2 }}>
                 The Wrap — Sam&apos;s Substack →
               </a>
@@ -740,57 +637,48 @@ export default function NthVentureIntro() {
       </section>
 
       {/* SEC & Legal */}
-      <section style={{ background: "#f5f4f0", padding: "48px clamp(24px, 5vw, 80px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 32, justifyContent: "center" }}>
+      <section style={{ background: "#f5f4f0", padding: "40px clamp(20px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: "12px 32px", justifyContent: "center" }}>
           {[
             ["SEC Filings: nth Venture", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461"],
             ["SEC Filings: Co-Owner Fund", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002088918"],
           ].map(([label, url], i) => (
-            <a
-              key={i}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
               style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 2, transition: "color 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.color = "#c45a2d")}
               onMouseLeave={e => (e.currentTarget.style.color = "#888")}
-            >
-              {label} ↗
-            </a>
+            >{label} ↗</a>
           ))}
-          <a
-            href="/portal"
+          <a href="/portal"
             style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 2, transition: "color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#c45a2d")}
             onMouseLeave={e => (e.currentTarget.style.color = "#888")}
-          >
-            Investor Portal ↗
-          </a>
+          >Investor Portal ↗</a>
         </div>
       </section>
 
       {/* Contact */}
-      <section id="contact" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <section id="contact" style={{ maxWidth: 1100, margin: "0 auto", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 48 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 40 }}>
             <div>
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Get in touch</p>
-              <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Let&apos;s talk</h2>
-              <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 32 }}>
+              <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>Let&apos;s talk</h2>
+              <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
                 Reach out to learn more about the Co-Owner Fund or nth Venture.
               </p>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 20, justifyContent: "center" }}>
-              <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 22px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, justifyContent: "center" }}>
+              <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "16px 20px" }}>
                 <p style={{ fontWeight: 500, fontSize: 15, margin: "0 0 4px" }}>Sam Sawhook</p>
                 <p style={{ fontSize: 13, color: "#888", margin: "0 0 2px" }}>Co-founder & CEO</p>
                 <a href="mailto:sam@nthventure.com" style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#c45a2d", textDecoration: "none" }}>sam@nthventure.com</a>
                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#888", display: "block", marginTop: 2 }}>(361) 510-3444</span>
               </div>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <a href="https://www.nthventure.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>nthventure.com</a>
-                <a href="https://sawhook.substack.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>The Wrap</a>
-                <a href="https://podcasts.apple.com/us/podcast/nth-venture/id1604416768" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>Podcast</a>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <a href="https://www.nthventure.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 12px", borderRadius: 6 }}>nthventure.com</a>
+                <a href="https://sawhook.substack.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 12px", borderRadius: 6 }}>The Wrap</a>
+                <a href="https://podcasts.apple.com/us/podcast/nth-venture/id1604416768" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 12px", borderRadius: 6 }}>Podcast</a>
               </div>
             </div>
           </div>
@@ -798,10 +686,10 @@ export default function NthVentureIntro() {
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid #e8e6e0", padding: "32px clamp(24px, 5vw, 80px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+      <footer style={{ borderTop: "1px solid #e8e6e0", padding: "28px clamp(20px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <NthLogo size={32} />
+            <NthLogo size={28} />
             <span style={{ fontSize: 12, color: "#aaa" }}>© 2021–2026 nth Venture Inc.</span>
           </div>
           <p style={{ fontSize: 11, color: "#bbb", maxWidth: 480, textAlign: "right", lineHeight: 1.5, margin: 0 }}>

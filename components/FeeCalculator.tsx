@@ -201,22 +201,23 @@ function Slider({ label, value, min, max, step, onChange, display, sub, markers 
           [&::-webkit-slider-thumb]:cursor-pointer"
       />
       {markers && markers.length > 0 ? (
-        <div className="relative mt-1" style={{ height: 28 }}>
+        <div className="relative mt-1" style={{ height: 44 }}>
           {markers.map((m, i) => {
             const pct = ((m.value - min) / (max - min)) * 100;
             const isTarget = m.color === "amber";
+            const topOffset = i % 2 === 0 ? 0 : 18;
             return (
               <div
                 key={i}
                 className="absolute flex flex-col items-center"
-                style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
+                style={{ left: `${pct}%`, transform: "translateX(-50%)", top: topOffset }}
               >
                 <div
                   className="w-px h-2"
                   style={{ background: isTarget ? "#f59e0b" : "#475569" }}
                 />
                 <span
-                  className="text-[9px] tabular-nums whitespace-nowrap mt-0.5 leading-none"
+                  className="text-[9px] tabular-nums whitespace-nowrap leading-none"
                   style={{ color: isTarget ? "#f59e0b" : "#475569" }}
                 >
                   {m.label}
