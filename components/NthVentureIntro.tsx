@@ -996,18 +996,17 @@ export default function NthVentureIntro() {
             <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#64748b", maxWidth: 620, marginBottom: 20, fontWeight: 300 }}>
               Most fund managers control what you see. We built something different.
               Every LP — and prospective LP — gets a real-time view of the fund:
-              monthly P&L for every portfolio company, fund-level performance attribution,
+              quarterly P&L for every portfolio company, fund-level performance attribution,
               a fee calculator that shows exactly what you&apos;d pay versus a traditional structure,
               and full documentation access. Nothing is behind a phone call.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", marginBottom: 52 }}>
               {[
-                "Monthly P&L by company",
+                "Quarterly P&L by company",
                 "Real-time NAV & MOIC",
-                "Deal pipeline access",
+                "Deal pipeline visibility",
                 "Allocator fee comparison",
                 "Fund documents & SEC filings",
-                "Secondary market",
               ].map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#c45a2d", flexShrink: 0 }} />
@@ -1072,7 +1071,7 @@ export default function NthVentureIntro() {
                   <div style={{ display: "flex", gap: 5 }}>
                     {["#ff5f57","#febc2e","#28c840"].map(c => <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />)}
                   </div>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#2a4a6a", marginLeft: 6 }}>Audily — Monthly P&amp;L</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#2a4a6a", marginLeft: 6 }}>Audily — Quarterly P&amp;L</span>
                 </div>
                 <div style={{ padding: "18px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
@@ -1082,14 +1081,14 @@ export default function NthVentureIntro() {
                       </div>
                       <span style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 500 }}>Audily</span>
                     </div>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#2a4a6a" }}>Oct 2024</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#2a4a6a" }}>Q4 2024</span>
                   </div>
                   {[
-                    { label: "Revenue",        val: "$48,200",  color: "#34D399",  bold: true,  sub: "" },
-                    { label: "COGS",           val: "−$31,500", color: "#94a3b8",  bold: false, sub: "" },
-                    { label: "Gross Profit",   val: "$16,700",  color: "#38BDF8",  bold: true,  sub: "34.6%" },
-                    { label: "Operating Exp",  val: "−$8,200",  color: "#64748b",  bold: false, sub: "" },
-                    { label: "Net Income",     val: "$8,500",   color: "#F59E0B",  bold: true,  sub: "17.6%" },
+                    { label: "Revenue",       val: "$144,600", color: "#34D399", bold: true,  sub: "" },
+                    { label: "COGS",          val: "−$94,500", color: "#94a3b8", bold: false, sub: "" },
+                    { label: "Gross Profit",  val: "$50,100",  color: "#38BDF8", bold: true,  sub: "34.6%" },
+                    { label: "Operating Exp", val: "−$24,600", color: "#64748b", bold: false, sub: "" },
+                    { label: "Net Income",    val: "$25,500",  color: "#F59E0B", bold: true,  sub: "17.6%" },
                   ].map(({ label, val, color, bold, sub }, i) => (
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 0", borderBottom: "1px solid #0f1a28" }}>
                       <span style={{ fontSize: 11, color: "#4a6278" }}>{label}</span>
@@ -1100,14 +1099,17 @@ export default function NthVentureIntro() {
                     </div>
                   ))}
                   <div style={{ marginTop: 14 }}>
-                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 8px" }}>12-Month Revenue</p>
-                    <svg viewBox="0 0 200 36" style={{ width: "100%", height: "auto" }}>
-                      {[12,18,22,28,24,32,29,35,31,38,42,48].map((v, i, arr) => {
-                        const max = Math.max(...arr);
-                        const x = (i / (arr.length - 1)) * 200;
-                        const y = 36 - (v / max) * 30;
-                        return i === 0 ? null : (
-                          <line key={i} x1={(i-1)/(arr.length-1)*200} y1={36-(arr[i-1]/max)*30} x2={x} y2={y} stroke="#F59E0B" strokeWidth={1.5} strokeLinecap="round" />
+                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 8px" }}>Quarterly Revenue</p>
+                    <svg viewBox="0 0 200 40" style={{ width: "100%", height: "auto" }}>
+                      {[58, 88, 114, 145].map((v, i) => {
+                        const max = 145;
+                        const bw = 36, gap = 14, x = i * (bw + gap) + 4;
+                        const h = (v / max) * 34;
+                        return (
+                          <g key={i}>
+                            <rect x={x} y={40 - h} width={bw} height={h} fill={i === 3 ? "#F59E0B" : "#1E3A2A"} rx={2} />
+                            <text x={x + bw / 2} y={38} textAnchor="middle" fill="#2a4a6a" fontSize={7} fontFamily="'DM Mono', monospace">{`Q${i + 1}`}</text>
+                          </g>
                         );
                       })}
                     </svg>
@@ -1138,20 +1140,25 @@ export default function NthVentureIntro() {
                     <div style={{ background: "#0b1a10", border: "1px solid #14311e", borderRadius: 6, padding: "12px" }}>
                       <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#34D399", margin: "0 0 8px", letterSpacing: 1, textTransform: "uppercase" }}>nth Venture</p>
                       <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Mgmt Fee</p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#34D399", margin: "0 0 8px", fontWeight: 600 }}>$0</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#34D399", margin: "0 0 6px", fontWeight: 600 }}>$0</p>
+                      <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>GP Carry (50% &gt; 6% hurdle)</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#94a3b8", margin: "0 0 6px" }}>$70,000</p>
                       <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Net to LP</p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#e2e8f0", margin: 0 }}>$186,000</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#e2e8f0", margin: 0, fontWeight: 600 }}>$130,000</p>
                     </div>
                     <div style={{ background: "#160e04", border: "1px solid #2d1e08", borderRadius: 6, padding: "12px" }}>
                       <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#F59E0B", margin: "0 0 8px", letterSpacing: 1, textTransform: "uppercase" }}>Trad. 2/20</p>
                       <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Mgmt Fee</p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#F59E0B", margin: "0 0 8px" }}>$20,000</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#F59E0B", margin: "0 0 6px" }}>$20,000</p>
+                      <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>GP Carry (20% w/ catch-up)</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#94a3b8", margin: "0 0 6px" }}>$58,000</p>
                       <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Net to LP</p>
-                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#64748b", margin: 0 }}>$140,000</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#64748b", margin: 0 }}>$122,000</p>
                     </div>
                   </div>
-                  <div style={{ background: "#0b1a10", border: "1px solid #14311e", borderRadius: 6, padding: "12px", textAlign: "center" }}>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#34D399" }}>You keep $46,000 more per year.</span>
+                  <div style={{ background: "#0b1a10", border: "1px solid #14311e", borderRadius: 6, padding: "10px 12px" }}>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#34D399", display: "block" }}>+$8,000 at 20% gross · +$23,000 at 10% gross</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#2a4a6a", display: "block", marginTop: 3 }}>$0 charged in any year, regardless of performance</span>
                   </div>
                 </div>
               </div>
