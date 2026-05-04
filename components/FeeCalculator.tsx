@@ -1124,7 +1124,6 @@ function RetirementPlanner({
     targetPct: number;
     deltaPct: number;
     deltaDollar: number;
-    illiquid: boolean;
   };
   const groupItems: Item[] = (() => {
     const byGroup = new Map<GroupKey, { current: number; targetPct: number }>();
@@ -1142,38 +1141,21 @@ function RetirementPlanner({
       const currentPct = totalValue > 0 ? v.current / totalValue : 0;
       const deltaPct = currentPct - v.targetPct;
       const deltaDollar = v.current - v.targetPct * totalValue;
-      return {
-        group: g,
-        label: GROUP_LABEL[g],
-        color: GROUP_COLOR[g],
-        current: v.current,
-        currentPct,
-        targetPct: v.targetPct,
-        deltaPct,
-        deltaDollar,
-        illiquid: ILLIQUID_GROUPS.includes(g),
-      };
+      return { group: g, label: GROUP_LABEL[g], color: GROUP_COLOR[g], current: v.current, currentPct, targetPct: v.targetPct, deltaPct, deltaDollar };
     });
   })();
 
   const TOL = 0.02;
   const sorted = [...groupItems].sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
-  // Underweight: always actionable (add).
-  const underweight = sorted.filter(i => i.deltaPct < -TOL).slice(0, 4);
-  // Overweight: only LIQUID groups produce sell recommendations. Illiquid
-  // overweights become "hold" notes — don't sell, just stop adding.
-  const overweight  = sorted.filter(i => i.deltaPct >  TOL && !i.illiquid).slice(0, 4);
-  const holdNotes   = sorted.filter(i => i.deltaPct >  TOL &&  i.illiquid).slice(0, 4);
+  const overweight  = sorted.filter(i => i.deltaPct >  TOL);
+  const underweight = sorted.filter(i => i.deltaPct < -TOL);
 
-  // Liquidity-constrained rebalancing: underweight "adds" can only be funded
-  // by selling liquid overweights. When illiquid assets are on hold, cap add-
-  // amounts so that sum(adds) == sum(liquid sells) == 0 net.
-  const liquidSellBudget = overweight.reduce((s, i) => s + Math.abs(i.deltaDollar), 0);
-  const totalUnderNeed   = underweight.reduce((s, i) => s + Math.abs(i.deltaDollar), 0);
-  const underProrateRatio =
-    holdNotes.length > 0 && totalUnderNeed > 0 && totalUnderNeed > liquidSellBudget
-      ? liquidSellBudget / totalUnderNeed
-      : 1;
+  // Prorate so displayed reduces == displayed adds (sum-to-zero guarantee).
+  const totalOver  = overweight.reduce((s, i) => s + i.deltaDollar, 0);
+  const totalUnder = underweight.reduce((s, i) => s + Math.abs(i.deltaDollar), 0);
+  const rebalBudget = Math.min(totalOver, totalUnder);
+  const overRatio  = totalOver  > 0 ? rebalBudget / totalOver  : 1;
+  const underRatio = totalUnder > 0 ? rebalBudget / totalUnder : 1;
 
   // Shortfall analysis
   const currGap   = currFV - requiredAtRetire;     // positive = surplus
@@ -1190,10 +1172,10 @@ function RetirementPlanner({
   const fmtPP  = (n: number) => `${n >= 0 ? "+" : ""}${(n * 100).toFixed(1)}pp`;
   const fmtSign = (n: number) => `${n >= 0 ? "+" : ""}${fmt(Math.abs(n))}`;
 
-  const Row = ({ kind, item, prorateRatio = 1 }: { kind: "over" | "under" | "hold"; item: Item; prorateRatio?: number }) => {
+  const Row = ({ kind, item, prorateRatio = 1 }: { kind: "over" | "under"; item: Item; prorateRatio?: number }) => {
     const dollar = fmt(Math.abs(item.deltaDollar) * prorateRatio);
-    const labelColor = kind === "over" ? "text-rose-400" : kind === "under" ? "text-emerald-400" : "text-amber-400";
-    const action = kind === "over" ? "↓ reduce" : kind === "under" ? "↑ add" : "✓ hold (illiquid)";
+    const labelColor = kind === "over" ? "text-rose-400" : "text-emerald-400";
+    const action = kind === "over" ? "↓ reduce" : "↑ add";
     return (
       <div className="flex items-baseline gap-2 py-1">
         <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: item.color }} />
@@ -1202,7 +1184,7 @@ function RetirementPlanner({
           {fmtPct1(item.currentPct)} <span className="text-slate-700">vs</span> {fmtPct0(item.targetPct)}
         </span>
         <span className={`text-[11px] tabular-nums font-semibold flex-1 ${labelColor}`}>
-          {action} {kind !== "hold" && <>~{dollar}</>}
+          {action} ~{dollar}
         </span>
         <span className="text-[10px] text-slate-600 tabular-nums">
           {item.deltaPct > 0 ? "+" : ""}{(item.deltaPct * 100).toFixed(1)} pp
@@ -1564,32 +1546,22 @@ function RetirementPlanner({
       </div>
 
       {/* Rebalancing actions */}
-      {(underweight.length > 0 || overweight.length > 0 || holdNotes.length > 0) && (
+      {(underweight.length > 0 || overweight.length > 0) && (
         <div>
           <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Rebalance to Target</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
             <div>
               {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight · add</p>}
-              {underweight.map(i => <Row key={i.group} kind="under" item={i} prorateRatio={underProrateRatio} />)}
+              {underweight.map(i => <Row key={i.group} kind="under" item={i} prorateRatio={underRatio} />)}
             </div>
             <div>
-              {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight · trim liquid</p>}
-              {overweight.map(i => <Row key={i.group} kind="over" item={i} />)}
-              {holdNotes.length > 0 && <p className="text-[10px] uppercase tracking-widest text-amber-500/80 mb-1 mt-2">Overweight · illiquid (hold)</p>}
-              {holdNotes.map(i => <Row key={i.group} kind="hold" item={i} />)}
+              {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight · reduce</p>}
+              {overweight.map(i => <Row key={i.group} kind="over" item={i} prorateRatio={overRatio} />)}
             </div>
           </div>
-          {holdNotes.length > 0 && (
-            <p className="text-[10px] text-slate-600 leading-relaxed pt-2">
-              Illiquid groups (Private Equity, Real Estate) cannot be sold to fund rebalancing.
-              {underProrateRatio < 1
-                ? ` Add amounts above are prorated to the $${Math.round(liquidSellBudget).toLocaleString()} available from liquid trims — adds and reduces net to zero.`
-                : " Use future contributions to build underweights rather than selling these positions."}
-            </p>
-          )}
         </div>
       )}
-      {underweight.length === 0 && overweight.length === 0 && holdNotes.length === 0 && (
+      {underweight.length === 0 && overweight.length === 0 && (
         <p className="text-xs text-emerald-400">All positions within ±2pp of target — portfolio is well-balanced.</p>
       )}
 
@@ -2430,7 +2402,7 @@ export default function FeeCalculator() {
                   />
                 </div>
               </div>
-              {/* Key rebalancing moves — grouped by bucket; illiquid overweight = hold */}
+              {/* Key rebalancing moves — grouped by bucket */}
               {(() => {
                 const byGroup = new Map<GroupKey, { current: number; targetPct: number }>();
                 for (const a of ASSET_CLASSES) {
@@ -2449,7 +2421,6 @@ export default function FeeCalculator() {
                     group: g,
                     label: GROUP_LABEL[g],
                     color: GROUP_COLOR[g],
-                    illiquid: ILLIQUID_GROUPS.includes(g),
                     current: v.current,
                     currPct,
                     targetPct: v.targetPct,
@@ -2457,43 +2428,41 @@ export default function FeeCalculator() {
                   };
                 });
                 const tol = totalValue * 0.02;
-                const moves = items
+                const allMoves = items
                   .filter(i => Math.abs(i.deltaDollar) > tol)
-                  .sort((a, b) => Math.abs(b.deltaDollar) - Math.abs(a.deltaDollar))
-                  .slice(0, 5);
-                if (moves.length === 0) return (
+                  .sort((a, b) => Math.abs(b.deltaDollar) - Math.abs(a.deltaDollar));
+                if (allMoves.length === 0) return (
                   <p className="text-[11px] text-emerald-400 pt-2 border-t border-slate-800/60 mt-1">
                     ✓ Allocation is within ±2% of target across all groups.
                   </p>
                 );
+                const overMoves = allMoves.filter(m => m.deltaDollar > 0);
+                const underMoves = allMoves.filter(m => m.deltaDollar < 0);
+                const totOver = overMoves.reduce((s, m) => s + m.deltaDollar, 0);
+                const totUnder = underMoves.reduce((s, m) => s + Math.abs(m.deltaDollar), 0);
+                const budget = Math.min(totOver, totUnder);
+                const oRatio = totOver > 0 ? budget / totOver : 1;
+                const uRatio = totUnder > 0 ? budget / totUnder : 1;
+                const moves = allMoves.slice(0, 5);
                 return (
                   <div className="pt-2 mt-1 border-t border-slate-800/60 space-y-1.5">
                     <p className="text-[10px] uppercase tracking-widest text-slate-600">Key Rebalancing Moves</p>
                     <ul className="space-y-1">
                       {moves.map(m => {
                         const isOver = m.deltaDollar > 0;
-                        const showHold = isOver && m.illiquid;
-                        const arrow = showHold ? "✓" : isOver ? "↓" : "↑";
-                        const color = showHold ? "text-amber-400" : isOver ? "text-rose-400" : "text-emerald-400";
+                        const ratio = isOver ? oRatio : uRatio;
+                        const arrow = isOver ? "↓" : "↑";
+                        const color = isOver ? "text-rose-400" : "text-emerald-400";
                         return (
                           <li key={m.group} className="text-[11px] flex items-baseline gap-2">
                             <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5" style={{ background: m.color }} />
                             <span className={`shrink-0 font-semibold ${color}`}>{arrow}</span>
                             <span className="text-slate-300 flex-1">
-                              {showHold ? (
-                                <>
-                                  Hold {m.label} (illiquid; {(m.currPct * 100).toFixed(0)}% vs {(m.targetPct * 100).toFixed(0)}% target);
-                                  <span className="text-slate-500"> use future contributions to balance.</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="tabular-nums font-semibold text-slate-100">{fmt(Math.abs(m.deltaDollar))}</span>{" "}
-                                  {isOver ? "out of" : "into"} {m.label}
-                                  <span className="text-slate-600 tabular-nums">
-                                    {" "}({(m.currPct * 100).toFixed(0)}% → {(m.targetPct * 100).toFixed(0)}%)
-                                  </span>
-                                </>
-                              )}
+                              <span className="tabular-nums font-semibold text-slate-100">{fmt(Math.abs(m.deltaDollar) * ratio)}</span>{" "}
+                              {isOver ? "out of" : "into"} {m.label}
+                              <span className="text-slate-600 tabular-nums">
+                                {" "}({(m.currPct * 100).toFixed(0)}% → {(m.targetPct * 100).toFixed(0)}%)
+                              </span>
                             </span>
                           </li>
                         );
