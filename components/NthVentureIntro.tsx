@@ -87,40 +87,53 @@ function NthLogo({ size = 44 }: { size?: number }) {
   );
 }
 
-// ── Fund Size Scatter (JPMorgan/PitchBook data, Exhibit 9) ───────────────────
-// Representative points: [fundSize_bn, irr_multiple, quartile 1-4]
-// Approximates distribution from 1,690 global PE funds, vintage 2003-2021
+// ── Fund Size Scatter (JPMorgan/PitchBook Exhibit 9 — every dot) ─────────────
+// [fundSize_bn, irr_multiple, quartile]  Q1=circle Q2=triangle Q3=square Q4=diamond
 const SCATTER_POINTS: [number, number, number][] = [
-  // Q1 — dense at small sizes, high IRR; rare above $10B
-  [0.12,7.8,1],[0.18,6.5,1],[0.10,5.8,1],[0.25,5.2,1],[0.15,4.9,1],
-  [0.32,4.5,1],[0.11,4.2,1],[0.42,3.8,1],[0.28,3.6,1],[0.72,3.4,1],
-  [0.55,3.2,1],[0.90,3.0,1],[0.65,2.9,1],[1.10,2.7,1],[0.85,2.6,1],
-  [1.40,2.5,1],[1.05,2.4,1],[1.80,2.3,1],[1.30,2.2,1],[2.20,2.1,1],
-  [1.60,2.0,1],[2.80,2.0,1],[2.00,1.9,1],[3.20,1.9,1],[2.50,1.8,1],
-  [3.80,1.8,1],[3.00,1.7,1],[4.80,1.7,1],[4.20,1.6,1],[5.50,1.6,1],
-  [6.80,1.5,1],[8.50,1.4,1],[11.5,1.8,1],[17.0,1.5,1],[0.38,3.1,1],
-  [0.62,2.8,1],[1.95,2.15,1],[0.48,4.1,1],
-  // Q2 — moderate IRR, spread across sizes
-  [0.22,1.9,2],[0.48,1.85,2],[0.95,1.75,2],[1.45,1.7,2],[2.10,1.65,2],
-  [2.90,1.6,2],[3.90,1.55,2],[5.20,1.5,2],[7.20,1.5,2],[9.80,1.6,2],
-  [12.5,1.45,2],[14.8,1.8,2],[19.5,1.7,2],[22.0,1.6,2],[0.75,1.8,2],
-  [4.50,1.55,2],[8.00,1.45,2],
-  // Q3 — lower IRR, spread across all sizes
-  [0.30,1.30,3],[0.78,1.25,3],[1.55,1.15,3],[2.80,1.30,3],[4.80,1.20,3],
-  [7.80,1.10,3],[11.8,1.28,3],[17.5,1.12,3],[21.5,1.22,3],[0.52,1.35,3],
-  [3.50,1.18,3],[6.20,1.15,3],[15.0,1.10,3],
-  // Q4 — lowest IRR, many near 1.0x or below
-  [0.22,0.82,4],[0.48,0.62,4],[0.95,0.90,4],[1.85,0.72,4],[3.80,0.85,4],
-  [6.80,0.92,4],[9.80,0.70,4],[14.5,0.80,4],[19.8,0.62,4],[23.5,0.88,4],
-  [0.65,0.42,4],[1.20,0.55,4],[2.50,0.38,4],[5.00,0.75,4],[11.0,0.65,4],
+  // ── Q1 First quartile (blue circles) ─────────────────────────────────────
+  // Top cluster — very small funds, high IRR
+  [0.05,7.80,1],[0.05,6.50,1],[0.08,5.70,1],[0.10,5.00,1],[0.08,4.70,1],
+  [0.05,4.40,1],[0.10,4.10,1],[0.05,3.85,1],[0.10,3.70,1],[0.05,3.50,1],
+  [0.10,3.30,1],[0.12,3.10,1],
+  // Dense mid-cluster — small funds, 2–3x IRR
+  [0.05,3.00,1],[0.10,2.90,1],[0.08,2.80,1],[0.15,2.70,1],[0.20,2.60,1],
+  [0.20,2.50,1],[0.25,2.40,1],[0.25,2.30,1],[0.30,2.20,1],[0.30,2.10,1],
+  [0.35,2.05,1],[0.40,2.00,1],
+  // Trailing out right — 1.5–2x, larger fund sizes
+  [0.50,1.95,1],[0.50,1.90,1],[0.70,1.85,1],[0.80,1.80,1],[1.00,1.80,1],
+  [1.20,1.75,1],[1.50,1.70,1],[1.50,1.65,1],[2.00,1.65,1],[2.50,1.60,1],
+  [3.00,1.60,1],[3.50,1.55,1],[4.00,1.55,1],[5.00,1.55,1],[5.50,1.50,1],
+  [6.50,1.45,1],[7.50,1.40,1],[9.00,1.40,1],
+  // Outliers at large fund sizes
+  [12.0,1.75,1],[17.0,1.50,1],[20.0,1.45,1],
+
+  // ── Q2 Second quartile (green triangles) ─────────────────────────────────
+  [0.30,1.75,2],[0.50,1.70,2],[0.80,1.60,2],[1.50,1.60,2],[2.00,1.55,2],
+  [3.00,1.50,2],[3.50,1.55,2],[5.00,1.50,2],[6.50,1.45,2],[8.00,1.50,2],
+  [10.0,1.55,2],[12.0,1.45,2],[14.0,1.40,2],[16.0,1.80,2],[18.0,1.45,2],
+  [20.0,1.55,2],[22.0,1.65,2],[24.0,1.40,2],
+
+  // ── Q3 Third quartile (orange squares) ───────────────────────────────────
+  [0.20,1.30,3],[0.50,1.25,3],[0.80,1.15,3],[1.00,1.20,3],[1.50,1.10,3],
+  [2.00,1.25,3],[3.00,1.15,3],[4.00,1.20,3],[5.50,1.10,3],[7.00,1.15,3],
+  [8.50,1.20,3],[10.0,1.10,3],[11.5,1.25,3],[13.0,1.15,3],[15.0,1.20,3],
+  [17.0,1.10,3],[18.5,1.15,3],[20.0,1.25,3],[21.5,1.10,3],[23.0,1.15,3],
+
+  // ── Q4 Fourth quartile (purple diamonds) ─────────────────────────────────
+  [0.10,0.50,4],[0.15,1.05,4],[0.20,0.30,4],[0.30,0.90,4],[0.40,0.75,4],
+  [0.50,0.60,4],[0.50,0.40,4],[0.60,1.00,4],[0.80,0.80,4],[1.00,0.95,4],
+  [1.20,0.65,4],[1.50,0.85,4],[2.00,0.75,4],[2.50,1.00,4],[3.00,0.90,4],
+  [3.50,0.80,4],[4.50,0.95,4],[5.50,0.85,4],[6.50,0.70,4],[7.50,0.90,4],
+  [8.50,0.80,4],[10.0,0.95,4],[11.5,0.85,4],[13.0,0.75,4],[15.0,0.90,4],
+  [17.0,0.80,4],[19.0,1.00,4],[21.0,0.85,4],[23.0,0.90,4],[25.0,1.00,4],
 ];
 
 function FundSizeScatter() {
   const ref = useRef<HTMLDivElement>(null);
   const visible = useInView(ref, 0.1);
 
-  const W = 560, H = 280;
-  const PAD = { left: 44, right: 12, top: 12, bottom: 36 };
+  const W = 560, H = 290;
+  const PAD = { left: 44, right: 16, top: 14, bottom: 38 };
   const pw = W - PAD.left - PAD.right;
   const ph = H - PAD.top - PAD.bottom;
   const maxX = 25, maxY = 8.5;
@@ -129,60 +142,80 @@ function FundSizeScatter() {
   const toY = (v: number) => PAD.top + ph - (v / maxY) * ph;
 
   const COLORS: Record<number, string> = {
-    1: "#3b82f6", 2: "#22c55e", 3: "#f97316", 4: "#8b5cf6",
+    1: "#3b82f6", 2: "#22c55e", 3: "#f97316", 4: "#7c3aed",
   };
-  const LABELS: Record<number, string> = {
-    1: "First quartile", 2: "Second quartile", 3: "Third quartile", 4: "Fourth quartile",
+
+  const renderPoint = ([x, y, q]: [number, number, number], i: number) => {
+    const cx = toX(x), cy = toY(y);
+    const c = COLORS[q];
+    const op = visible ? (q === 1 ? 0.88 : 0.70) : 0;
+    const tr = { transition: `fill-opacity ${0.35 + i * 0.005}s ease` };
+    const r = 4;
+    if (q === 1) return <circle key={i} cx={cx} cy={cy} r={r} fill={c} fillOpacity={op} style={tr} />;
+    if (q === 2) return <polygon key={i} points={`${cx},${cy-r} ${cx-r},${cy+r} ${cx+r},${cy+r}`} fill={c} fillOpacity={op} style={tr} />;
+    if (q === 3) return <rect key={i} x={cx-r+0.5} y={cy-r+0.5} width={r*2-1} height={r*2-1} fill={c} fillOpacity={op} style={tr} />;
+    return <polygon key={i} points={`${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}`} fill={c} fillOpacity={op} style={tr} />;
   };
+
+  const LEGEND = [
+    { q: 1, label: "First quartile",  shape: "circle"   },
+    { q: 2, label: "Second quartile", shape: "triangle"  },
+    { q: 3, label: "Third quartile",  shape: "square"    },
+    { q: 4, label: "Fourth quartile", shape: "diamond"   },
+  ];
 
   return (
     <div ref={ref} style={{ marginTop: 24 }}>
-      {/* Legend */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px", marginBottom: 12 }}>
-        {[1, 2, 3, 4].map(q => (
-          <div key={q} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[q], flexShrink: 0 }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#555" }}>{LABELS[q]}</span>
-          </div>
-        ))}
+      {/* Legend — matching original chart shapes */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 24px", marginBottom: 14 }}>
+        {LEGEND.map(({ q, label, shape }) => {
+          const c = COLORS[q];
+          return (
+            <div key={q} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <svg width={10} height={10} viewBox="-5 -5 10 10" overflow="visible">
+                {shape === "circle"   && <circle cx={0} cy={0} r={4} fill={c} />}
+                {shape === "triangle" && <polygon points="0,-4 -4,4 4,4" fill={c} />}
+                {shape === "square"   && <rect x={-3.5} y={-3.5} width={7} height={7} fill={c} />}
+                {shape === "diamond"  && <polygon points="0,-4 4,0 0,4 -4,0" fill={c} />}
+              </svg>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#555" }}>{label}</span>
+            </div>
+          );
+        })}
       </div>
+
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", overflow: "visible" }}>
-        {/* Grid */}
+        {/* Horizontal grid lines */}
         {[0, 2, 4, 6, 8].map(y => (
           <line key={y} x1={PAD.left} y1={toY(y)} x2={W - PAD.right} y2={toY(y)}
-            stroke="#222" strokeWidth={0.5} />
+            stroke="#1e1e1c" strokeWidth={0.8} />
         ))}
-        {/* Points — animate opacity in */}
-        {SCATTER_POINTS.map(([x, y, q], i) => (
-          <circle
-            key={i}
-            cx={toX(x)} cy={toY(y)} r={4}
-            fill={COLORS[q]}
-            fillOpacity={visible ? (q === 1 ? 0.85 : 0.55) : 0}
-            style={{ transition: `fill-opacity ${0.4 + i * 0.006}s ease` }}
-          />
-        ))}
-        {/* X axis */}
+        {/* Draw Q4, Q3, Q2 first so Q1 renders on top */}
+        {SCATTER_POINTS.filter(p => p[2] === 4).map((p, i) => renderPoint(p, 1000 + i))}
+        {SCATTER_POINTS.filter(p => p[2] === 3).map((p, i) => renderPoint(p, 2000 + i))}
+        {SCATTER_POINTS.filter(p => p[2] === 2).map((p, i) => renderPoint(p, 3000 + i))}
+        {SCATTER_POINTS.filter(p => p[2] === 1).map((p, i) => renderPoint(p, i))}
+        {/* X axis ticks + labels */}
         {[0, 5, 10, 15, 20, 25].map(v => (
           <g key={v}>
-            <line x1={toX(v)} y1={PAD.top + ph} x2={toX(v)} y2={PAD.top + ph + 4} stroke="#444" strokeWidth={0.5} />
-            <text x={toX(v)} y={H - 6} textAnchor="middle" fill="#666" fontSize={10} fontFamily="'DM Mono', monospace">
+            <line x1={toX(v)} y1={PAD.top + ph} x2={toX(v)} y2={PAD.top + ph + 5} stroke="#444" strokeWidth={0.6} />
+            <text x={toX(v)} y={H - 8} textAnchor="middle" fill="#666" fontSize={10} fontFamily="'DM Mono', monospace">
               ${v}
             </text>
           </g>
         ))}
-        {/* Y axis */}
+        {/* Y axis labels */}
         {[0, 2, 4, 6, 8].map(v => (
           <text key={v} x={PAD.left - 6} y={toY(v) + 4} textAnchor="end" fill="#666" fontSize={10} fontFamily="'DM Mono', monospace">
             {v}.0×
           </text>
         ))}
-        {/* Axis labels */}
-        <text x={PAD.left + pw / 2} y={H + 2} textAnchor="middle" fill="#555" fontSize={10} fontFamily="'DM Mono', monospace">
+        {/* Axis titles */}
+        <text x={PAD.left + pw / 2} y={H - 0} textAnchor="middle" fill="#555" fontSize={10} fontFamily="'DM Mono', monospace">
           Fund size (USD bn)
         </text>
-        <text x={10} y={PAD.top + ph / 2} textAnchor="middle" fill="#555" fontSize={10} fontFamily="'DM Mono', monospace"
-          transform={`rotate(-90, 10, ${PAD.top + ph / 2})`}>
+        <text x={9} y={PAD.top + ph / 2} textAnchor="middle" fill="#555" fontSize={10} fontFamily="'DM Mono', monospace"
+          transform={`rotate(-90, 9, ${PAD.top + ph / 2})`}>
           IRR (multiple)
         </text>
       </svg>
