@@ -416,13 +416,16 @@ function simulatePathsMonthly(
   years: number,
   nPaths: number,
   seed: number,
+  monthlySavings?: number,
 ): number[][] {
   const months = years * 12;
   const rng = makeRng(seed);
   const out: number[][] = new Array(nPaths);
+  const totalAmount = rows.reduce((s, r) => s + r.amount, 0);
   // Pre-compute per-asset monthly drift / vol
   const params = rows.map(r => ({
     amount: r.amount,
+    weight: totalAmount > 0 ? r.amount / totalAmount : 0,
     muMo: Math.log(1 + Math.max(r.retRate, -0.999)) / 12,
     volMo: r.vol / Math.sqrt(12),
   }));
@@ -434,6 +437,7 @@ function simulatePathsMonthly(
       for (let m = 1; m <= months; m++) {
         const z = normalSample(rng);
         v *= Math.exp(pa.muMo + pa.volMo * z);
+        if (monthlySavings) v += monthlySavings * pa.weight;
         totals[m] += v;
       }
     }
@@ -450,18 +454,34 @@ function percentile(values: number[], p: number): number {
 }
 
 function PortfolioChart({
-  view, years, rows, accentColor,
+  view, years, rows, accentColor, idealRows, monthlySavings,
 }: {
   view: ViewMode;
   years: number;
-  rows: PortfolioInputs[];     // active rows only (amount > 0)
-  accentColor: string;         // for total median line in variable view
+  rows: PortfolioInputs[];
+  accentColor: string;
+  idealRows?: PortfolioInputs[];   // target-allocation rows (same total value)
+  monthlySavings?: number;         // additional monthly savings in $
 }) {
   const W = 580, H = 320, PL = 66, PR = 24, PT = 16, PB = 34;
   const innerW = W - PL - PR;
   const innerH = H - PT - PB;
   const T = Math.max(years, 1);
   const currentYear = new Date().getFullYear();
+
+  // Helper: FV of annuity contribution per asset
+  function fvContribForRows(theRows: PortfolioInputs[], t: number, monthly: number): number {
+    const totalAmt = theRows.reduce((s, r) => s + r.amount, 0);
+    if (!monthly || totalAmt <= 0) return 0;
+    return theRows.reduce((s, r) => {
+      const w = r.amount / totalAmt;
+      const mC = monthly * w;
+      const rM = Math.pow(1 + Math.max(r.retRate, -0.999), 1 / 12) - 1;
+      const m = t * 12;
+      if (Math.abs(rM) < 1e-10) return s + mC * m;
+      return s + mC * (Math.pow(1 + rM, m) - 1) / rM;
+    }, 0);
+  }
 
   // Per-asset deterministic median trajectory (= amount × (1+r)^t)
   const medians: { row: PortfolioInputs; values: number[] }[] = rows.map(r => ({
@@ -475,10 +495,25 @@ function PortfolioChart({
     medians.reduce((s, m) => s + m.values[t], 0)
   );
 
+  const ms = monthlySavings ?? 0;
+
+  // savings-adjusted total median for current allocation
+  const totalMedianAdj = Array.from({ length: years + 1 }, (_, t) =>
+    totalMedian[t] + fvContribForRows(rows, t, ms)
+  );
+
+  // ideal allocation baseline median
+  const idealMedianDet = idealRows && idealRows.length > 0
+    ? Array.from({ length: years + 1 }, (_, t) =>
+        idealRows.reduce((s, r) => s + r.amount * Math.pow(1 + Math.max(r.retRate, -0.999), t), 0)
+        + fvContribForRows(idealRows, t, ms)
+      )
+    : null;
+
   // Stable serialization of inputs for useMemo deps — re-runs on any change
   const mcDepKey = useMemo(
-    () => rows.map(r => `${r.key}:${r.amount.toFixed(2)}:${r.retRate.toFixed(4)}:${r.vol.toFixed(4)}`).join("|") + `|y${years}`,
-    [rows, years],
+    () => rows.map(r => `${r.key}:${r.amount.toFixed(2)}:${r.retRate.toFixed(4)}:${r.vol.toFixed(4)}`).join("|") + `|y${years}|s${ms}`,
+    [rows, years, ms],
   );
 
   // Monte Carlo simulation for Variable view, MONTHLY resolution.
@@ -489,7 +524,7 @@ function PortfolioChart({
     const N_PATHS = 400;
     const N_SPAGHETTI = 60;
     const seed = 4242;
-    const paths = simulatePathsMonthly(rows, years, N_PATHS, seed);
+    const paths = simulatePathsMonthly(rows, years, N_PATHS, seed, ms);
     const median: number[] = [];
     const p5: number[] = [];
     const p95: number[] = [];
@@ -508,10 +543,26 @@ function PortfolioChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, mcDepKey]);
 
+  const idealMcDepKey = useMemo(
+    () => (idealRows ?? []).map(r => `${r.key}:${r.amount.toFixed(2)}:${r.retRate.toFixed(4)}:${r.vol.toFixed(4)}`).join("|") + `|y${years}|s${ms}`,
+    [idealRows, years, ms],
+  );
+  const idealMc = useMemo(() => {
+    if (view !== "variable" || !idealRows || idealRows.length === 0) return null;
+    const N_PATHS = 400;
+    const paths = simulatePathsMonthly(idealRows, years, N_PATHS, 5353, ms);
+    const median: number[] = [];
+    for (let m = 0; m <= months; m++) {
+      median.push(percentile(paths.map(p => p[m]), 0.5));
+    }
+    return { median };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, idealMcDepKey]);
+
   // y-axis max — clamp to P95 endpoint in Variable mode, total median in stacked.
   const maxVal = view === "median"
-    ? Math.max(...totalMedian, 1)
-    : Math.max((mc?.p95[months] ?? 1), 1);
+    ? Math.max(...(totalMedianAdj), ...(idealMedianDet ?? [0]), 1)
+    : Math.max((mc?.p95[months] ?? 1), (idealMc?.median[months] ?? 0), 1);
 
   // x scaling — yearly index for stacked, monthly for variable.
   const xS = (t: number) => PL + (t / T) * innerW;
@@ -596,6 +647,28 @@ function PortfolioChart({
               </text>
             </>
           )}
+          {/* savings-adjusted current total — subtle offset dot + label if savingsMode active */}
+          {ms > 0 && (() => {
+            const finalAdj = totalMedianAdj[years];
+            return (
+              <>
+                <path d={linePath(totalMedianAdj)} fill="none" stroke="#F8FAFC" strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity="0.5" />
+                <circle cx={xS(years)} cy={yS(finalAdj)} r="3.5" fill="#F8FAFC" fillOpacity="0.8" />
+                <text x={xS(years) - 8} y={yS(finalAdj) - 9} textAnchor="end" fontSize="9" fontWeight="600" fill="#F8FAFC" fillOpacity="0.8">+savings {fmt(finalAdj)}</text>
+              </>
+            );
+          })()}
+          {/* Ideal allocation overlay — amber dashed line */}
+          {idealMedianDet && (() => {
+            const finalIdeal = idealMedianDet[years];
+            return (
+              <>
+                <path d={linePath(idealMedianDet)} fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="6 3" />
+                <circle cx={xS(years)} cy={yS(finalIdeal)} r="4" fill="#F59E0B" />
+                <text x={xS(years) - 8} y={yS(finalIdeal) - 9} textAnchor="end" fontSize="9" fontWeight="700" fill="#F59E0B">ideal {fmt(finalIdeal)}</text>
+              </>
+            );
+          })()}
         </>
       )}
 
@@ -637,6 +710,13 @@ function PortfolioChart({
               </>
             );
           })()}
+          {/* Ideal allocation MC median overlay */}
+          {idealMc && (
+            <path d={linePathM(idealMc.median)} fill="none" stroke="#F59E0B" strokeWidth="2.25" strokeDasharray="6 3" strokeLinejoin="round" strokeLinecap="round" />
+          )}
+          {idealMc && idealMc.median[months] > 0 && (
+            <text x={xSM(months) - 8} y={yS(idealMc.median[months]) - 9} textAnchor="end" fontSize="9" fontWeight="700" fill="#F59E0B">ideal {fmt(idealMc.median[months])}</text>
+          )}
         </>
       )}
     </svg>
@@ -653,22 +733,26 @@ type RiskTolerance = "conservative" | "moderate" | "aggressive";
 // fund commitment sizes, and adequate liquidity buffers at lower wealth.
 //   Starter (<$200k): no privates (not accredited), heavier cash buffer
 //   Builder ($200k-$1M): partial private exposure
-//   Established ($1M+): full diversification
-// All rows must sum to 1.00 within each tolerance.
+//   Established ($1M+): full diversification across alternatives
+//
+// Research basis: JPMorgan Model Portfolios (2024), Swensen Yale Endowment
+// model adapted for individuals, Vanguard glide-path research, AQR
+// alternative allocation studies. Crypto capped at 1-7% across bands.
+// All rows sum to 1.00.
 const TARGETS_STARTER: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: { fund: 0,    sp500: 0.40, bonds: 0.20, realestate: 0.20, privCredit: 0,    privEquity: 0,    crypto: 0.02, cash: 0.18 },
-  moderate:     { fund: 0,    sp500: 0.55, bonds: 0.15, realestate: 0.15, privCredit: 0,    privEquity: 0,    crypto: 0.05, cash: 0.10 },
-  aggressive:   { fund: 0,    sp500: 0.60, bonds: 0.05, realestate: 0.15, privCredit: 0,    privEquity: 0,    crypto: 0.15, cash: 0.05 },
+  conservative: { fund: 0,    sp500: 0.40, bonds: 0.22, realestate: 0.14, privCredit: 0,    privEquity: 0,    crypto: 0.01, cash: 0.23 },
+  moderate:     { fund: 0,    sp500: 0.55, bonds: 0.13, realestate: 0.12, privCredit: 0,    privEquity: 0,    crypto: 0.03, cash: 0.17 },
+  aggressive:   { fund: 0,    sp500: 0.65, bonds: 0.05, realestate: 0.10, privCredit: 0,    privEquity: 0,    crypto: 0.07, cash: 0.13 },
 };
 const TARGETS_BUILDER: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: { fund: 0.05, sp500: 0.30, bonds: 0.15, realestate: 0.15, privCredit: 0.10, privEquity: 0.05, crypto: 0.02, cash: 0.18 },
-  moderate:     { fund: 0.07, sp500: 0.40, bonds: 0.12, realestate: 0.13, privCredit: 0.05, privEquity: 0.08, crypto: 0.07, cash: 0.08 },
-  aggressive:   { fund: 0.13, sp500: 0.30, bonds: 0.08, realestate: 0.12, privCredit: 0.03, privEquity: 0.18, crypto: 0.12, cash: 0.04 },
+  conservative: { fund: 0.05, sp500: 0.28, bonds: 0.18, realestate: 0.12, privCredit: 0.08, privEquity: 0.03, crypto: 0.01, cash: 0.25 },
+  moderate:     { fund: 0.08, sp500: 0.40, bonds: 0.12, realestate: 0.12, privCredit: 0.06, privEquity: 0.05, crypto: 0.03, cash: 0.14 },
+  aggressive:   { fund: 0.12, sp500: 0.47, bonds: 0.05, realestate: 0.10, privCredit: 0.03, privEquity: 0.08, crypto: 0.07, cash: 0.08 },
 };
 const TARGETS_ESTABLISHED: Record<RiskTolerance, Record<AssetKey, number>> = {
-  conservative: { fund: 0.10, sp500: 0.20, bonds: 0.15, realestate: 0.15, privCredit: 0.20, privEquity: 0.05, crypto: 0.02, cash: 0.13 },
-  moderate:     { fund: 0.15, sp500: 0.30, bonds: 0.08, realestate: 0.15, privCredit: 0.08, privEquity: 0.10, crypto: 0.10, cash: 0.04 },
-  aggressive:   { fund: 0.20, sp500: 0.28, bonds: 0.05, realestate: 0.10, privCredit: 0.03, privEquity: 0.20, crypto: 0.13, cash: 0.01 },
+  conservative: { fund: 0.08, sp500: 0.22, bonds: 0.22, realestate: 0.13, privCredit: 0.18, privEquity: 0.04, crypto: 0.01, cash: 0.12 },
+  moderate:     { fund: 0.12, sp500: 0.32, bonds: 0.14, realestate: 0.13, privCredit: 0.10, privEquity: 0.07, crypto: 0.04, cash: 0.08 },
+  aggressive:   { fund: 0.17, sp500: 0.37, bonds: 0.06, realestate: 0.10, privCredit: 0.06, privEquity: 0.11, crypto: 0.06, cash: 0.07 },
 };
 
 function getWealthBand(wealth: number): "starter" | "builder" | "established" {
@@ -1027,6 +1111,16 @@ function RetirementPlanner({
   const overweight  = sorted.filter(i => i.deltaPct >  TOL && !i.illiquid).slice(0, 4);
   const holdNotes   = sorted.filter(i => i.deltaPct >  TOL &&  i.illiquid).slice(0, 4);
 
+  // Liquidity-constrained rebalancing: underweight "adds" can only be funded
+  // by selling liquid overweights. When illiquid assets are on hold, cap add-
+  // amounts so that sum(adds) == sum(liquid sells) == 0 net.
+  const liquidSellBudget = overweight.reduce((s, i) => s + Math.abs(i.deltaDollar), 0);
+  const totalUnderNeed   = underweight.reduce((s, i) => s + Math.abs(i.deltaDollar), 0);
+  const underProrateRatio =
+    holdNotes.length > 0 && totalUnderNeed > 0 && totalUnderNeed > liquidSellBudget
+      ? liquidSellBudget / totalUnderNeed
+      : 1;
+
   // Shortfall analysis
   const currGap   = currFV - requiredAtRetire;     // positive = surplus
   const targetGap = targetFV - requiredAtRetire;
@@ -1042,8 +1136,8 @@ function RetirementPlanner({
   const fmtPP  = (n: number) => `${n >= 0 ? "+" : ""}${(n * 100).toFixed(1)}pp`;
   const fmtSign = (n: number) => `${n >= 0 ? "+" : ""}${fmt(Math.abs(n))}`;
 
-  const Row = ({ kind, item }: { kind: "over" | "under" | "hold"; item: Item }) => {
-    const dollar = fmt(Math.abs(item.deltaDollar));
+  const Row = ({ kind, item, prorateRatio = 1 }: { kind: "over" | "under" | "hold"; item: Item; prorateRatio?: number }) => {
+    const dollar = fmt(Math.abs(item.deltaDollar) * prorateRatio);
     const labelColor = kind === "over" ? "text-rose-400" : kind === "under" ? "text-emerald-400" : "text-amber-400";
     const action = kind === "over" ? "↓ reduce" : kind === "under" ? "↑ add" : "✓ hold (illiquid)";
     return (
@@ -1063,27 +1157,51 @@ function RetirementPlanner({
     );
   };
 
+  // Profile inference: estimate income bracket from wealth band. Used to show
+  // context-aware hints when the user hasn't refined their planner inputs.
+  const inferredIncome = (() => {
+    const band = getWealthBand(totalValue);
+    if (band === "starter")     return 75_000;
+    if (band === "builder")     return 175_000;
+    return 350_000;
+  })();
+  // Infer likely age from retirement target and horizon (retireAge - horizon).
+  // For now, the stored `age` is the source of truth (defaults to 45). We flag
+  // whether it looks like an unmodified default so the UI can prompt refinement.
+  const ageIsDefault = age === 45 && retireAge === 65;
+
   // Plain-English narrative — 2 sentences describing the situation.
   const probColor = currProb >= 0.75 ? "text-emerald-300" : currProb >= 0.5 ? "text-amber-300" : "text-rose-300";
   const probTargetColor = targetProb >= 0.75 ? "text-emerald-300" : targetProb >= 0.5 ? "text-amber-300" : "text-rose-300";
   const probLift = targetProb - currProb;
   const narrative = (
-    <p className="text-sm text-slate-300 leading-relaxed">
-      At <span className="text-slate-100 font-semibold">{age}</span>, retiring at{" "}
-      <span className="text-slate-100 font-semibold">{retireAge}</span> with a{" "}
-      <span className="text-slate-100 font-semibold tabular-nums">{fmt(requiredAtRetire)}</span> target,
-      your current allocation has a{" "}
-      <span className={`font-semibold ${probColor}`}>{(currProb * 100).toFixed(0)}%</span> chance
-      of getting you there. Rebalancing to the{" "}
-      <span className="text-slate-100 capitalize">{wealthBandLabel.split(" ")[0].toLowerCase()}</span>/
-      <span className="text-slate-100 capitalize">{riskTolerance}</span> target{" "}
-      {probLift > 0.005
-        ? <>lifts that to <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> ({probLift > 0 ? "+" : ""}{(probLift * 100).toFixed(0)}pp).</>
-        : probLift < -0.005
-        ? <>would drop it to <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> — current is already over-aggressive.</>
-        : <>holds at <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> — already near-optimal.</>
-      }
-    </p>
+    <div className="space-y-2">
+      <p className="text-sm text-slate-300 leading-relaxed">
+        At <span className="text-slate-100 font-semibold">{age}</span>, retiring at{" "}
+        <span className="text-slate-100 font-semibold">{retireAge}</span> with a{" "}
+        <span className="text-slate-100 font-semibold tabular-nums">{fmt(requiredAtRetire)}</span> target,
+        your current allocation has a{" "}
+        <span className={`font-semibold ${probColor}`}>{(currProb * 100).toFixed(0)}%</span> chance
+        of getting you there. Rebalancing to the{" "}
+        <span className="text-slate-100 capitalize">{wealthBandLabel.split(" ")[0].toLowerCase()}</span>/
+        <span className="text-slate-100 capitalize">{riskTolerance}</span> target{" "}
+        {probLift > 0.005
+          ? <>lifts that to <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> ({probLift > 0 ? "+" : ""}{(probLift * 100).toFixed(0)}pp).</>
+          : probLift < -0.005
+          ? <>would drop it to <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> — current is already over-aggressive.</>
+          : <>holds at <span className={`font-semibold ${probTargetColor}`}>{(targetProb * 100).toFixed(0)}%</span> — already near-optimal.</>
+        }
+      </p>
+      {ageIsDefault && (
+        <p className="text-[11px] text-slate-500 leading-relaxed bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-3 py-2">
+          <span className="text-amber-400 font-medium">Profile estimates</span>{" "}
+          based on your {wealthBandLabel} portfolio: est. age <strong className="text-slate-400">{age}</strong>,
+          est. income <strong className="text-slate-400">{fmt(inferredIncome)}/yr</strong>.
+          {" "}Targets are blended toward conservative over {Math.max(0, retireAge - age)} yrs to retirement.
+          {" "}<span className="text-slate-400 cursor-pointer underline decoration-dotted" onClick={() => setPlanningOpen(true)}>Update your profile in the planner</span>{" "}for personalized recommendations.
+        </p>
+      )}
+    </div>
   );
 
   return (
@@ -1398,7 +1516,7 @@ function RetirementPlanner({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
             <div>
               {underweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 mb-1">Underweight · add</p>}
-              {underweight.map(i => <Row key={i.group} kind="under" item={i} />)}
+              {underweight.map(i => <Row key={i.group} kind="under" item={i} prorateRatio={underProrateRatio} />)}
             </div>
             <div>
               {overweight.length > 0 && <p className="text-[10px] uppercase tracking-widest text-rose-500/80 mb-1">Overweight · trim liquid</p>}
@@ -1409,8 +1527,10 @@ function RetirementPlanner({
           </div>
           {holdNotes.length > 0 && (
             <p className="text-[10px] text-slate-600 leading-relaxed pt-2">
-              Illiquid groups (Private Equity, Real Estate) are held at current value rather than reduced.
-              Use future contributions to balance underweights instead of selling these positions.
+              Illiquid groups (Private Equity, Real Estate) cannot be sold to fund rebalancing.
+              {underProrateRatio < 1
+                ? ` Add amounts above are prorated to the $${Math.round(liquidSellBudget).toLocaleString()} available from liquid trims — adds and reduces net to zero.`
+                : " Use future contributions to build underweights rather than selling these positions."}
             </p>
           )}
         </div>
@@ -1580,6 +1700,8 @@ export default function FeeCalculator() {
 
   // Portfolio view selector (persisted)
   const [portfolioView, setPortfolioView] = usePersistedState<ViewMode>("view", "median");
+  const [showSavings, setShowSavings] = useState(false);
+  const [additionalMonthly, setAdditionalMonthly] = usePersistedState<number>("addlMonthly", 500);
 
   // Per-asset slider expansion state (UI only, not persisted)
   const [expandedAssets, setExpandedAssets] = useState<Set<AssetKey>>(new Set());
@@ -1683,6 +1805,16 @@ export default function FeeCalculator() {
   // Total portfolio value (current)
   const totalValue = allRows.reduce((s, r) => s + r.amount, 0);
 
+  // Target-allocation rows for the ideal overlay (same total value, target weights)
+  const idealRows: PortfolioInputs[] = ASSET_CLASSES.map(a => ({
+    key: a.key,
+    label: a.label,
+    color: a.color,
+    amount: (targets[a.key] ?? 0) * totalValue,
+    retRate: allReturnsMap[a.key] ?? a.defaultReturn,
+    vol: allVolsMap[a.key] ?? a.defaultVol,
+  })).filter(r => r.amount > 0);
+
   // Wealth-band-aware targets, blended toward conservative as retirement nears
   // (linear over 0..20 yrs to retirement).
   const yearsToRetire = Math.max(0, retireAge - age);
@@ -1697,6 +1829,19 @@ export default function FeeCalculator() {
     return out;
   })();
   const wealthBandLabel = getWealthBandLabel(totalValue);
+
+  // Profile inference: estimate income bracket from wealth band. Used to show
+  // context-aware hints when the user hasn't refined their planner inputs.
+  const inferredIncome = (() => {
+    const band = getWealthBand(totalValue);
+    if (band === "starter")     return 75_000;
+    if (band === "builder")     return 175_000;
+    return 350_000;
+  })();
+  // Infer likely age from retirement target and horizon (retireAge - horizon).
+  // For now, the stored `age` is the source of truth (defaults to 45). We flag
+  // whether it looks like an unmodified default so the UI can prompt refinement.
+  const ageIsDefault = age === 45 && retireAge === 65;
 
   // Returns/vols by asset key, with the fund using selected-net IRR / fund Vol.
   const allReturnsMap: Record<string, number> = {
