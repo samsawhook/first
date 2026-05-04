@@ -39,6 +39,33 @@ import {
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction, DebtPosition } from "@/lib/types";
 
+// Audily Series A Preferred — dividends began accruing 03/18/2026.
+// Accrued amount is computed dynamically and folded into the position's
+// currentValue so it flows through NAV, donut allocations, and convertible
+// breakdowns consistently. Must be declared above any module-level `const`
+// that calls withAudilyAccrued — function decls hoist, but the const
+// AUDILY_PREFERRED_ACCRUAL_START it reads does not.
+const AUDILY_PREFERRED_ACCRUAL_START = new Date("2026-03-18T00:00:00Z");
+function audilyPreferredAccrued(): number {
+  const pref = basePortfolio.find(c => c.id === "audily")?.debtPositions?.find(d => d.id === "audily-pref-a");
+  if (!pref?.interestRate) return 0;
+  const days = Math.max(0, (Date.now() - AUDILY_PREFERRED_ACCRUAL_START.getTime()) / 86_400_000);
+  return pref.principal * (pref.interestRate / 100) * (days / 365);
+}
+function withAudilyAccrued<T extends typeof basePortfolio[number]>(p: T[]): T[] {
+  const accrued = audilyPreferredAccrued();
+  if (accrued <= 0) return p;
+  return p.map(c => {
+    if (c.id !== "audily") return c;
+    return {
+      ...c,
+      debtPositions: (c.debtPositions ?? []).map(d =>
+        d.id === "audily-pref-a" ? { ...d, currentValue: d.currentValue + accrued } : d
+      ),
+    };
+  });
+}
+
 const portfolio = withAudilyAccrued(basePortfolio);
 const fund = baseFund;
 const LP_TOTAL_UNITS = BASE_LP_TOTAL_UNITS;
@@ -79,31 +106,6 @@ const SCENARIOB_SBR2TH_SHARES    = 3_247_832;
 const SCENARIOB_MB_SHARES        = 4_804_351;
 
 type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "letters" | "investor" | "fees";
-
-// Audily Series A Preferred — dividends began accruing 03/18/2026.
-// Accrued amount is computed dynamically and folded into the position's
-// currentValue so it flows through NAV, donut allocations, and convertible
-// breakdowns consistently.
-const AUDILY_PREFERRED_ACCRUAL_START = new Date("2026-03-18T00:00:00Z");
-function audilyPreferredAccrued(): number {
-  const pref = basePortfolio.find(c => c.id === "audily")?.debtPositions?.find(d => d.id === "audily-pref-a");
-  if (!pref?.interestRate) return 0;
-  const days = Math.max(0, (Date.now() - AUDILY_PREFERRED_ACCRUAL_START.getTime()) / 86_400_000);
-  return pref.principal * (pref.interestRate / 100) * (days / 365);
-}
-function withAudilyAccrued<T extends typeof basePortfolio[number]>(p: T[]): T[] {
-  const accrued = audilyPreferredAccrued();
-  if (accrued <= 0) return p;
-  return p.map(c => {
-    if (c.id !== "audily") return c;
-    return {
-      ...c,
-      debtPositions: (c.debtPositions ?? []).map(d =>
-        d.id === "audily-pref-a" ? { ...d, currentValue: d.currentValue + accrued } : d
-      ),
-    };
-  });
-}
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
