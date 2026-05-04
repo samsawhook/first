@@ -137,97 +137,54 @@ function AssetAllocationChart() {
   );
 }
 
-// ── Quarterly revenue chart ───────────────────────────────────────────────────
-// Aggregated from monthly P&L data across all portfolio companies
-const quarterlyData = [
-  { label: "Q4'21", total: 5,   year: "2021" },
-  { label: "Q1'22", total: 5,   year: "2022" },
-  { label: "Q2'22", total: 36,  year: "2022" },
-  { label: "Q3'22", total: 109, year: "2022" },
-  { label: "Q4'22", total: 115, year: "2022" },
-  { label: "Q1'23", total: 193, year: "2023" },
-  { label: "Q2'23", total: 343, year: "2023" },
-  { label: "Q3'23", total: 369, year: "2023" },
-  { label: "Q4'23", total: 398, year: "2023" },
-  { label: "Q1'24", total: 521, year: "2024" },
-  { label: "Q2'24", total: 338, year: "2024" },
-  { label: "Q3'24", total: 493, year: "2024" },
-  { label: "Q4'24", total: 506, year: "2024" },
-  { label: "Q1'25", total: 476, year: "2025" },
-  { label: "Q2'25", total: 372, year: "2025" },
-  { label: "Q3'25", total: 519, year: "2025" },
-  { label: "Q4'25", total: 345, year: "2025" },
+// ── Annual revenue chart ──────────────────────────────────────────────────────
+const revenueData = [
+  { label: "Year 1", total: 5 },
+  { label: "Year 2", total: 265 },
+  { label: "Year 3", total: 1304 },
+  { label: "Year 4", total: 1858 },
+  { label: "Year 5", total: 1712 },
 ];
 
-const YEAR_COLORS: Record<string, string> = {
-  "2021": "#3a3a38",
-  "2022": "#2a2a28",
-  "2023": "#2b4a6a",
-  "2024": "#c45a2d",
-  "2025": "#8b3a1a",
-};
-
-function QuarterlyRevenueChart() {
+function RevenueChart() {
   const ref = useRef<HTMLDivElement>(null);
   const visible = useInView(ref, 0.1);
   const [hovered, setHovered] = useState<number | null>(null);
-  const max = Math.max(...quarterlyData.map(d => d.total));
+  const max = 2000;
 
   return (
     <div ref={ref} style={{ padding: "2rem 0" }}>
-      <div style={{ overflowX: "auto", paddingBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(4px, 1vw, 10px)", height: 220, minWidth: 600, paddingBottom: 4 }}>
-          {quarterlyData.map((d, i) => {
-            const hPct = d.total / max;
-            const active = hovered === i;
-            const color = active ? "#c45a2d" : YEAR_COLORS[d.year] ?? "#2a2a28";
-            const delay = visible ? i * 0.035 : 0;
-            return (
-              <div
-                key={d.label}
-                onMouseEnter={() => setHovered(i)}
-                onMouseLeave={() => setHovered(null)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, cursor: "default", minWidth: 28 }}
-              >
-                <span style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: "clamp(9px, 1.2vw, 12px)",
-                  fontWeight: 500,
-                  color: active ? "#c45a2d" : "#8a8a8a",
-                  transition: "color 0.2s",
-                  whiteSpace: "nowrap",
-                  opacity: active ? 1 : 0,
-                  minHeight: 16,
-                }}>
-                  ${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}
-                </span>
-                <div style={{
-                  width: "100%",
-                  height: `${hPct * 180}px`,
-                  background: active ? "linear-gradient(180deg, #c45a2d, #8b3a1a)" : `linear-gradient(180deg, ${color}, ${color}99)`,
-                  borderRadius: "3px 3px 0 0",
-                  transition: `all 0.3s ease, height ${0.5 + delay}s cubic-bezier(0.16,1,0.3,1)`,
-                  transform: active ? "scaleX(1.08)" : "scaleX(1)",
-                  transformOrigin: "bottom",
-                  ...(visible ? {} : { height: "0px" }),
-                }} />
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(8px, 1vw, 10px)", color: d.label.startsWith("Q1") ? "#888" : "#555", letterSpacing: 0.5, whiteSpace: "nowrap" }}>{d.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {/* Year labels */}
-      <div style={{ display: "flex", justifyContent: "space-around", marginTop: 4, flexWrap: "wrap", gap: 6 }}>
-        {["2021", "2022", "2023", "2024", "2025"].map(y => (
-          <div key={y} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: YEAR_COLORS[y], display: "inline-block" }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#666" }}>{y}</span>
-          </div>
-        ))}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(16px, 4vw, 48px)", height: 220, justifyContent: "center" }}>
+        {revenueData.map((d, i) => {
+          const hPct = d.total / max;
+          const active = hovered === i;
+          const delay = i * 0.07;
+          return (
+            <div
+              key={d.label}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "default" }}
+            >
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, fontWeight: 500, color: active ? "#c45a2d" : "#8a8a8a", transition: "color 0.2s", minHeight: 18 }}>
+                {active ? `$${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}` : ""}
+              </span>
+              <div style={{
+                width: "clamp(40px, 9vw, 64px)",
+                height: visible ? `${hPct * 180}px` : "0px",
+                background: active ? "linear-gradient(180deg, #c45a2d, #8b3a1a)" : "linear-gradient(180deg, #2a2a2a, #1a1a1a)",
+                borderRadius: "4px 4px 0 0",
+                transition: `background 0.3s ease, transform 0.2s ease, height ${0.5 + delay}s cubic-bezier(0.16,1,0.3,1)`,
+                transform: active ? "scaleX(1.06)" : "scaleX(1)",
+                transformOrigin: "bottom",
+              }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#666", letterSpacing: 0.5 }}>{d.label}</span>
+            </div>
+          );
+        })}
       </div>
       <p style={{ textAlign: "center", fontSize: 12, color: "#888", marginTop: 12, fontStyle: "italic" }}>
-        Aggregate portfolio revenues (000s USD) · Unaudited, non-GAAP cash basis · Through Q4 2025
+        Aggregate portfolio revenues (000s USD) · Unaudited, non-GAAP cash basis
       </p>
     </div>
   );
@@ -627,7 +584,7 @@ export default function NthVentureIntro() {
           </p>
         </FadeIn>
         <FadeIn delay={0.1}>
-          <QuarterlyRevenueChart />
+          <RevenueChart />
         </FadeIn>
 
         {/* Press coverage */}
