@@ -314,9 +314,11 @@ function StackBar({ exit, capital, mgmtFee, carry, lpNet }: {
   );
 }
 
-function ResultCard({ title, label, accentColor, result, capital }: {
+function ResultCard({ title, label, accentColor, result, capital, waterfall }: {
   title: string; label: string; accentColor: string; result: Result; capital: number;
+  waterfall: React.ReactNode;
 }) {
+  const [detailOpen, setDetailOpen] = useState(false);
   const rows = [
     { label: "Gross Exit Value", value: fmt(result.exitValue), dim: false },
     { label: "6% Hurdle (LP preferred return)", value: fmt(result.hurdle), dim: true },
@@ -333,6 +335,7 @@ function ResultCard({ title, label, accentColor, result, capital }: {
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden flex-1 min-w-0">
+      {/* Header — always visible */}
       <div className="px-5 py-4 border-b border-slate-800 flex items-start justify-between" style={{ background: `${accentColor}10` }}>
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-widest mb-0.5" style={{ color: accentColor }}>{label}</p>
@@ -340,10 +343,12 @@ function ResultCard({ title, label, accentColor, result, capital }: {
         </div>
         <div className="text-right ml-4 shrink-0">
           <p className="text-2xl font-bold tabular-nums text-slate-100 leading-none">{fmtX(result.lpNetMoic)}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wide">LP Net MOIC</p>
+          <p className="text-xs tabular-nums text-slate-300 font-medium mt-0.5">{fmt(result.lpNet)}</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">LP Net MOIC</p>
         </div>
       </div>
-      <div className="px-5 pt-4 pb-2">
+      {/* Breakdown bar — always visible */}
+      <div className="px-5 pt-4 pb-3">
         <StackBar exit={result.exitValue} capital={capital} mgmtFee={result.mgmtFee} carry={result.gpCarry} lpNet={result.lpNet} />
         <div className="flex gap-4 mt-1.5 flex-wrap">
           <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-slate-500/70 inline-block" />LP basis</span>
@@ -351,24 +356,41 @@ function ResultCard({ title, label, accentColor, result, capital }: {
           <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-violet-500/70 inline-block" />GP carry</span>
           {result.mgmtFee > 0 && <span className="flex items-center gap-1 text-[10px] text-slate-400"><span className="w-2 h-2 rounded-sm bg-rose-500/60 inline-block" />Mgmt fee</span>}
         </div>
+        {/* Chevron to expand detail */}
+        <button
+          type="button"
+          onClick={() => setDetailOpen(d => !d)}
+          className="mt-2 flex items-center gap-1 text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+        >
+          <ChevronDown size={11} className={`transition-transform ${detailOpen ? "rotate-180" : ""}`} />
+          {detailOpen ? "Hide details" : "Show details"}
+        </button>
       </div>
-      <div className="px-5 pb-5 space-y-0">
-        {rows.map((row, i) =>
-          row === null ? (
-            <div key={i} className="border-t border-slate-800/60 my-2" />
-          ) : (
-            <div key={i} className="flex justify-between items-baseline py-1.5">
-              <span className={`text-xs ${row.dim ? "text-slate-600" : "text-slate-400"}`}>{row.label}</span>
-              <span
-                className={`text-xs tabular-nums font-medium ${row.bold ? "text-sm text-slate-100 font-semibold" : ""}`}
-                style={{ color: row.color ?? (row.bold ? undefined : row.dim ? "#475569" : "#CBD5E1") }}
-              >
-                {row.value}
-              </span>
-            </div>
-          )
-        )}
-      </div>
+      {/* Collapsible: fee rows + waterfall explainer */}
+      {detailOpen && (
+        <>
+          <div className="px-5 pb-4 border-t border-slate-800/50 space-y-0">
+            {rows.map((row, i) =>
+              row === null ? (
+                <div key={i} className="border-t border-slate-800/60 my-2" />
+              ) : (
+                <div key={i} className="flex justify-between items-baseline py-1.5">
+                  <span className={`text-xs ${row.dim ? "text-slate-600" : "text-slate-400"}`}>{row.label}</span>
+                  <span
+                    className={`text-xs tabular-nums font-medium ${row.bold ? "text-sm text-slate-100 font-semibold" : ""}`}
+                    style={{ color: row.color ?? (row.bold ? undefined : row.dim ? "#475569" : "#CBD5E1") }}
+                  >
+                    {row.value}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+          <div className="px-5 pb-5 border-t border-slate-800/50 pt-4 text-xs text-slate-500 space-y-1">
+            {waterfall}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1699,7 +1721,6 @@ export default function FeeCalculator() {
   // Portfolio view selector (persisted)
   const [portfolioView, setPortfolioView] = usePersistedState<ViewMode>("view", "median");
   const [showSavings, setShowSavings] = useState(false);
-  const [additionalMonthly, setAdditionalMonthly] = usePersistedState<number>("addlMonthly", 500);
 
   // Per-asset slider expansion state (UI only, not persisted)
   const [expandedAssets, setExpandedAssets] = useState<Set<AssetKey>>(new Set());
@@ -2034,20 +2055,35 @@ export default function FeeCalculator() {
 
       {/* Side-by-side fee-structure results */}
       <div className="flex flex-col sm:flex-row gap-5">
-        <ResultCard title="2% Management Fee / 20% Carry" label="Traditional 2 / 20" accentColor="#6366F1" result={r2_20} capital={capital} />
-        <ResultCard title="0% Management Fee / 50% Carry" label="Buffett Partnership Style  ·  0 / 50" accentColor="#F59E0B" result={rBuf} capital={capital} />
-      </div>
-
-      {/* Comparison callout */}
-      <div className={`rounded-xl border px-6 py-4 text-sm ${lpDiff > 0 ? "border-emerald-800/50 bg-emerald-900/10" : "border-rose-800/50 bg-rose-900/10"}`}>
-        <span className="text-slate-400">At these assumptions, the Buffett structure returns </span>
-        <span className={`font-semibold ${lpDiff > 0 ? "text-emerald-400" : "text-rose-400"}`}>
-          {lpDiff > 0 ? "+" : ""}{fmt(Math.abs(lpDiff))} ({lpDiff > 0 ? "+" : ""}{fmtPct(lpDiff / capital)})
-        </span>
-        <span className="text-slate-400"> {lpDiff > 0 ? "more" : "less"} to the LP versus 2/20.</span>
-        <span className="ml-2 text-slate-600 text-xs">
-          (Δ LP net MOIC: {lpDiff >= 0 ? "+" : ""}{(rBuf.lpNetMoic - r2_20.lpNetMoic).toFixed(2)}× · Δ LP net IRR: {lpDiff >= 0 ? "+" : ""}{fmtPct(rBuf.lpNetIrr - r2_20.lpNetIrr)})
-        </span>
+        <ResultCard
+          title="2% Management Fee / 20% Carry"
+          label="Traditional 2 / 20"
+          accentColor="#6366F1"
+          result={r2_20}
+          capital={capital}
+          waterfall={<>
+            <p className="font-semibold text-slate-400 mb-1">2/20 Waterfall</p>
+            <p>① Return of capital to LP</p>
+            <p>② LP preferred return at 6% compounded</p>
+            <p>③ 80/20 catchup until GP holds 20% of all profits</p>
+            <p>④ 80% LP / 20% GP on remaining proceeds</p>
+            <p className="pt-1 text-slate-600">Management fee paid annually regardless of performance.</p>
+          </>}
+        />
+        <ResultCard
+          title="0% Management Fee / 50% Carry"
+          label="Buffett Partnership Style  ·  0 / 50"
+          accentColor="#F59E0B"
+          result={rBuf}
+          capital={capital}
+          waterfall={<>
+            <p className="font-semibold text-slate-400 mb-1">Buffett Partnership 0/50 Waterfall</p>
+            <p>① Return of capital to LP</p>
+            <p>② LP preferred return at 6% compounded</p>
+            <p>③ 50% LP / 50% GP on profits above hurdle</p>
+            <p className="pt-1 text-slate-600">No management fee. No catchup. GP only earns on supra-hurdle returns.</p>
+          </>}
+        />
       </div>
 
       {/* Portfolio Context */}
@@ -2096,31 +2132,22 @@ export default function FeeCalculator() {
                 Variable (90% CI)
               </button>
             </div>
-            {/* Additional savings toggle */}
-            <div className="inline-flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950/60 px-2 py-1">
-              <button
-                type="button"
-                onClick={() => setShowSavings(s => !s)}
-                className={`text-xs font-medium transition-colors ${showSavings ? "text-amber-400" : "text-slate-500 hover:text-slate-300"}`}
-              >
-                + Savings
-              </button>
-              {showSavings && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-slate-600">$</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={99999}
-                    step={100}
-                    value={additionalMonthly}
-                    onChange={e => setAdditionalMonthly(Math.max(0, Number(e.target.value)))}
-                    className="w-16 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-100 tabular-nums focus:border-amber-500 focus:outline-none"
-                  />
-                  <span className="text-[10px] text-slate-600">/mo</span>
-                </div>
+            {/* Contributions toggle — uses planner annual contribution ÷ 12 */}
+            <button
+              type="button"
+              onClick={() => setShowSavings(s => !s)}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                showSavings
+                  ? "border-amber-700/50 bg-amber-500/10 text-amber-400"
+                  : "border-slate-800 bg-slate-950/60 text-slate-500 hover:text-slate-300"
+              }`}
+              title={`Include ${fmt(effectiveContrib)}/yr planner contributions in projection`}
+            >
+              + Contributions
+              {showSavings && effectiveContrib > 0 && (
+                <span className="text-[10px] opacity-70">{fmt(effectiveContrib / 12)}/mo</span>
               )}
-            </div>
+            </button>
           </div>
         </div>
 
@@ -2457,7 +2484,7 @@ export default function FeeCalculator() {
                 rows={activeRows}
                 accentColor={portfolioView === "variable" ? "#22D3EE" : selectedColor}
                 idealRows={idealRows}
-                monthlySavings={showSavings ? additionalMonthly : 0}
+                monthlySavings={showSavings ? effectiveContrib / 12 : 0}
               />
             )}
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 px-2">
@@ -2565,24 +2592,6 @@ export default function FeeCalculator() {
         </div>
       </div>
 
-      {/* Structure notes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-500">
-        <div className="rounded-lg border border-slate-800 p-4 space-y-1">
-          <p className="font-semibold text-slate-400 mb-2">2/20 Waterfall</p>
-          <p>① Return of capital to LP</p>
-          <p>② LP preferred return at 6% compounded</p>
-          <p>③ 80/20 catchup until GP holds 20% of all profits</p>
-          <p>④ 80% LP / 20% GP on remaining proceeds</p>
-          <p className="pt-1 text-slate-600">Management fee paid annually regardless of performance.</p>
-        </div>
-        <div className="rounded-lg border border-slate-800 p-4 space-y-1">
-          <p className="font-semibold text-slate-400 mb-2">Buffett Partnership 0/50 Waterfall</p>
-          <p>① Return of capital to LP</p>
-          <p>② LP preferred return at 6% compounded</p>
-          <p>③ 50% LP / 50% GP on profits above hurdle</p>
-          <p className="pt-1 text-slate-600">No management fee. No catchup. GP only earns on supra-hurdle returns.</p>
-        </div>
-      </div>
     </div>
   );
 }
