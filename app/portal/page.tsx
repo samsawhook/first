@@ -105,13 +105,12 @@ const SCENARIOB_FALCONER_SHARES  = 4_735_803;
 const SCENARIOB_SBR2TH_SHARES    = 3_247_832;
 const SCENARIOB_MB_SHARES        = 4_804_351;
 
-type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "letters" | "investor" | "fees";
+type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees";
 
 const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
   { id: "fees",      label: "Allocator", icon: <Calculator size={15} /> },
-  { id: "letters",   label: "Letters",   icon: <BookOpen size={15} /> },
 ];
 
 const fmt = (n: number) =>
@@ -5274,17 +5273,6 @@ export default function Dashboard() {
           <FeeCalculator />
         )}
 
-        {!activeCompany && activeTab === "letters" && (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-xl font-semibold text-slate-100">Letters to LPs</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Quarterly and annual letters from the nth Venture management team. Confidential.
-              </p>
-            </div>
-            <LettersSection />
-          </div>
-        )}
 
         {!activeCompany && activeTab === "investor" && (
           <InvestorPortal

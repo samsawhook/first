@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, RefObject } from "react";
 
-const SECTIONS = ["mission", "story", "track", "fund", "team", "letters", "contact"] as const;
+const SECTIONS = ["mission", "track", "fund", "approach", "story", "team", "letters", "contact"] as const;
 
 function useInView(ref: RefObject<HTMLDivElement | null>, threshold = 0.15): boolean {
   const [visible, setVisible] = useState(false);
@@ -75,75 +75,12 @@ function useCountUp(target: number, enabled: boolean, duration = 1.2): number {
   return val;
 }
 
-// ── Asset allocation chart ────────────────────────────────────────────────────
-const ALLOC_TIERS = [
-  { tier: "$10K",  bars: [{ label: "Liquid", pct: 0.40, color: "#d0d0d0" }, { label: "Residence", pct: 0.35, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.06, color: "#888" }, { label: "Retirement", pct: 0.13, color: "#666" }, { label: "Other", pct: 0.06, color: "#c0c0c0" }] },
-  { tier: "$100K", bars: [{ label: "Liquid", pct: 0.26, color: "#d0d0d0" }, { label: "Residence", pct: 0.36, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.05, color: "#888" }, { label: "Retirement", pct: 0.18, color: "#666" }, { label: "Stocks", pct: 0.07, color: "#999" }, { label: "Other", pct: 0.08, color: "#c0c0c0" }] },
-  { tier: "$1M",   bars: [{ label: "Liquid", pct: 0.13, color: "#d0d0d0" }, { label: "Residence", pct: 0.22, color: "#a8a8a8" }, { label: "Retirement", pct: 0.14, color: "#666" }, { label: "Stocks", pct: 0.18, color: "#999" }, { label: "Real Estate", pct: 0.08, color: "#555" }, { label: "Business", pct: 0.18, color: "#2b5c8a" }, { label: "Other", pct: 0.07, color: "#c0c0c0" }] },
-  { tier: "$10M",  bars: [{ label: "Liquid", pct: 0.07, color: "#d0d0d0" }, { label: "Residence", pct: 0.10, color: "#a8a8a8" }, { label: "Stocks", pct: 0.14, color: "#999" }, { label: "Fixed Income", pct: 0.06, color: "#777" }, { label: "Real Estate", pct: 0.14, color: "#555" }, { label: "Business", pct: 0.42, color: "#2b5c8a" }, { label: "Other", pct: 0.07, color: "#c0c0c0" }] },
-  { tier: "$100M", bars: [{ label: "Liquid", pct: 0.04, color: "#d0d0d0" }, { label: "Stocks", pct: 0.08, color: "#999" }, { label: "Fixed Income", pct: 0.05, color: "#777" }, { label: "Real Estate", pct: 0.12, color: "#555" }, { label: "Business", pct: 0.57, color: "#2b5c8a" }, { label: "Other", pct: 0.14, color: "#c0c0c0" }] },
-  { tier: "$1B",   bars: [{ label: "Liquid", pct: 0.03, color: "#d0d0d0" }, { label: "Real Estate", pct: 0.09, color: "#555" }, { label: "Business", pct: 0.79, color: "#2b5c8a" }, { label: "Other", pct: 0.09, color: "#c0c0c0" }] },
-];
-
-function AssetAllocationChart() {
-  const [hoveredTier, setHoveredTier] = useState<number | null>(null);
-  return (
-    <div>
-      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>How asset allocation shifts with net worth</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {ALLOC_TIERS.map((row, ri) => (
-          <div
-            key={ri}
-            style={{ display: "flex", alignItems: "center", gap: 10 }}
-            onMouseEnter={() => setHoveredTier(ri)}
-            onMouseLeave={() => setHoveredTier(null)}
-          >
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#888", width: 44, textAlign: "right", flexShrink: 0 }}>{row.tier}</span>
-            <div style={{ flex: 1, height: 28, display: "flex", borderRadius: 4, overflow: "hidden", opacity: hoveredTier !== null && hoveredTier !== ri ? 0.5 : 1, transition: "opacity 0.2s" }}>
-              {row.bars.map((b, bi) => (
-                <div
-                  key={bi}
-                  title={`${b.label}: ${(b.pct * 100).toFixed(1)}%`}
-                  style={{ width: `${b.pct * 100}%`, background: b.color, transition: "width 0.3s" }}
-                />
-              ))}
-            </div>
-            {hoveredTier === ri && (
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#2b5c8a", width: 80, flexShrink: 0 }}>
-                {Math.round((row.bars.find(b => b.label === "Business")?.pct ?? 0) * 100)}% business
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 14 }}>
-        {[
-          { label: "Liquid / Cash", color: "#d0d0d0" },
-          { label: "Residence", color: "#a8a8a8" },
-          { label: "Retirement / Stocks", color: "#888" },
-          { label: "Real Estate", color: "#555" },
-          { label: "Business Interests", color: "#2b5c8a" },
-        ].map((l, i) => (
-          <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#888" }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, display: "inline-block" }} />
-            {l.label}
-          </span>
-        ))}
-      </div>
-      <p style={{ fontSize: 11, color: "#aaa", marginTop: 8, fontStyle: "italic" }}>
-        Federal Reserve Survey of Consumer Finances · Visual Capitalist
-      </p>
-    </div>
-  );
-}
-
 // ── Annual revenue chart ──────────────────────────────────────────────────────
 const revenueData = [
   { label: "Year 1", total: 5 },
   { label: "Year 2", total: 265 },
   { label: "Year 3", total: 1304 },
   { label: "Year 4", total: 1858 },
-  { label: "Year 5", total: 1712 },
 ];
 
 function RevenueChart() {
@@ -154,11 +91,12 @@ function RevenueChart() {
 
   return (
     <div ref={ref} style={{ padding: "2rem 0" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(16px, 4vw, 48px)", height: 220, justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(24px, 6vw, 72px)", height: 240, justifyContent: "center" }}>
         {revenueData.map((d, i) => {
           const hPct = d.total / max;
           const active = hovered === i;
-          const delay = i * 0.07;
+          const barH = hPct * 190;
+          const delay = i * 0.09;
           return (
             <div
               key={d.label}
@@ -166,15 +104,24 @@ function RevenueChart() {
               onMouseLeave={() => setHovered(null)}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "default" }}
             >
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, fontWeight: 500, color: active ? "#c45a2d" : "#8a8a8a", transition: "color 0.2s", minHeight: 18 }}>
-                {active ? `$${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}` : ""}
+              <span style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 13,
+                fontWeight: 500,
+                color: active ? "#c45a2d" : "#888",
+                transition: "color 0.2s",
+                minHeight: 18,
+              }}>
+                ${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}
               </span>
               <div style={{
-                width: "clamp(40px, 9vw, 64px)",
-                height: visible ? `${hPct * 180}px` : "0px",
-                background: active ? "linear-gradient(180deg, #c45a2d, #8b3a1a)" : "linear-gradient(180deg, #2a2a2a, #1a1a1a)",
+                width: "clamp(44px, 10vw, 72px)",
+                height: visible ? `${barH}px` : "0px",
+                background: active
+                  ? "linear-gradient(180deg, #c45a2d, #8b3a1a)"
+                  : "linear-gradient(180deg, #2a2a2a, #1a1a1a)",
                 borderRadius: "4px 4px 0 0",
-                transition: `background 0.3s ease, transform 0.2s ease, height ${0.5 + delay}s cubic-bezier(0.16,1,0.3,1)`,
+                transition: `background 0.3s, transform 0.2s, height ${0.45 + delay}s cubic-bezier(0.16,1,0.3,1)`,
                 transform: active ? "scaleX(1.06)" : "scaleX(1)",
                 transformOrigin: "bottom",
               }} />
@@ -206,7 +153,7 @@ function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: num
     <FadeIn delay={index * 0.07}>
       <div
         onClick={() => setExpanded(!expanded)}
-        style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "20px 22px", cursor: "pointer", transition: "all 0.25s ease", position: "relative", overflow: "hidden" }}
+        style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "20px 22px", cursor: "pointer", transition: "all 0.25s ease" }}
         onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#c45a2d40"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
         onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#e8e6e0"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
       >
@@ -277,11 +224,11 @@ const ADVANTAGES = [
 
 function AdvantagesSection() {
   return (
-    <section style={{ background: "#0f0f0e", padding: "80px clamp(24px, 5vw, 80px)" }}>
+    <section id="approach" style={{ background: "#0f0f0e", padding: "80px clamp(24px, 5vw, 80px)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <FadeIn>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Structural advantages</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px", color: "#fdfcfa" }}>Why this approach works.</h2>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Why this approach works</p>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px", color: "#fdfcfa" }}>Structural advantages.</h2>
           <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", maxWidth: 560, marginBottom: 56, fontWeight: 300 }}>
             These are structural edges built into how we operate, whom we hire, and what we buy.
           </p>
@@ -344,7 +291,7 @@ function StatCounter({ val, label, suffix = "", prefix = "" }: { val: number; la
   const count = useCountUp(val, visible);
   return (
     <div ref={ref} style={{ textAlign: "center" }}>
-      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>
+      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>
         {prefix}{count}{suffix}
       </p>
       <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>{label}</p>
@@ -355,44 +302,40 @@ function StatCounter({ val, label, suffix = "", prefix = "" }: { val: number; la
 // ── Portfolio companies ───────────────────────────────────────────────────────
 const COMPANIES = [
   {
-    name: "Audily Inc.",
-    desc: "Full-service podcast & audio production · Rococo Punch, Pop Ups Studio, Pinwheel",
-    rev: "$1.15M",
-    yoy: "+24%",
-    revYear: "FY 2024",
+    name: "Audily",
+    desc: "Full-service podcast & audio production studio. Home of Rococo Punch, Pop Ups Studio, and Pinwheel.",
     logo: "/logos/audily.png",
+    site: "https://audily.com",
   },
   {
     name: "SBR2TH Recruiting",
-    desc: "Niche tech talent sourcing for high-growth teams",
-    rev: "$498K",
-    yoy: "+155%",
-    revYear: "FY 2024",
+    desc: "Specialized recruiting firm placing senior engineers, PMs, and data professionals at venture-backed companies.",
     logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
+    site: "https://www.sbr2th.com",
   },
   {
-    name: "Falconer Inc.",
-    desc: "Investment advisory boutique",
-    rev: "$104K",
-    yoy: "+12%",
-    revYear: "FY 2024",
+    name: "Falconer",
+    desc: "Investment advisory boutique serving individuals and institutions.",
     logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
+    site: "https://falconer.io",
   },
   {
     name: "Merchant Boxes",
-    desc: "Packaging design & sourcing",
-    rev: "$103K",
-    yoy: "+14%",
-    revYear: "FY 2024",
+    desc: "Custom packaging design and sourcing for e-commerce and retail brands.",
     logo: "/logos/merchant-boxes.png",
+    site: "https://www.merchantboxes.com",
   },
   {
-    name: "Sentius Development",
-    desc: "Data & ML consulting",
-    rev: "$29K",
-    yoy: "New",
-    revYear: "FY 2024",
-    logo: null,
+    name: "Pigeon Service",
+    desc: "Modern same-day delivery infrastructure for local commerce.",
+    logo: "/logos/pigeon.png",
+    site: "https://pigeonservice.com",
+  },
+  {
+    name: "Galileo Computing",
+    desc: "Intelligent compute orchestration for AI/ML workloads.",
+    logo: "/logos/galileo.webp",
+    site: "https://galileocomputing.com",
   },
 ];
 
@@ -414,7 +357,7 @@ export default function NthVentureIntro() {
       if (!el) return;
       const obs = new IntersectionObserver(
         ([e]) => { if (e.isIntersecting) setActiveSection(id); },
-        { threshold: 0.35 },
+        { threshold: 0.25 },
       );
       obs.observe(el);
       observers.push(obs);
@@ -438,7 +381,7 @@ export default function NthVentureIntro() {
             <NthLogo size={38} />
           </div>
           <div style={{ display: "flex", gap: "clamp(10px, 2vw, 24px)", alignItems: "center" }}>
-            {([["Mission", "mission"], ["Story", "story"], ["Track Record", "track"], ["Fund", "fund"], ["Team", "team"], ["Letters", "letters"], ["Contact", "contact"]] as [string, typeof SECTIONS[number]][]).map(([label, id]) => (
+            {([["Mission", "mission"], ["Track Record", "track"], ["Fund", "fund"], ["Approach", "approach"], ["Story", "story"], ["Team", "team"], ["Letters", "letters"], ["Contact", "contact"]] as [string, typeof SECTIONS[number]][]).map(([label, id]) => (
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
@@ -474,7 +417,7 @@ export default function NthVentureIntro() {
         <FadeIn delay={0.18}>
           <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", maxWidth: 600, margin: "0 0 40px", fontWeight: 300 }}>
             nth Venture builds and invests in employee-owned companies. A $10,000 check in 2021.
-            Five companies. $1.9M in portfolio revenue.
+            Six companies. $1.9M in portfolio revenue. We&apos;re proving that ownership changes everything.
           </p>
         </FadeIn>
         <FadeIn delay={0.26}>
@@ -506,71 +449,22 @@ export default function NthVentureIntro() {
       </section>
 
       {/* Stats Strip */}
-      <section style={{ background: "#1a1a1a", padding: "48px clamp(24px, 5vw, 80px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 32 }}>
-          <StatCounter val={0} label="Management fee" prefix="0" suffix="%" />
+      <section style={{ background: "#1a1a1a", padding: "52px clamp(24px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32 }}>
           <StatCounter val={86} label="3-yr revenue CAGR (2022–2025)" suffix="%" />
-          <StatCounter val={100} label="Employee-owned" suffix="%" />
-          <StatCounter val={60} label="Team members across portfolio" suffix="+" />
-          <FadeIn delay={0.2}>
+          <FadeIn delay={0.06}>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$5K → $1.9M</p>
-              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Portfolio revenue since launch</p>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$5K → $1.9M</p>
+              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Since 2021</p>
             </div>
           </FadeIn>
-          <FadeIn delay={0.24}>
+          <FadeIn delay={0.12}>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>6%</p>
-              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Hurdle rate before any carry</p>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$0</p>
+              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Management fees</p>
             </div>
           </FadeIn>
-        </div>
-      </section>
-
-      {/* Evolution: From Studio to Fund */}
-      <section id="story" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <FadeIn>
-            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>From studio to fund</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>How nth Venture got here.</h2>
-          </FadeIn>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48 }}>
-            <SlideIn delay={0.06} from="left">
-              <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2021 — The venture studio</p>
-                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
-                  nth Venture started with a single thesis: talented people accomplish more when they own what they build.
-                  We launched our first companies from scratch — a $10,000 check and the belief that founder economics
-                  should extend to every employee, not just the people at the top.
-                  No performance fees. Just operators who owned meaningful stakes in the companies they ran.
-                </p>
-              </div>
-            </SlideIn>
-            <FadeIn delay={0.12}>
-              <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2022–2023 — Proof of concept</p>
-                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
-                  Over three years we launched and scaled a portfolio of employee-owned companies —
-                  growing from $5K to $1.3M in revenue while absorbing two struggling businesses and
-                  protecting their investors. Every company remained employee-owned.
-                  The model worked. We wrote about it honestly — in annual letters that didn&apos;t
-                  hide the failures alongside the wins.
-                </p>
-              </div>
-            </FadeIn>
-            <SlideIn delay={0.18} from="right">
-              <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2024 — Co-Owner Fund LP</p>
-                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
-                  We formalized our track record into the Co-Owner Fund LP — a Texas limited partnership
-                  seeded with ~$1M in equity transferred by the founder for $1. The fund brings in aligned
-                  outside capital to accelerate a strategy already generating results: acquiring small businesses
-                  at single-digit multiples, with employee ownership baked in from day one, and a principal whose
-                  audit training comes from the supreme audit authority in the United States.
-                </p>
-              </div>
-            </SlideIn>
-          </div>
+          <StatCounter val={20} label="Target IRR" suffix="%" />
         </div>
       </section>
 
@@ -593,46 +487,48 @@ export default function NthVentureIntro() {
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", margin: 0, flexShrink: 0 }}>As covered by</p>
             <div style={{ display: "flex", gap: 40, flexWrap: "wrap", alignItems: "flex-start" }}>
               <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px", letterSpacing: -0.3 }}>Bloomberg</p>
-                <p style={{ fontSize: 13, color: "#888", margin: 0, lineHeight: 1.5 }}>Podcast M&A — coverage of Rococo Punch acquisition by Audily</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px" }}>Bloomberg</p>
+                <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Podcast M&A — Rococo Punch acquisition by Audily</p>
               </div>
               <div>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px", letterSpacing: -0.3 }}>The Hollywood Reporter</p>
-                <p style={{ fontSize: 13, color: "#888", margin: 0, lineHeight: 1.5 }}>Coverage of Rococo Punch and the Audily network</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px" }}>The Hollywood Reporter</p>
+                <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Coverage of Rococo Punch and the Audily network</p>
               </div>
             </div>
           </div>
         </FadeIn>
 
         <FadeIn delay={0.15}>
-          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5, marginTop: 16 }}>Our companies</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5 }}>Our companies</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
             {COMPANIES.map((co, i) => (
-              <SlideIn key={i} delay={0.05 + i * 0.05} from={i % 2 === 0 ? "left" : "right"}>
-                <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px", height: "100%", transition: "border-color 0.2s, transform 0.2s", boxSizing: "border-box" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#c45a2d40"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#e8e6e0"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
+              <SlideIn key={i} delay={0.04 + i * 0.04} from={i % 2 === 0 ? "left" : "right"}>
+                <a
+                  href={co.site}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: "none", display: "block", height: "100%" }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                    {co.logo ? (
-                      <div style={{ width: 32, height: 32, borderRadius: 6, overflow: "hidden", background: "#f0efe8", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div
+                    style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px", height: "100%", boxSizing: "border-box", transition: "border-color 0.2s, transform 0.2s" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#c45a2d60"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#e8e6e0"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 6, overflow: "hidden", background: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={co.logo} alt={co.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        <img
+                          src={co.logo}
+                          alt={co.name}
+                          style={{ width: "100%", height: "100%", objectFit: "contain", mixBlendMode: "multiply" }}
+                        />
                       </div>
-                    ) : (
-                      <div style={{ width: 32, height: 32, borderRadius: 6, background: "#e8e6e0", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#888" }}>{co.name.slice(0, 2).toUpperCase()}</span>
-                      </div>
-                    )}
-                    <p style={{ fontWeight: 500, fontSize: 14, margin: 0, color: "#1a1a1a" }}>{co.name}</p>
+                      <p style={{ fontWeight: 500, fontSize: 14, margin: 0, color: "#1a1a1a" }}>{co.name}</p>
+                    </div>
+                    <p style={{ fontSize: 13, color: "#666", margin: "0 0 10px", lineHeight: 1.55 }}>{co.desc}</p>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d" }}>{co.site.replace(/^https?:\/\//, "")} ↗</span>
                   </div>
-                  <p style={{ fontSize: 12, color: "#888", margin: "0 0 12px" }}>{co.desc}</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500 }}>{co.rev}</span>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: co.yoy === "New" ? "#c45a2d" : "#2a7a3a" }}>{co.yoy}</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: "#aaa", margin: "6px 0 0", fontStyle: "italic" }}>{co.revYear} revenue</p>
-                </div>
+                </a>
               </SlideIn>
             ))}
           </div>
@@ -650,82 +546,72 @@ export default function NthVentureIntro() {
         </FadeIn>
       </section>
 
-      <AdvantagesSection />
-
       {/* The Fund */}
-      <section id="fund" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
-        <FadeIn>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>The Fund</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Co-Owner Fund LP</h2>
-          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-            A Texas limited partnership investing in businesses with long histories of free cash flow,
-            at small-business multiples, with employee ownership and incentive alignment at the core.
-            Seeded with ~$1M in equity transferred by the founder for $1.
-          </p>
-        </FadeIn>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginBottom: 56 }}>
-          <SlideIn delay={0.05} from="left">
-            <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Investment focus</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {["Acquisitions at single-digit P/E multiples", "Strategic credit at 20%+ yields", "Portfolio company growth financing", "Occasional ground-up launches"].map((item, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <span style={{ color: "#c45a2d", fontSize: 14, lineHeight: "22px", flexShrink: 0 }}>→</span>
-                    <span style={{ fontSize: 14, color: "#444", lineHeight: "22px" }}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </SlideIn>
-          <SlideIn delay={0.1} from="right">
-            <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Fund structure</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[
-                  ["Vehicle", "Texas Limited Partnership"],
-                  ["Max Size", "$10,000,000"],
-                  ["Hurdle Rate", "6% preferred return"],
-                  ["Carry", "50% above hurdle"],
-                  ["Mgmt Fee", "None"],
-                  ["Structure", "Evergreen — no fixed term"],
-                ].map(([k, v], i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 5 ? "1px solid #f0efe8" : "none" }}>
-                    <span style={{ fontSize: 13, color: "#888" }}>{k}</span>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", textAlign: "right" }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-              <p style={{ fontSize: 12, color: "#aaa", marginTop: 12, lineHeight: 1.55 }}>
-                LPs may elect traditional 2/20 terms in lieu of the no-fee structure.
-              </p>
-            </div>
-          </SlideIn>
-        </div>
-
-        <FadeIn delay={0.15}>
-          <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
-            <AssetAllocationChart />
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* Investment Principles */}
-      <section style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      <section id="fund" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <FadeIn>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>The Fund</p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Co-Owner Fund LP</h2>
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
+              A Texas limited partnership investing in businesses with long histories of free cash flow,
+              at small-business multiples, with employee ownership and incentive alignment at the core.
+              Seeded with ~$1M in equity transferred by the founder for $1.
+            </p>
+          </FadeIn>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginBottom: 56 }}>
+            <SlideIn delay={0.05} from="left">
+              <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Investment focus</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {["Acquisitions at single-digit P/E multiples", "Strategic credit at 20%+ yields", "Portfolio company growth financing", "Occasional ground-up launches"].map((item, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ color: "#c45a2d", fontSize: 14, lineHeight: "22px", flexShrink: 0 }}>→</span>
+                      <span style={{ fontSize: 14, color: "#444", lineHeight: "22px" }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SlideIn>
+            <SlideIn delay={0.1} from="right">
+              <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Fund structure</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    ["Vehicle", "Texas Limited Partnership"],
+                    ["Max Size", "$10,000,000"],
+                    ["Hurdle Rate", "6% preferred return"],
+                    ["Carry", "50% above hurdle"],
+                    ["Mgmt Fee", "None"],
+                    ["Structure", "Evergreen — no fixed term"],
+                  ].map(([k, v], i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 5 ? "1px solid #f0efe8" : "none" }}>
+                      <span style={{ fontSize: 13, color: "#888" }}>{k}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", textAlign: "right" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, color: "#aaa", marginTop: 12, lineHeight: 1.55 }}>
+                  LPs may elect traditional 2/20 terms in lieu of the no-fee structure.
+                </p>
+              </div>
+            </SlideIn>
+          </div>
+
+          {/* Investment Principles */}
+          <FadeIn delay={0.1}>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles.</h2>
-            <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 48, maxWidth: 600 }}>
+            <h3 style={{ fontSize: "clamp(22px, 3vw, 32px)", fontWeight: 300, letterSpacing: -0.8, margin: "0 0 12px" }}>Five principles.</h3>
+            <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 36, maxWidth: 580 }}>
               As laid out in the annual letters. Derived from the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
             </p>
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2 }}>
             {PRINCIPLES.map((p, i) => (
               <SlideIn key={i} delay={i * 0.06} from={i % 2 === 0 ? "left" : "right"}>
-                <div style={{ background: i % 2 === 0 ? "#fff" : "#fafaf8", border: "1px solid #e8e6e0", borderTop: "2px solid #c45a2d", padding: "28px 30px" }}>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", display: "block", marginBottom: 12 }}>{p.num}</span>
-                  <h3 style={{ fontSize: 19, fontWeight: 400, color: "#1a1a1a", margin: "0 0 14px", letterSpacing: -0.4, lineHeight: 1.3, fontStyle: "italic" }}>{p.title}</h3>
+                <div style={{ background: i % 2 === 0 ? "#fff" : "#fafaf8", border: "1px solid #e8e6e0", borderTop: "2px solid #c45a2d", padding: "24px 28px" }}>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", display: "block", marginBottom: 10 }}>{p.num}</span>
+                  <h4 style={{ fontSize: 18, fontWeight: 400, color: "#1a1a1a", margin: "0 0 12px", letterSpacing: -0.4, lineHeight: 1.3, fontStyle: "italic" }}>{p.title}</h4>
                   <p style={{ fontSize: 14, lineHeight: 1.75, color: "#666", margin: 0 }}>{p.body}</p>
                 </div>
               </SlideIn>
@@ -734,17 +620,68 @@ export default function NthVentureIntro() {
         </div>
       </section>
 
+      <AdvantagesSection />
+
+      {/* Evolution: How We Got Here */}
+      <section id="story" style={{ background: "#fdfcfa", padding: "80px clamp(24px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>How we got here</p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>From studio to fund.</h2>
+          </FadeIn>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48 }}>
+            <SlideIn delay={0.06} from="left">
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2021 — The venture studio</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
+                  nth Venture started with a single thesis: talented people accomplish more when they own what they build.
+                  We launched our first companies from scratch — a $10,000 check and the belief that founder economics
+                  should extend to every employee, not just the people at the top.
+                  No performance fees. Just operators who owned meaningful stakes in the companies they ran.
+                </p>
+              </div>
+            </SlideIn>
+            <FadeIn delay={0.12}>
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2022–2023 — Proof of concept</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
+                  Over three years we launched and scaled a portfolio of employee-owned companies —
+                  growing from $5K to $1.3M in revenue while absorbing two struggling businesses and
+                  protecting their investors. Every company remained employee-owned.
+                  The model worked. We wrote about it honestly — in annual letters that didn&apos;t
+                  hide the failures alongside the wins.
+                </p>
+              </div>
+            </FadeIn>
+            <SlideIn delay={0.18} from="right">
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2024 — Co-Owner Fund LP</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
+                  We formalized our track record into the Co-Owner Fund LP — a Texas limited partnership
+                  seeded with ~$1M in equity transferred by the founder for $1. The fund brings in aligned
+                  outside capital to accelerate a strategy already generating results: acquiring small businesses
+                  at single-digit multiples, with employee ownership baked in from day one, and a principal whose
+                  audit training comes from the supreme audit authority in the United States.
+                </p>
+              </div>
+            </SlideIn>
+          </div>
+        </div>
+      </section>
+
       {/* Team */}
-      <section id="team" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
-        <FadeIn>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Leadership</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Built by operators, not administrators</h2>
-          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-            Our leadership team combines institutional investment management, startup operational experience, and financial audit discipline. Staff and advisors invest on the same terms as LPs.
-          </p>
-        </FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
-          {teamMembers.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
+      <section id="team" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Leadership</p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Built by operators, not administrators</h2>
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
+              Our leadership team combines institutional investment management, startup operational experience, and financial audit discipline. Staff and advisors invest on the same terms as LPs.
+            </p>
+          </FadeIn>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
+            {teamMembers.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
+          </div>
         </div>
       </section>
 

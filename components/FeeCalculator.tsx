@@ -172,9 +172,10 @@ const ILLIQUID_GROUPS: GroupKey[] = ["private", "realestate"];
 // =========================================================
 //   Slider (top-level fee-calc assumptions)
 // =========================================================
-function Slider({ label, value, min, max, step, onChange, display, sub }: {
+function Slider({ label, value, min, max, step, onChange, display, sub, markers }: {
   label: string; value: number; min: number; max: number; step: number;
   onChange: (v: number) => void; display: string; sub?: string;
+  markers?: { value: number; label: string; color?: string }[];
 }) {
   const isCapital = max === 10_000_000;
   const isHorizon = max === 25 && step === 1;
@@ -199,10 +200,39 @@ function Slider({ label, value, min, max, step, onChange, display, sub }: {
           [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400
           [&::-webkit-slider-thumb]:cursor-pointer"
       />
-      <div className="flex justify-between mt-0.5">
-        <span className="text-[10px] text-slate-600">{minLabel}</span>
-        <span className="text-[10px] text-slate-600">{maxLabel}</span>
-      </div>
+      {markers && markers.length > 0 ? (
+        <div className="relative mt-1" style={{ height: 28 }}>
+          {markers.map((m, i) => {
+            const pct = ((m.value - min) / (max - min)) * 100;
+            const isTarget = m.color === "amber";
+            return (
+              <div
+                key={i}
+                className="absolute flex flex-col items-center"
+                style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
+              >
+                <div
+                  className="w-px h-2"
+                  style={{ background: isTarget ? "#f59e0b" : "#475569" }}
+                />
+                <span
+                  className="text-[9px] tabular-nums whitespace-nowrap mt-0.5 leading-none"
+                  style={{ color: isTarget ? "#f59e0b" : "#475569" }}
+                >
+                  {m.label}
+                </span>
+              </div>
+            );
+          })}
+          <span className="absolute left-0 bottom-0 text-[10px] text-slate-600">{minLabel}</span>
+          <span className="absolute right-0 bottom-0 text-[10px] text-slate-600">{maxLabel}</span>
+        </div>
+      ) : (
+        <div className="flex justify-between mt-0.5">
+          <span className="text-[10px] text-slate-600">{minLabel}</span>
+          <span className="text-[10px] text-slate-600">{maxLabel}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -2070,6 +2100,12 @@ export default function FeeCalculator() {
             onChange={setGrossReturn}
             display={fmtPct(grossReturn)}
             sub={`${fmtX(grossMoic)} MOIC`}
+            markers={[
+              { value: 0.09, label: "~9% Bottom Q" },
+              { value: 0.15, label: "~15% Median" },
+              { value: 0.20, label: "20% Target", color: "amber" },
+              { value: 0.23, label: "~23% Top Q" },
+            ]}
           />
         </div>
         <div className="mt-5 pt-4 border-t border-slate-800 flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
