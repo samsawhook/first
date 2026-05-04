@@ -436,46 +436,39 @@ export default function NthVentureIntro() {
 
       {/* Hero */}
       <section id="mission" style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px) 80px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48, alignItems: "center" }}>
-          <div>
-            <FadeIn>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 20 }}>Corpus Christi, Texas · Est. 2021</p>
-            </FadeIn>
-            <FadeIn delay={0.1}>
-              <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
-                Set talented people free through the power of <span style={{ fontStyle: "italic", color: "#c45a2d" }}>ownership</span>.
-              </h1>
-            </FadeIn>
-            <FadeIn delay={0.2}>
-              <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", margin: "0 0 40px", fontWeight: 300 }}>
-                nth Venture builds and invests in employee-owned companies with radically aligned incentives.
-                From a $10,000 check and an idea in 2021 to nearly $2 million in portfolio revenue —
-                we&apos;re proving that ownership changes everything.
-              </p>
-            </FadeIn>
-            <FadeIn delay={0.3}>
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                <a
-                  href="/portal"
-                  style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", textDecoration: "none" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
-                >
-                  Explore the Co-Owner Fund →
-                </a>
-                <button
-                  onClick={() => scrollTo("letters")}
-                  style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "transparent", color: "#1a1a1a", border: "1px solid #d0cec8", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5 }}
-                >
-                  Read annual letters
-                </button>
-              </div>
-            </FadeIn>
+        <FadeIn>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 20 }}>Corpus Christi, Texas · Est. 2021</p>
+        </FadeIn>
+        <FadeIn delay={0.1}>
+          <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
+            Set talented people free through the power of <span style={{ fontStyle: "italic", color: "#c45a2d" }}>ownership</span>.
+          </h1>
+        </FadeIn>
+        <FadeIn delay={0.2}>
+          <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", maxWidth: 640, margin: "0 0 40px", fontWeight: 300 }}>
+            nth Venture builds and invests in employee-owned companies with radically aligned incentives.
+            From a $10,000 check and an idea in 2021 to nearly $2 million in portfolio revenue —
+            we&apos;re proving that ownership changes everything.
+          </p>
+        </FadeIn>
+        <FadeIn delay={0.3}>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <a
+              href="/portal"
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", textDecoration: "none" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
+            >
+              Explore the Co-Owner Fund →
+            </a>
+            <button
+              onClick={() => scrollTo("letters")}
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "transparent", color: "#1a1a1a", border: "1px solid #d0cec8", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5 }}
+            >
+              Read annual letters
+            </button>
           </div>
-          <FadeIn delay={0.25}>
-            <FlywheelDiagram />
-          </FadeIn>
-        </div>
+        </FadeIn>
       </section>
 
       {/* Stats Strip */}
@@ -498,8 +491,6 @@ export default function NthVentureIntro() {
           ))}
         </div>
       </section>
-
-      <AdvantagesSection />
 
       {/* The Fund */}
       <section id="fund" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
@@ -537,7 +528,7 @@ export default function NthVentureIntro() {
                   ["Hurdle Rate", "6% preferred return"],
                   ["Carry", "50% above hurdle"],
                   ["Mgmt Fee", "None"],
-                  ["Liquidity", "Annual repurchase up to 5%"],
+                  ["Structure", "Evergreen — no fixed term"],
                 ].map(([k, v], i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 5 ? "1px solid #f0efe8" : "none" }}>
                     <span style={{ fontSize: 13, color: "#888" }}>{k}</span>
@@ -553,13 +544,6 @@ export default function NthVentureIntro() {
         </div>
 
         <FadeIn delay={0.15}>
-          <div style={{ marginBottom: 48 }}>
-            <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 20, letterSpacing: -0.5 }}>Distribution waterfall</h3>
-            <WaterfallDiagram />
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={0.2}>
           <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
             <AssetAllocationChart />
           </div>
@@ -618,6 +602,8 @@ export default function NthVentureIntro() {
           </FadeIn>
         </div>
       </section>
+
+      <AdvantagesSection />
 
       {/* Team */}
       <section id="team" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
@@ -688,13 +674,13 @@ export default function NthVentureIntro() {
         </div>
       </section>
 
-      {/* Investment Philosophy */}
+      {/* Investment Principles */}
       <section style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
         <FadeIn>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Philosophy</p>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles</h2>
           <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 40, maxWidth: 600 }}>
-            Derived from decades of academic work and practicing exemplars like Berkshire Hathaway, Markel, and DFA.
+            As laid out in the annual letters. Derived from decades of academic work and the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
           </p>
         </FadeIn>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
