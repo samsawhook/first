@@ -37,6 +37,168 @@ function FadeIn({ children, delay = 0, className = "" }: {
   );
 }
 
+// ── Flywheel ──────────────────────────────────────────────────────────────────
+function FlywheelDiagram() {
+  // 5 nodes at clock positions: 10:30, 1:30, 4:00, 6:00, 8:00 (roughly)
+  const R = 130; // ring centre radius
+  const cx = 200; const cy = 200; // SVG centre
+  const nodes = [
+    { angle: -135, label: ["Attract the right", "talent and capital."] },
+    { angle:  -45, label: ["Launch and support", "high-quality businesses."] },
+    { angle:   25, label: ["Reflect and apply", "lessons learned."] },
+    { angle:   90, label: ["Operate with greater", "intensity and efficiency."] },
+    { angle:  200, label: ["Generate", "exceptional returns."] },
+  ];
+
+  // Arrow triangles pointing clockwise tangent at each node
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const pt = (angle: number, r: number) => ({
+    x: cx + r * Math.cos(toRad(angle)),
+    y: cy + r * Math.sin(toRad(angle)),
+  });
+
+  // Ring: two concentric circles rendered as a thick stroke
+  const ringR = R;
+  const ringW = 40;
+
+  // Label offset — push outward from ring edge
+  const labelR = R + ringW / 2 + 42;
+
+  return (
+    <svg viewBox="0 0 400 400" style={{ width: "100%", maxWidth: 420, display: "block", margin: "0 auto" }}>
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#d8d8d8" />
+          <stop offset="40%" stopColor="#888" />
+          <stop offset="100%" stopColor="#1a1a1a" />
+        </linearGradient>
+        <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#1a1a1a" />
+        </marker>
+      </defs>
+
+      {/* Ring */}
+      <circle cx={cx} cy={cy} r={ringR} fill="none" stroke="url(#ringGrad)" strokeWidth={ringW} />
+      {/* Inner white fill to restore donut */}
+      <circle cx={cx} cy={cy} r={ringR - ringW / 2 - 1} fill="#fdfcfa" />
+
+      {/* Arrowheads — small dark triangles tangent to ring, pointing clockwise */}
+      {nodes.map((n, i) => {
+        const a = toRad(n.angle);
+        const tangA = a + Math.PI / 2; // clockwise tangent
+        const p = pt(n.angle, ringR);
+        const size = 11;
+        const tx = Math.cos(tangA); const ty = Math.sin(tangA);
+        const nx2 = -Math.sin(tangA); const ny2 = Math.cos(tangA);
+        const tip = { x: p.x + tx * size, y: p.y + ty * size };
+        const bl  = { x: p.x - tx * size * 0.5 + nx2 * size * 0.6, y: p.y - ty * size * 0.5 + ny2 * size * 0.6 };
+        const br  = { x: p.x - tx * size * 0.5 - nx2 * size * 0.6, y: p.y - ty * size * 0.5 - ny2 * size * 0.6 };
+        return (
+          <polygon
+            key={i}
+            points={`${tip.x},${tip.y} ${bl.x},${bl.y} ${br.x},${br.y}`}
+            fill="#1a1a1a"
+          />
+        );
+      })}
+
+      {/* Centre text */}
+      <text x={cx} y={cy - 10} textAnchor="middle" fontSize="13" fontWeight="500" fill="#1a1a1a" fontFamily="Georgia, serif">The nth Venture</text>
+      <text x={cx} y={cy + 10} textAnchor="middle" fontSize="13" fontWeight="500" fill="#1a1a1a" fontFamily="Georgia, serif">Flywheel</text>
+
+      {/* Node labels */}
+      {nodes.map((n, i) => {
+        const lp = pt(n.angle, labelR);
+        // Dot on ring edge
+        const dp = pt(n.angle, ringR + ringW / 2 + 6);
+        return (
+          <g key={i}>
+            <circle cx={dp.x} cy={dp.y} r={3} fill="#555" />
+            {n.label.map((line, li) => (
+              <text
+                key={li}
+                x={lp.x}
+                y={lp.y + li * 15 - ((n.label.length - 1) * 15) / 2}
+                textAnchor={lp.x < cx - 10 ? "end" : lp.x > cx + 10 ? "start" : "middle"}
+                fontSize="11"
+                fill="#1a1a1a"
+                fontFamily="Georgia, serif"
+                fontStyle="italic"
+              >
+                {line}
+              </text>
+            ))}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Asset allocation chart ────────────────────────────────────────────────────
+// Approximate Federal Reserve data (Visual Capitalist) — illustrative
+const ALLOC_TIERS = [
+  { tier: "$10K",  bars: [{ label: "Liquid", pct: 0.40, color: "#d0d0d0" }, { label: "Residence", pct: 0.35, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.06, color: "#888" }, { label: "Retirement", pct: 0.13, color: "#666" }, { label: "Other", pct: 0.06, color: "#c0c0c0" }] },
+  { tier: "$100K", bars: [{ label: "Liquid", pct: 0.26, color: "#d0d0d0" }, { label: "Residence", pct: 0.36, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.05, color: "#888" }, { label: "Retirement", pct: 0.18, color: "#666" }, { label: "Stocks", pct: 0.07, color: "#999" }, { label: "Other", pct: 0.08, color: "#c0c0c0" }] },
+  { tier: "$1M",   bars: [{ label: "Liquid", pct: 0.13, color: "#d0d0d0" }, { label: "Residence", pct: 0.22, color: "#a8a8a8" }, { label: "Retirement", pct: 0.14, color: "#666" }, { label: "Stocks", pct: 0.18, color: "#999" }, { label: "Real Estate", pct: 0.08, color: "#555" }, { label: "Business", pct: 0.18, color: "#2b5c8a" }, { label: "Other", pct: 0.07, color: "#c0c0c0" }] },
+  { tier: "$10M",  bars: [{ label: "Liquid", pct: 0.07, color: "#d0d0d0" }, { label: "Residence", pct: 0.10, color: "#a8a8a8" }, { label: "Stocks", pct: 0.14, color: "#999" }, { label: "Fixed Income", pct: 0.06, color: "#777" }, { label: "Real Estate", pct: 0.14, color: "#555" }, { label: "Business", pct: 0.42, color: "#2b5c8a" }, { label: "Other", pct: 0.07, color: "#c0c0c0" }] },
+  { tier: "$100M", bars: [{ label: "Liquid", pct: 0.04, color: "#d0d0d0" }, { label: "Stocks", pct: 0.08, color: "#999" }, { label: "Fixed Income", pct: 0.05, color: "#777" }, { label: "Real Estate", pct: 0.12, color: "#555" }, { label: "Business", pct: 0.57, color: "#2b5c8a" }, { label: "Other", pct: 0.14, color: "#c0c0c0" }] },
+  { tier: "$1B",   bars: [{ label: "Liquid", pct: 0.03, color: "#d0d0d0" }, { label: "Real Estate", pct: 0.09, color: "#555" }, { label: "Business", pct: 0.79, color: "#2b5c8a" }, { label: "Other", pct: 0.09, color: "#c0c0c0" }] },
+];
+
+function AssetAllocationChart() {
+  const [hoveredTier, setHoveredTier] = useState<number | null>(null);
+  return (
+    <div>
+      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>How asset allocation shifts with net worth</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {ALLOC_TIERS.map((row, ri) => (
+          <div
+            key={ri}
+            style={{ display: "flex", alignItems: "center", gap: 10 }}
+            onMouseEnter={() => setHoveredTier(ri)}
+            onMouseLeave={() => setHoveredTier(null)}
+          >
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#888", width: 44, textAlign: "right", flexShrink: 0 }}>{row.tier}</span>
+            <div style={{ flex: 1, height: 28, display: "flex", borderRadius: 4, overflow: "hidden", opacity: hoveredTier !== null && hoveredTier !== ri ? 0.5 : 1, transition: "opacity 0.2s" }}>
+              {row.bars.map((b, bi) => (
+                <div
+                  key={bi}
+                  title={`${b.label}: ${Math.round(b.pct * 100)}%`}
+                  style={{ width: `${b.pct * 100}%`, background: b.color, transition: "width 0.3s" }}
+                />
+              ))}
+            </div>
+            {hoveredTier === ri && (
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#2b5c8a", width: 80, flexShrink: 0 }}>
+                {Math.round((row.bars.find(b => b.label === "Business")?.pct ?? 0) * 100)}% business
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", marginTop: 14 }}>
+        {[
+          { label: "Liquid / Cash", color: "#d0d0d0" },
+          { label: "Residence", color: "#a8a8a8" },
+          { label: "Retirement / Stocks", color: "#888" },
+          { label: "Real Estate", color: "#555" },
+          { label: "Business Interests", color: "#2b5c8a" },
+        ].map((l, i) => (
+          <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#888" }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, display: "inline-block" }} />
+            {l.label}
+          </span>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, color: "#aaa", marginTop: 8, fontStyle: "italic" }}>
+        Approximate Federal Reserve data via Visual Capitalist · Illustrative
+      </p>
+    </div>
+  );
+}
+
+// ── Revenue chart ─────────────────────────────────────────────────────────────
 const revenueData = [
   { year: "2021", total: 5 },
   { year: "2022", total: 264 },
@@ -76,6 +238,7 @@ function RevenueChart() {
   );
 }
 
+// ── Team ──────────────────────────────────────────────────────────────────────
 const teamMembers = [
   { name: "Sam Sawhook", role: "Co-Founder & CEO", initials: "SS", color: "#c45a2d", bio: "29-year-old startup operator. Co-founded nth Venture in 2021, launched several employee-owned companies. Former GAO financial auditor (SEC, DoD, Treasury). Army veteran, Operation Atlantic Resolve convoy commander. Currently pursuing Master of Accountancy." },
   { name: "Neil Wolfson", role: "Vice Chairman", initials: "NW", color: "#1a5a3a", bio: "Former President & CIO of Wilmington Trust Investment Management ($40B+ AUM). National Partner in Charge of KPMG's Investment Consulting Practice ($100B+ in assets)." },
@@ -115,27 +278,7 @@ function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: num
   );
 }
 
-function ComparisonTable() {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, border: "1px solid #e8e6e0", borderRadius: 8, overflow: "hidden", fontSize: 14 }}>
-      <div style={{ background: "#f5f5f0", padding: "14px 18px", fontWeight: 500, borderBottom: "1px solid #e8e6e0", borderRight: "1px solid #e8e6e0", color: "#888", fontSize: 13 }}>Traditional 2/20</div>
-      <div style={{ background: "#f5f5f0", padding: "14px 18px", fontWeight: 500, borderBottom: "1px solid #e8e6e0", color: "#c45a2d", fontSize: 13 }}>Co-Owner Fund</div>
-
-      <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0efe8", borderRight: "1px solid #e8e6e0", color: "#555" }}>2% management fee</div>
-      <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0efe8", color: "#1a1a1a", fontWeight: 500 }}>No management fee</div>
-
-      <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0efe8", borderRight: "1px solid #e8e6e0", color: "#555" }}>20% carry</div>
-      <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0efe8", color: "#1a1a1a", fontWeight: 500 }}>50% carry after 6% hurdle</div>
-
-      <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0efe8", borderRight: "1px solid #e8e6e0", color: "#555" }}>Manager fees ~$60K on $100K over 10 years</div>
-      <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0efe8", color: "#1a1a1a", fontWeight: 500 }}>Manager earns only on gains above hurdle</div>
-
-      <div style={{ padding: "12px 18px", borderRight: "1px solid #e8e6e0", color: "#555" }}>Separate GP & mgmt entities</div>
-      <div style={{ padding: "12px 18px", color: "#1a1a1a", fontWeight: 500 }}>~$1M GP seed equity as buffer</div>
-    </div>
-  );
-}
-
+// ── Waterfall ─────────────────────────────────────────────────────────────────
 function WaterfallDiagram() {
   const steps = [
     { label: "Return of capital", detail: "100% to investor", color: "#2a4a2a", bg: "#eef5ee" },
@@ -160,6 +303,7 @@ function WaterfallDiagram() {
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function NthVentureIntro() {
   const [activeSection, setActiveSection] = useState<typeof SECTIONS[number]>("mission");
   const [scrolled, setScrolled] = useState(false);
@@ -170,7 +314,6 @@ export default function NthVentureIntro() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Track active section via IntersectionObserver
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
     SECTIONS.forEach(id => {
@@ -220,7 +363,7 @@ export default function NthVentureIntro() {
               onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
               onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
             >
-              Investor Portal →
+              Explore the Co-Owner Fund →
             </a>
           </div>
         </div>
@@ -228,39 +371,46 @@ export default function NthVentureIntro() {
 
       {/* Hero */}
       <section id="mission" style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px) 80px" }}>
-        <FadeIn>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 20 }}>Corpus Christi, Texas · Est. 2021</p>
-        </FadeIn>
-        <FadeIn delay={0.1}>
-          <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
-            Set talented people free through the power of <span style={{ fontStyle: "italic", color: "#c45a2d" }}>ownership</span>.
-          </h1>
-        </FadeIn>
-        <FadeIn delay={0.2}>
-          <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", maxWidth: 640, margin: "0 0 40px", fontWeight: 300 }}>
-            nth Venture builds and invests in employee-owned companies with radically aligned incentives.
-            From a $10,000 check and an idea in 2021 to nearly $2 million in portfolio revenue —
-            we&apos;re proving that ownership changes everything.
-          </p>
-        </FadeIn>
-        <FadeIn delay={0.3}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <button
-              onClick={() => scrollTo("fund")}
-              style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
-            >
-              Explore the Co-Owner Fund →
-            </button>
-            <button
-              onClick={() => scrollTo("letters")}
-              style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "transparent", color: "#1a1a1a", border: "1px solid #d0cec8", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5 }}
-            >
-              Read annual letters
-            </button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48, alignItems: "center" }}>
+          <div>
+            <FadeIn>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 20 }}>Corpus Christi, Texas · Est. 2021</p>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
+                Set talented people free through the power of <span style={{ fontStyle: "italic", color: "#c45a2d" }}>ownership</span>.
+              </h1>
+            </FadeIn>
+            <FadeIn delay={0.2}>
+              <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", margin: "0 0 40px", fontWeight: 300 }}>
+                nth Venture builds and invests in employee-owned companies with radically aligned incentives.
+                From a $10,000 check and an idea in 2021 to nearly $2 million in portfolio revenue —
+                we&apos;re proving that ownership changes everything.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.3}>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <a
+                  href="/portal"
+                  style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", textDecoration: "none" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
+                >
+                  Explore the Co-Owner Fund →
+                </a>
+                <button
+                  onClick={() => scrollTo("letters")}
+                  style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "transparent", color: "#1a1a1a", border: "1px solid #d0cec8", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5 }}
+                >
+                  Read annual letters
+                </button>
+              </div>
+            </FadeIn>
           </div>
-        </FadeIn>
+          <FadeIn delay={0.25}>
+            <FlywheelDiagram />
+          </FadeIn>
+        </div>
       </section>
 
       {/* Stats Strip */}
@@ -320,28 +470,31 @@ export default function NthVentureIntro() {
                   ["Hurdle Rate", "6% preferred return"],
                   ["Carry", "50% above hurdle"],
                   ["Mgmt Fee", "None"],
-                  ["GP Commitment", "≥1% (seeded ~$1M equity)"],
                   ["Liquidity", "Annual repurchase up to 5%"],
                 ].map(([k, v], i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 6 ? "1px solid #f0efe8" : "none" }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 5 ? "1px solid #f0efe8" : "none" }}>
                     <span style={{ fontSize: 13, color: "#888" }}>{k}</span>
                     <span style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", textAlign: "right" }}>{v}</span>
                   </div>
                 ))}
               </div>
+              <p style={{ fontSize: 12, color: "#aaa", marginTop: 12, lineHeight: 1.55 }}>
+                LPs may elect traditional 2/20 terms in lieu of the no-fee structure.
+              </p>
             </div>
           </FadeIn>
         </div>
 
         <FadeIn delay={0.15}>
-          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 20, letterSpacing: -0.5 }}>Why no management fee matters</h3>
-          <ComparisonTable />
+          <div style={{ marginBottom: 48 }}>
+            <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 20, letterSpacing: -0.5 }}>Distribution waterfall</h3>
+            <WaterfallDiagram />
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.2}>
-          <div style={{ marginTop: 48 }}>
-            <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 20, letterSpacing: -0.5 }}>Distribution waterfall</h3>
-            <WaterfallDiagram />
+          <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
+            <AssetAllocationChart />
           </div>
         </FadeIn>
       </section>
@@ -427,13 +580,13 @@ export default function NthVentureIntro() {
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
             {[
-              { year: "2024", title: "Third Annual Letter", quote: "Most death does not come in the form of a grand, fiery defeat. It comes from slow erosion, cynicism, and mediocrity.", highlight: "Co-Owner Fund LP announced" },
-              { year: "2023", title: "Second Annual Letter", quote: "I simply put my naked, stinking foot forward and say this is what I am doing.", highlight: "Written from deployment in Poland" },
-              { year: "2022", title: "First Annual Letter", quote: "Noblesse oblige — if you have the ability to act with honor and generosity, you incur the obligation to do so.", highlight: "$10K start, $500K in first-year revenue" },
+              { released: "2025", covers: "2024", title: "Third Annual Letter", quote: "Most death does not come in the form of a grand, fiery defeat. It comes from slow erosion, cynicism, and mediocrity.", highlight: "Co-Owner Fund LP announced", slug: "Third-Annual-Letter" },
+              { released: "2024", covers: "2023", title: "Second Annual Letter", quote: "I simply put my naked, stinking foot forward and say this is what I am doing.", highlight: "Written from deployment in Poland", slug: "Second-Annual-Letter" },
+              { released: "2023", covers: "2022", title: "First Annual Letter", quote: "Noblesse oblige — if you have the ability to act with honor and generosity, you incur the obligation to do so.", highlight: "$10K start, $500K in first-year revenue", slug: "2022-Annual-Letter" },
             ].map((letter, i) => (
               <FadeIn key={i} delay={i * 0.1}>
                 <a
-                  href={`https://www.nthventure.com/s/nth-Venture-${letter.year === "2022" ? "2022-Annual-Letter" : letter.title.replace(/ /g, "-")}.pdf`}
+                  href={`https://www.nthventure.com/s/nth-Venture-${letter.slug}.pdf`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ textDecoration: "none" }}
@@ -444,11 +597,11 @@ export default function NthVentureIntro() {
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#333"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#c45a2d" }}>{letter.year}</span>
-                      <span style={{ fontSize: 12, color: "#666" }}>↗</span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#c45a2d" }}>{letter.released}</span>
+                      <span style={{ fontSize: 11, color: "#555" }}>covers {letter.covers} · ↗</span>
                     </div>
                     <h4 style={{ fontSize: 17, fontWeight: 400, color: "#eee", margin: "0 0 12px" }}>{letter.title}</h4>
-                    <p style={{ fontSize: 13, fontStyle: "italic", color: "#888", lineHeight: 1.6, margin: "0 0 16px", flex: 1 }}>"{letter.quote}"</p>
+                    <p style={{ fontSize: 13, fontStyle: "italic", color: "#888", lineHeight: 1.6, margin: "0 0 16px", flex: 1 }}>&ldquo;{letter.quote}&rdquo;</p>
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#666", background: "#1a1a18", padding: "4px 10px", borderRadius: 4, alignSelf: "flex-start" }}>{letter.highlight}</span>
                   </div>
                 </a>
@@ -456,9 +609,12 @@ export default function NthVentureIntro() {
             ))}
           </div>
           <FadeIn delay={0.35}>
-            <div style={{ marginTop: 32, textAlign: "center" }}>
+            <div style={{ marginTop: 32, display: "flex", gap: 32, flexWrap: "wrap", justifyContent: "center" }}>
               <a href="https://sawhook.substack.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#888", textDecoration: "none", borderBottom: "1px solid #444", paddingBottom: 2 }}>
-                Read more on The Wrap — Sam&apos;s Substack →
+                The Wrap — Sam&apos;s Substack →
+              </a>
+              <a href="https://podcasts.apple.com/us/podcast/nth-venture/id1604416768" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#888", textDecoration: "none", borderBottom: "1px solid #444", paddingBottom: 2 }}>
+                nth Venture Podcast on Apple →
               </a>
             </div>
           </FadeIn>
@@ -469,42 +625,60 @@ export default function NthVentureIntro() {
       <section style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Philosophy</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 32px" }}>Five principles</h2>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles</h2>
+          <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 40, maxWidth: 600 }}>
+            Derived from decades of academic work and practicing exemplars like Berkshire Hathaway, Markel, and DFA.
+          </p>
         </FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
           {[
-            ["01", "Invest for the long-term"],
-            ["02", "Minimize fees"],
-            ["03", "Proper diversification"],
-            ["04", "Straightforward businesses"],
-            ["05", "High-integrity managers"],
-          ].map(([num, text], i) => (
-            <FadeIn key={i} delay={i * 0.06}>
-              <div style={{ borderTop: "2px solid #1a1a1a", paddingTop: 16 }}>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#c45a2d" }}>{num}</span>
-                <p style={{ fontSize: 15, fontWeight: 400, margin: "8px 0 0", lineHeight: 1.5, color: "#333" }}>{text}</p>
+            {
+              num: "01",
+              title: "Invest for the long-term",
+              body: "We hold businesses for years, not quarters. Compounding works best when you stay out of its way — patient capital earns what impatient capital cannot.",
+            },
+            {
+              num: "02",
+              title: "Minimize fees",
+              body: "Every dollar paid in management fees is a dollar that never compounds. Our no-fee structure means the manager eats only what the investor eats first.",
+            },
+            {
+              num: "03",
+              title: "Proper diversification",
+              body: "Diversification is the only free lunch in investing. We spread across cash-flowing businesses, credit, and asset classes — never concentrating beyond conviction.",
+            },
+            {
+              num: "04",
+              title: "Straightforward businesses",
+              body: "We avoid complexity: no black boxes, no derivative structures, no businesses we cannot explain plainly. Simple models survive surprises better than clever ones.",
+            },
+            {
+              num: "05",
+              title: "High-integrity managers",
+              body: "Character compounds too. We invest alongside — and in — leaders who treat employees, customers, and partners as ends, not means. Reputation is an irreplaceable asset.",
+            },
+          ].map((p, i) => (
+            <FadeIn key={i} delay={i * 0.07}>
+              <div style={{ borderTop: "2px solid #1a1a1a", paddingTop: 18 }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#c45a2d" }}>{p.num}</span>
+                <p style={{ fontSize: 15, fontWeight: 500, margin: "8px 0 10px", lineHeight: 1.4, color: "#1a1a1a" }}>{p.title}</p>
+                <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "#666", margin: 0 }}>{p.body}</p>
               </div>
             </FadeIn>
           ))}
         </div>
-        <FadeIn delay={0.35}>
-          <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginTop: 32, maxWidth: 600 }}>
-            Derived from decades of academic work and practicing exemplars
-            like Berkshire Hathaway, Markel, and DFA.
-          </p>
-        </FadeIn>
       </section>
 
       {/* SEC & Legal */}
       <section style={{ background: "#f5f4f0", padding: "48px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 32, justifyContent: "center" }}>
           {[
-            ["SEC Filings: nth Venture", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461", true],
-            ["SEC Filings: Co-Owner Fund", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002088918", true],
+            ["SEC Filings: nth Venture", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461"],
+            ["SEC Filings: Co-Owner Fund", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002088918"],
           ].map(([label, url], i) => (
             <a
               key={i}
-              href={url as string}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
               style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 2, transition: "color 0.2s" }}
@@ -546,8 +720,8 @@ export default function NthVentureIntro() {
               </div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <a href="https://www.nthventure.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>nthventure.com</a>
-                <a href="https://www.falconer.io" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>falconer.io</a>
                 <a href="https://sawhook.substack.com" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>The Wrap</a>
+                <a href="https://podcasts.apple.com/us/podcast/nth-venture/id1604416768" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", border: "1px solid #e0ded8", padding: "8px 14px", borderRadius: 6 }}>Podcast</a>
               </div>
             </div>
           </div>
