@@ -278,6 +278,19 @@ function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: num
   );
 }
 
+// ── Logo ─────────────────────────────────────────────────────────────────────
+function NthLogo({ size = 44, invert = false }: { size?: number; invert?: boolean }) {
+  const fg = invert ? "#fdfcfa" : "#1a1a1a";
+  const bg = invert ? "#1a1a1a" : "#fdfcfa";
+  return (
+    <svg viewBox="0 0 108 108" width={size} height={size} style={{ display: "block", flexShrink: 0 }}>
+      <rect x="2.5" y="2.5" width="103" height="103" fill={bg} stroke={fg} strokeWidth="4" rx="1" />
+      <text x="13" y="82" fontFamily="'Newsreader', Georgia, serif" fontSize="68" fontWeight="300" fill={fg} letterSpacing="-2">n</text>
+      <text x="68" y="42" fontFamily="'Newsreader', Georgia, serif" fontSize="26" fontWeight="400" fill={fg}>th</text>
+    </svg>
+  );
+}
+
 // ── Advantages ───────────────────────────────────────────────────────────────
 const ADVANTAGES = [
   {
@@ -406,9 +419,8 @@ export default function NthVentureIntro() {
       {/* Navigation */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: scrolled ? "rgba(253,252,250,0.92)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? "1px solid #e8e6e0" : "1px solid transparent", transition: "all 0.35s ease", padding: "0 clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, cursor: "pointer" }} onClick={() => scrollTo("mission")}>
-            <span style={{ fontFamily: "'Newsreader', serif", fontSize: 26, fontWeight: 300, letterSpacing: -1 }}>n</span>
-            <sup style={{ fontSize: 13, fontWeight: 400, color: "#888" }}>th</sup>
+          <div style={{ cursor: "pointer" }} onClick={() => scrollTo("mission")}>
+            <NthLogo size={38} />
           </div>
           <div style={{ display: "flex", gap: "clamp(12px, 2.5vw, 28px)", alignItems: "center" }}>
             {([["Mission", "mission"], ["Fund", "fund"], ["Track Record", "track"], ["Team", "team"], ["Letters", "letters"], ["Contact", "contact"]] as [string, typeof SECTIONS[number]][]).map(([label, id]) => (
@@ -679,43 +691,22 @@ export default function NthVentureIntro() {
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles</h2>
-          <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 40, maxWidth: 600 }}>
+          <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 48, maxWidth: 600 }}>
             As laid out in the annual letters. Derived from decades of academic work and the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
           </p>
         </FadeIn>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 28 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 760 }}>
           {[
-            {
-              num: "01",
-              title: "Invest for the long-term",
-              body: "We hold businesses for years, not quarters. Compounding works best when you stay out of its way — patient capital earns what impatient capital cannot.",
-            },
-            {
-              num: "02",
-              title: "Minimize fees",
-              body: "Every dollar paid in management fees is a dollar that never compounds. Our no-fee structure means the manager eats only what the investor eats first.",
-            },
-            {
-              num: "03",
-              title: "Proper diversification",
-              body: "Diversification is the only free lunch in investing. We spread across cash-flowing businesses, credit, and asset classes — never concentrating beyond conviction.",
-            },
-            {
-              num: "04",
-              title: "Straightforward businesses",
-              body: "We avoid complexity: no black boxes, no derivative structures, no businesses we cannot explain plainly. Simple models survive surprises better than clever ones.",
-            },
-            {
-              num: "05",
-              title: "High-integrity managers",
-              body: "Character compounds too. We invest alongside — and in — leaders who treat employees, customers, and partners as ends, not means. Reputation is an irreplaceable asset.",
-            },
+            { num: "01", text: "Invest for the long-term," },
+            { num: "02", text: "minimize fees," },
+            { num: "03", text: "ensure proper – but not excessive – diversification" },
+            { num: "04", text: "in straightforward businesses" },
+            { num: "05", text: "with passionate, effective and high-integrity managers." },
           ].map((p, i) => (
             <FadeIn key={i} delay={i * 0.07}>
-              <div style={{ borderTop: "2px solid #1a1a1a", paddingTop: 18 }}>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#c45a2d" }}>{p.num}</span>
-                <p style={{ fontSize: 15, fontWeight: 500, margin: "8px 0 10px", lineHeight: 1.4, color: "#1a1a1a" }}>{p.title}</p>
-                <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "#666", margin: 0 }}>{p.body}</p>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 20, padding: "18px 0", borderBottom: i < 4 ? "1px solid #e8e6e0" : "none" }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", flexShrink: 0, width: 20 }}>{p.num}</span>
+                <p style={{ fontSize: "clamp(18px, 2.5vw, 26px)", fontWeight: 300, margin: 0, lineHeight: 1.35, color: "#1a1a1a", letterSpacing: -0.3 }}>{p.text}</p>
               </div>
             </FadeIn>
           ))}
@@ -784,10 +775,9 @@ export default function NthVentureIntro() {
       {/* Footer */}
       <footer style={{ borderTop: "1px solid #e8e6e0", padding: "32px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontFamily: "'Newsreader', serif", fontSize: 20, fontWeight: 300 }}>n</span>
-            <sup style={{ fontSize: 11, color: "#888" }}>th</sup>
-            <span style={{ fontSize: 12, color: "#aaa", marginLeft: 12 }}>© 2021–2026 nth Venture Inc.</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <NthLogo size={32} />
+            <span style={{ fontSize: 12, color: "#aaa" }}>© 2021–2026 nth Venture Inc.</span>
           </div>
           <p style={{ fontSize: 11, color: "#bbb", maxWidth: 480, textAlign: "right", lineHeight: 1.5, margin: 0 }}>
             Offerings under SEC Reg D 506(b)/(c). Not a solicitation.
