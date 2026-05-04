@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, RefObject } from "react";
 
-const SECTIONS = ["mission", "fund", "track", "team", "letters", "contact"] as const;
+const SECTIONS = ["mission", "story", "track", "fund", "team", "letters", "contact"] as const;
 
 function useInView(ref: RefObject<HTMLDivElement | null>): boolean {
   const [visible, setVisible] = useState(false);
@@ -37,106 +37,8 @@ function FadeIn({ children, delay = 0, className = "" }: {
   );
 }
 
-// ── Flywheel ──────────────────────────────────────────────────────────────────
-function FlywheelDiagram() {
-  // 5 nodes at clock positions: 10:30, 1:30, 4:00, 6:00, 8:00 (roughly)
-  const R = 130; // ring centre radius
-  const cx = 200; const cy = 200; // SVG centre
-  const nodes = [
-    { angle: -135, label: ["Attract the right", "talent and capital."] },
-    { angle:  -45, label: ["Launch and support", "high-quality businesses."] },
-    { angle:   25, label: ["Reflect and apply", "lessons learned."] },
-    { angle:   90, label: ["Operate with greater", "intensity and efficiency."] },
-    { angle:  200, label: ["Generate", "exceptional returns."] },
-  ];
-
-  // Arrow triangles pointing clockwise tangent at each node
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const pt = (angle: number, r: number) => ({
-    x: cx + r * Math.cos(toRad(angle)),
-    y: cy + r * Math.sin(toRad(angle)),
-  });
-
-  // Ring: two concentric circles rendered as a thick stroke
-  const ringR = R;
-  const ringW = 40;
-
-  // Label offset — push outward from ring edge
-  const labelR = R + ringW / 2 + 42;
-
-  return (
-    <svg viewBox="0 0 400 400" style={{ width: "100%", maxWidth: 420, display: "block", margin: "0 auto" }}>
-      <defs>
-        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#d8d8d8" />
-          <stop offset="40%" stopColor="#888" />
-          <stop offset="100%" stopColor="#1a1a1a" />
-        </linearGradient>
-        <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" fill="#1a1a1a" />
-        </marker>
-      </defs>
-
-      {/* Ring */}
-      <circle cx={cx} cy={cy} r={ringR} fill="none" stroke="url(#ringGrad)" strokeWidth={ringW} />
-      {/* Inner white fill to restore donut */}
-      <circle cx={cx} cy={cy} r={ringR - ringW / 2 - 1} fill="#fdfcfa" />
-
-      {/* Arrowheads — small dark triangles tangent to ring, pointing clockwise */}
-      {nodes.map((n, i) => {
-        const a = toRad(n.angle);
-        const tangA = a + Math.PI / 2; // clockwise tangent
-        const p = pt(n.angle, ringR);
-        const size = 11;
-        const tx = Math.cos(tangA); const ty = Math.sin(tangA);
-        const nx2 = -Math.sin(tangA); const ny2 = Math.cos(tangA);
-        const tip = { x: p.x + tx * size, y: p.y + ty * size };
-        const bl  = { x: p.x - tx * size * 0.5 + nx2 * size * 0.6, y: p.y - ty * size * 0.5 + ny2 * size * 0.6 };
-        const br  = { x: p.x - tx * size * 0.5 - nx2 * size * 0.6, y: p.y - ty * size * 0.5 - ny2 * size * 0.6 };
-        return (
-          <polygon
-            key={i}
-            points={`${tip.x},${tip.y} ${bl.x},${bl.y} ${br.x},${br.y}`}
-            fill="#1a1a1a"
-          />
-        );
-      })}
-
-      {/* Centre text */}
-      <text x={cx} y={cy - 10} textAnchor="middle" fontSize="13" fontWeight="500" fill="#1a1a1a" fontFamily="Georgia, serif">The nth Venture</text>
-      <text x={cx} y={cy + 10} textAnchor="middle" fontSize="13" fontWeight="500" fill="#1a1a1a" fontFamily="Georgia, serif">Flywheel</text>
-
-      {/* Node labels */}
-      {nodes.map((n, i) => {
-        const lp = pt(n.angle, labelR);
-        // Dot on ring edge
-        const dp = pt(n.angle, ringR + ringW / 2 + 6);
-        return (
-          <g key={i}>
-            <circle cx={dp.x} cy={dp.y} r={3} fill="#555" />
-            {n.label.map((line, li) => (
-              <text
-                key={li}
-                x={lp.x}
-                y={lp.y + li * 15 - ((n.label.length - 1) * 15) / 2}
-                textAnchor={lp.x < cx - 10 ? "end" : lp.x > cx + 10 ? "start" : "middle"}
-                fontSize="11"
-                fill="#1a1a1a"
-                fontFamily="Georgia, serif"
-                fontStyle="italic"
-              >
-                {line}
-              </text>
-            ))}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 // ── Asset allocation chart ────────────────────────────────────────────────────
-// Approximate Federal Reserve data (Visual Capitalist) — illustrative
+// Federal Reserve Survey of Consumer Finances · Visual Capitalist
 const ALLOC_TIERS = [
   { tier: "$10K",  bars: [{ label: "Liquid", pct: 0.40, color: "#d0d0d0" }, { label: "Residence", pct: 0.35, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.06, color: "#888" }, { label: "Retirement", pct: 0.13, color: "#666" }, { label: "Other", pct: 0.06, color: "#c0c0c0" }] },
   { tier: "$100K", bars: [{ label: "Liquid", pct: 0.26, color: "#d0d0d0" }, { label: "Residence", pct: 0.36, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.05, color: "#888" }, { label: "Retirement", pct: 0.18, color: "#666" }, { label: "Stocks", pct: 0.07, color: "#999" }, { label: "Other", pct: 0.08, color: "#c0c0c0" }] },
@@ -164,7 +66,7 @@ function AssetAllocationChart() {
               {row.bars.map((b, bi) => (
                 <div
                   key={bi}
-                  title={`${b.label}: ${Math.round(b.pct * 100)}%`}
+                  title={`${b.label}: ${(b.pct * 100).toFixed(1)}%`}
                   style={{ width: `${b.pct * 100}%`, background: b.color, transition: "width 0.3s" }}
                 />
               ))}
@@ -192,7 +94,7 @@ function AssetAllocationChart() {
         ))}
       </div>
       <p style={{ fontSize: 11, color: "#aaa", marginTop: 8, fontStyle: "italic" }}>
-        Approximate Federal Reserve data via Visual Capitalist · Illustrative
+        Federal Reserve Survey of Consumer Finances · Visual Capitalist
       </p>
     </div>
   );
@@ -296,30 +198,30 @@ const ADVANTAGES = [
   {
     num: "01",
     headline: "Ownership is positive-sum.",
-    stat: "$1.7B distributed to frontline workers",
-    statSub: "Ownership Works coalition · 90+ companies",
-    body: "When KKR implemented broad employee ownership at Gardner Denver, factory workers averaged $175,000 each at exit — not because of charity, but because aligned incentives drive better businesses. Ownership Works, the nonprofit co-founded by KKR's Pete Stavros, has replicated this across industries. Employee-owned firms show higher productivity, lower turnover, and measurably superior financial performance. nth Venture operationalizes this from day one of every company we build.",
+    stat: "Equity to every operator, from day one",
+    statSub: "nth Venture standard · All portfolio companies · 2021–present",
+    body: "We don't theorize about employee ownership — we practice it. Every company we've built grants meaningful equity to its frontline operators from launch. A former valet now runs an audio production company he owns. An employee who lost everything rebuilt his life and moved his family onto acreage — because he owns the company. Our portfolio companies absorbed two failing businesses, protected their investors, and generated $336K in earnings for four principals who own those companies. KKR's Ownership Works coalition validates the playbook at scale — $1.7B distributed to frontline workers across 90+ companies — but we've lived it from the start.",
   },
   {
     num: "02",
     headline: "We already own the platforms.",
-    stat: "6 operating companies, no cold-start risk",
-    statSub: "Built and launched from scratch since 2021",
-    body: "Most funds raise capital and then hunt for deals. We built our portfolio companies ourselves, which means we understand their unit economics, their talent pools, and their growth constraints from the inside. Each platform is a natural magnet for bolt-on acquisitions — adjacent services, shared overhead, and customers who want more than we currently offer. We source deals others never see because we are already operating in the space.",
+    stat: "Built from scratch, owned inside out",
+    statSub: "No deal-hunting, no cold-start risk",
+    body: "Most funds raise capital and then hunt for deals. We built our portfolio companies ourselves, which means we understand their unit economics, talent pools, and growth constraints from the inside. Each platform is a natural magnet for bolt-on acquisitions — adjacent services, shared overhead, and customers who want more than we currently offer. We source deals others never see because we are already operating in the space.",
   },
   {
     num: "03",
     headline: "Small by design.",
     stat: "3–5× earnings at acquisition",
-    statSub: "vs. 15–20× in public markets",
-    body: "The small business market is chronically undervalued. A company generating $500K in annual earnings might trade at 4× in a private sale — the same cash flow commands 15–20× in public markets or large-cap PE. By staying deliberately micro-cap, we access this arbitrage before institutional money can follow. Our overhead is minimal by design: no lavish offices, no army of analysts, no management fees to justify. Capital goes to work, not to us.",
+    statSub: "vs. 10–15× for PE fund targets",
+    body: "Private equity funds have grown enormous — and so have their competition. Hundreds of funds are chasing the same pool of $50M+ EBITDA businesses, and multiples reflect the crowding. A company generating $500K in earnings might trade at 4× in a private small-business sale — the same cash flow commands 12× or more in the PE market for larger businesses. By staying deliberately micro-cap, we access the arbitrage before institutional money can follow. Our overhead is minimal by design: no lavish offices, no army of analysts, no management fees to justify. Capital goes to work.",
   },
   {
     num: "04",
-    headline: "Audit rigor from the nation's top institution.",
-    stat: "U.S. GAO · Comptroller General of the United States",
-    statSub: "Supreme audit authority — audits SEC, DoD, Treasury",
-    body: "The Government Accountability Office is the highest audit institution in the United States. Its principal trained there — conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That discipline means we don't skim offering documents or rely on management projections. We reconstruct cash flows, stress-test assumptions, and look for what sellers hope you won't find. Every investment is audited before it is made.",
+    headline: "Audit rigor from the nation's top authority.",
+    stat: "U.S. GAO — supreme audit authority",
+    statSub: "Audited SEC, DoD, U.S. Treasury",
+    body: "The Government Accountability Office is the supreme audit authority in the United States — the investigative arm of Congress, independent of every agency it reviews. Our principal trained there, conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That discipline means we don't skim offering documents or rely on management projections. We reconstruct cash flows, stress-test assumptions, and look for what sellers hope you won't find. Every investment is audited before it is made.",
   },
 ];
 
@@ -356,30 +258,34 @@ function AdvantagesSection() {
   );
 }
 
-// ── Waterfall ─────────────────────────────────────────────────────────────────
-function WaterfallDiagram() {
-  const steps = [
-    { label: "Return of capital", detail: "100% to investor", color: "#2a4a2a", bg: "#eef5ee" },
-    { label: "Preferred return", detail: "6% annual, compounded", color: "#2a4a7a", bg: "#eef0f8" },
-    { label: "Gains above hurdle", detail: "50/50 split", color: "#c45a2d", bg: "#fdf3ee" },
-  ];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-      {steps.map((s, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 32, display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ width: 28, height: 28, borderRadius: "50%", background: s.bg, border: `1.5px solid ${s.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono', monospace", fontSize: 13, fontWeight: 500, color: s.color }}>{i + 1}</div>
-            {i < steps.length - 1 && <div style={{ width: 1.5, height: 24, background: "#ddd" }} />}
-          </div>
-          <div style={{ flex: 1, padding: "8px 0" }}>
-            <p style={{ margin: 0, fontWeight: 500, fontSize: 14, color: "#1a1a1a" }}>{s.label}</p>
-            <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{s.detail}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// ── Investment Principles ─────────────────────────────────────────────────────
+const PRINCIPLES = [
+  {
+    num: "01",
+    title: "Invest for the long-term.",
+    body: "Compounding rewards patience and punishes impatience. We commit capital the way an owner would — measured in decades, not quarters — and resist every pressure to trade short-term optionality for long-term value.",
+  },
+  {
+    num: "02",
+    title: "Minimize fees.",
+    body: "Every dollar lost to management fees and administrative overhead is a dollar that doesn't compound for investors. We carry no management fee, no carried interest until a 6% hurdle is cleared, and no cost structure built to justify itself.",
+  },
+  {
+    num: "03",
+    title: "Proper — but not excessive — diversification.",
+    body: "Diversification eliminates company-specific risk. But over-diversification merely mirrors an index at a higher cost. We hold enough positions to protect the portfolio without diluting conviction into meaninglessness.",
+  },
+  {
+    num: "04",
+    title: "Straightforward businesses.",
+    body: "We don't invest in things we don't understand. Simple models, recurring revenue, high free-cash-flow conversion. No moonshots, no black boxes, no businesses whose profits depend on a single customer or contract.",
+  },
+  {
+    num: "05",
+    title: "Passionate, effective, high-integrity managers.",
+    body: "Strategy is cheap. Execution is everything. We back people who care deeply, operate well, and do what they say. Character is not negotiable — and it is the hardest thing to audit, so we start there.",
+  },
+];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function NthVentureIntro() {
@@ -422,8 +328,8 @@ export default function NthVentureIntro() {
           <div style={{ cursor: "pointer" }} onClick={() => scrollTo("mission")}>
             <NthLogo size={38} />
           </div>
-          <div style={{ display: "flex", gap: "clamp(12px, 2.5vw, 28px)", alignItems: "center" }}>
-            {([["Mission", "mission"], ["Fund", "fund"], ["Track Record", "track"], ["Team", "team"], ["Letters", "letters"], ["Contact", "contact"]] as [string, typeof SECTIONS[number]][]).map(([label, id]) => (
+          <div style={{ display: "flex", gap: "clamp(10px, 2vw, 24px)", alignItems: "center" }}>
+            {([["Mission", "mission"], ["Story", "story"], ["Track Record", "track"], ["Fund", "fund"], ["Team", "team"], ["Letters", "letters"], ["Contact", "contact"]] as [string, typeof SECTIONS[number]][]).map(([label, id]) => (
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
@@ -464,7 +370,7 @@ export default function NthVentureIntro() {
           </p>
         </FadeIn>
         <FadeIn delay={0.3}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
             <a
               href="/portal"
               style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#1a1a1a", color: "#fdfcfa", border: "none", padding: "12px 28px", borderRadius: 6, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", textDecoration: "none" }}
@@ -479,6 +385,14 @@ export default function NthVentureIntro() {
             >
               Read annual letters
             </button>
+            <a
+              href="https://pulley.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 2, whiteSpace: "nowrap" }}
+            >
+              Portfolio company investor? Access Pulley →
+            </a>
           </div>
         </FadeIn>
       </section>
@@ -487,8 +401,8 @@ export default function NthVentureIntro() {
       <section style={{ background: "#1a1a1a", padding: "48px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 32 }}>
           {[
-            ["$5K → $1.9M", "Portfolio revenue growth"],
-            ["6+", "Companies launched"],
+            ["$5K → $1.9M", "Revenue growth"],
+            ["100%", "Employee-owned"],
             ["60+", "Team members"],
             ["$0", "Investor losses to date"],
             ["0%", "Management fee"],
@@ -497,12 +411,130 @@ export default function NthVentureIntro() {
             <FadeIn key={i} delay={i * 0.06}>
               <div style={{ textAlign: "center" }}>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>{val}</p>
-                <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>{label}</p>
+                <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4, whiteSpace: "nowrap" }}>{label}</p>
               </div>
             </FadeIn>
           ))}
         </div>
       </section>
+
+      {/* Evolution: From Studio to Fund */}
+      <section id="story" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>From studio to fund</p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>How nth Venture got here.</h2>
+          </FadeIn>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48 }}>
+            <FadeIn delay={0.08}>
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2021 — The venture studio</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
+                  nth Venture started with a single thesis: talented people accomplish more when they own what they build.
+                  We launched our first companies from scratch — a $10,000 check and the belief that founder economics
+                  should extend to every employee, not just the people at the top. No outside capital. No performance
+                  fees. Just operators who owned meaningful stakes in the companies they ran.
+                </p>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.16}>
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2022–2023 — Proof of concept</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
+                  Over three years we launched and scaled a portfolio of employee-owned companies —
+                  growing from $5K to $1.3M in revenue while absorbing two struggling businesses and
+                  protecting their investors. Every company remained employee-owned. Not a single investor
+                  lost money. The model worked. We wrote about it — honestly — in annual letters that didn&apos;t
+                  hide the failures alongside the wins.
+                </p>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.24}>
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2024 — Co-Owner Fund LP</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
+                  We formalized our track record into the Co-Owner Fund LP — a Texas limited partnership
+                  seeded with ~$1M in equity transferred by the founder for $1. The fund brings in aligned
+                  outside capital to accelerate a strategy already generating results: acquiring small businesses
+                  at single-digit multiples, with employee ownership baked in from day one, and a principal whose
+                  audit training comes from the supreme audit authority in the United States.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Track Record */}
+      <section id="track" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
+        <FadeIn>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Track record</p>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>From $10K to $1.9M in revenue</h2>
+          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
+            Our portfolio companies follow a &quot;grow as much as you can without burning other people&apos;s money&quot; strategy.
+            The result: consistent growth at breakeven with zero investor losses.
+          </p>
+        </FadeIn>
+        <FadeIn delay={0.1}>
+          <RevenueChart />
+        </FadeIn>
+
+        <FadeIn delay={0.15}>
+          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5, marginTop: 48 }}>Our companies</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+            {[
+              {
+                name: "Audily Inc.",
+                desc: "Podcast & audio production · Rococo Punch network",
+                rev: "$1.15M",
+                yoy: "+24%",
+                press: [
+                  { outlet: "Bloomberg", label: "Podcast M&A" },
+                  { outlet: "Hollywood Reporter", label: "Rococo Punch" },
+                ],
+              },
+              { name: "SBR2TH Recruiting", desc: "Niche tech talent sourcing", rev: "$498K", yoy: "+155%", press: [] },
+              { name: "Falconer Inc.", desc: "Investment advisory boutique", rev: "$104K", yoy: "+12%", press: [] },
+              { name: "Merchant Boxes", desc: "Packaging design & sourcing", rev: "$103K", yoy: "+14%", press: [] },
+              { name: "Sentius Development", desc: "Data & ML consulting", rev: "$29K", yoy: "New", press: [] },
+            ].map((co, i) => (
+              <FadeIn key={i} delay={0.1 + i * 0.05}>
+                <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px" }}>
+                  <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 4px", color: "#1a1a1a" }}>{co.name}</p>
+                  <p style={{ fontSize: 12, color: "#888", margin: "0 0 12px" }}>{co.desc}</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500 }}>{co.rev}</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: co.yoy === "New" ? "#c45a2d" : "#2a7a3a" }}>{co.yoy}</span>
+                  </div>
+                  <p style={{ fontSize: 11, color: "#aaa", margin: "6px 0 8px", fontStyle: "italic" }}>2024 revenue</p>
+                  {co.press.length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {co.press.map((p, pi) => (
+                        <span key={pi} style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#888", background: "#f0efe8", padding: "2px 8px", borderRadius: 3, border: "1px solid #e0ddd5" }}>
+                          {p.outlet} · {p.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.25}>
+          <div style={{ marginTop: 56, background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "28px 32px" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 16, letterSpacing: -0.3 }}>Real results, real people</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20, fontSize: 14, lineHeight: 1.65, color: "#555" }}>
+              <p style={{ margin: 0 }}>A former valet earned over $85K doing work he&apos;d been doing as a passion project. He owns the company.</p>
+              <p style={{ margin: 0 }}>An employee who lost everything caring for his late wife earned 2× median household income and moved his new family into a home on acreage. He owns the company.</p>
+              <p style={{ margin: 0 }}>Our companies absorbed two struggling businesses, protected their investors, retained most employees, and generated $336K in earnings for four principals. They own the company.</p>
+            </div>
+          </div>
+        </FadeIn>
+      </section>
+
+      <AdvantagesSection />
 
       {/* The Fund */}
       <section id="fund" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
@@ -562,60 +594,29 @@ export default function NthVentureIntro() {
         </FadeIn>
       </section>
 
-      {/* Track Record */}
-      <section id="track" style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
+      {/* Investment Principles */}
+      <section style={{ background: "#f5f4f0", padding: "80px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <FadeIn>
-            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Track record</p>
-            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>From $10K to $1.9M in revenue</h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-              Our portfolio companies follow a &quot;grow as much as you can without burning other people&apos;s money&quot; strategy.
-              The result: consistent growth at breakeven with zero investor losses.
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles.</h2>
+            <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 48, maxWidth: 600 }}>
+              As laid out in the annual letters. Derived from decades of academic work and the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
             </p>
           </FadeIn>
-          <FadeIn delay={0.1}>
-            <RevenueChart />
-          </FadeIn>
-
-          <FadeIn delay={0.15}>
-            <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5, marginTop: 48 }}>Portfolio companies</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-              {[
-                { name: "Audily Inc.", desc: "Podcast & audio production", rev: "$1.15M", yoy: "+24%" },
-                { name: "SBR2TH Recruiting", desc: "Niche tech talent sourcing", rev: "$498K", yoy: "+155%" },
-                { name: "Falconer Inc.", desc: "Investment advisory boutique", rev: "$104K", yoy: "+12%" },
-                { name: "Merchant Boxes", desc: "Packaging design & sourcing", rev: "$103K", yoy: "+14%" },
-                { name: "Sentius Development", desc: "Data & ML consulting", rev: "$29K", yoy: "New" },
-              ].map((co, i) => (
-                <FadeIn key={i} delay={0.1 + i * 0.05}>
-                  <div style={{ background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px" }}>
-                    <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 4px", color: "#1a1a1a" }}>{co.name}</p>
-                    <p style={{ fontSize: 12, color: "#888", margin: "0 0 12px" }}>{co.desc}</p>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500 }}>{co.rev}</span>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: co.yoy === "New" ? "#c45a2d" : "#2a7a3a" }}>{co.yoy}</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: "#aaa", margin: "6px 0 0", fontStyle: "italic" }}>2024 revenue</p>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </FadeIn>
-
-          <FadeIn delay={0.25}>
-            <div style={{ marginTop: 56, background: "#fff", border: "1px solid #e8e6e0", borderRadius: 8, padding: "28px 32px" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 16, letterSpacing: -0.3 }}>Real results, real people</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20, fontSize: 14, lineHeight: 1.65, color: "#555" }}>
-                <p style={{ margin: 0 }}>A former valet earned over $85K doing work he&apos;d been doing as a passion project. He owns the company.</p>
-                <p style={{ margin: 0 }}>An employee who lost everything caring for his late wife earned 2x median household income and moved his new family into a home on acreage. He owns the company.</p>
-                <p style={{ margin: 0 }}>Our companies absorbed two struggling businesses, protected their investors, retained most employees, and generated $336K in earnings for four principals. They own the company.</p>
-              </div>
-            </div>
-          </FadeIn>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2 }}>
+            {PRINCIPLES.map((p, i) => (
+              <FadeIn key={i} delay={i * 0.07}>
+                <div style={{ background: i % 2 === 0 ? "#fff" : "#fafaf8", border: "1px solid #e8e6e0", borderTop: "2px solid #c45a2d", padding: "28px 30px" }}>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", display: "block", marginBottom: 12 }}>{p.num}</span>
+                  <h3 style={{ fontSize: 19, fontWeight: 400, color: "#1a1a1a", margin: "0 0 14px", letterSpacing: -0.4, lineHeight: 1.3, fontStyle: "italic" }}>{p.title}</h3>
+                  <p style={{ fontSize: 14, lineHeight: 1.75, color: "#666", margin: 0 }}>{p.body}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
         </div>
       </section>
-
-      <AdvantagesSection />
 
       {/* Team */}
       <section id="team" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
@@ -683,33 +684,6 @@ export default function NthVentureIntro() {
               </a>
             </div>
           </FadeIn>
-        </div>
-      </section>
-
-      {/* Investment Principles */}
-      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
-        <FadeIn>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles</h2>
-          <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 48, maxWidth: 600 }}>
-            As laid out in the annual letters. Derived from decades of academic work and the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
-          </p>
-        </FadeIn>
-        <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 760 }}>
-          {[
-            { num: "01", text: "Invest for the long-term," },
-            { num: "02", text: "minimize fees," },
-            { num: "03", text: "ensure proper – but not excessive – diversification" },
-            { num: "04", text: "in straightforward businesses" },
-            { num: "05", text: "with passionate, effective and high-integrity managers." },
-          ].map((p, i) => (
-            <FadeIn key={i} delay={i * 0.07}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 20, padding: "18px 0", borderBottom: i < 4 ? "1px solid #e8e6e0" : "none" }}>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", flexShrink: 0, width: 20 }}>{p.num}</span>
-                <p style={{ fontSize: "clamp(18px, 2.5vw, 26px)", fontWeight: 300, margin: 0, lineHeight: 1.35, color: "#1a1a1a", letterSpacing: -0.3 }}>{p.text}</p>
-              </div>
-            </FadeIn>
-          ))}
         </div>
       </section>
 
