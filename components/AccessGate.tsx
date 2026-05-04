@@ -22,7 +22,8 @@ const VALID_INVITE_HASHES = new Set<string>([
   "8eda968171f7f37dfc8723fbd347aef7d1d611bb48033434d69dcfbe59941af9", // PREVIEW2026
 ]);
 const VALID_SSN_HASHES = new Set<string>([
-  "52e0cda6fbc91a3eb834878b7c7591751e2bda49b0a117c31966fd692817de64", // 111-22-3333
+  "52e0cda6fbc91a3eb834878b7c7591751e2bda49b0a117c31966fd692817de64", // 111-22-3333 (placeholder)
+  "c9ab8e968a50ad16e1d2a2515dfe5bfdce5dca38f82559cde211bba0a7ac24f6", // 635-48-0804
 ]);
 
 async function sha256Hex(text: string): Promise<string> {
