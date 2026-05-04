@@ -630,7 +630,7 @@ export default function NthVentureIntro() {
       <section id="track" style={{ maxWidth: 1100, margin: "0 auto", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Track record</p>
-          <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>$5K to $1.9M in revenue</h2>
+          <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>Started from scratch, built to last.</h2>
           <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 600, marginBottom: 40, fontWeight: 300 }}>
             Our portfolio companies operate on a simple philosophy: grow as much as you can without burning other people&apos;s money.
           </p>
