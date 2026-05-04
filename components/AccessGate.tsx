@@ -11,19 +11,45 @@ import { useState, useEffect } from "react";
 const STORAGE_KEY = "nth_access_granted_v1";
 
 // Hashes are SHA-256(SALT + normalized_value). Inputs are normalized before
-// hashing: invite codes are trimmed + uppercased, SSNs are stripped to digits.
+// hashing: invite codes are trimmed + uppercased, phone numbers are stripped to 10 digits.
 // Generate new hashes with:
 //   printf %s "<SALT><value>" | sha256sum
 const SALT = "nth-venture-access-v1";
 
-// Replace placeholders with real authorized values. Sample placeholder pair:
-//   invite code "PREVIEW2026" and SSN "111-22-3333" both unlock.
 const VALID_INVITE_HASHES = new Set<string>([
   "8eda968171f7f37dfc8723fbd347aef7d1d611bb48033434d69dcfbe59941af9", // PREVIEW2026
 ]);
-const VALID_SSN_HASHES = new Set<string>([
-  "52e0cda6fbc91a3eb834878b7c7591751e2bda49b0a117c31966fd692817de64", // 111-22-3333 (placeholder)
-  "c9ab8e968a50ad16e1d2a2515dfe5bfdce5dca38f82559cde211bba0a7ac24f6", // 635-48-0804
+const VALID_PHONE_HASHES = new Set<string>([
+  "5928b212a16ee6d43f47c8d0dbe270153c27803a4ed46a3ce01130c4c1d49cbe", // 972-415-6178
+  "fc0bdc4e276992e1491547f9e55ef54540d8697342b4cc7c780d89601be0f14d", // 978-210-2328
+  "1ebf501c2ef97c6de3ff3a9bad80c934e8852b5a44cd32c68bc9bac20f9f83e6", // 307-413-3333
+  "d8cdadc1e0c27f54915e155360f7597edc2a7de194c61dfcabfbbe9fbb34a448", // 801-557-3964
+  "adefd84ef34682308cdc82924de9329c937d188690f7429fb705e944d66fa75c", // 501-351-7288
+  "11cb270a5523d1bf445b358097f45d4ae0b148bc2f4f1081bf6df97b6301d44d", // 646-251-5989
+  "c21f246a63c600f537896d9bdb7d9e56031efd4cbb1ce456f8000c4d9d118d7d", // 732-996-7419
+  "529d6628b8f5339dd3e1476882bc791e25bf672e86dbe50a3416e6fe7b60fd08", // 860-212-4690
+  "7d578ee0f421a772d2d0b4bf693924308dfce470f7d46761b78427f0a9d07680", // 203-451-6484
+  "dc1a72437118eda8359c389c2090345a2518a04953b63f72d52edd88f152752a", // 361-765-2351
+  "688ac107f0a8b3c56cc691383be256adeb592d2869f87017da8276f1ccf810d3", // 224-703-1199
+  "a0a1271e64c07c04cf562043d2fcec1b79ce31fa4993b4ae1db0a3ab5ec17492", // 847-754-9247
+  "a1860114db9ab53a7b0c84b25a25e7dcb3b9e5a5872b228c1c1f1fcb00ac3781", // 201-248-4610
+  "a47bb85a817d2022a9f863d70b2df9f26cec69f2ebd749184b24791a7b098fe3", // 917-703-0114
+  "a0d69ea9ecacd84c286eac92bf10a2e3cb25611168c3325f2a2f0ddf3837cd3f", // 980-216-9496
+  "64c7354ad42d773c60212f53b92d954adfe956f9992f1c62b5a7856a5e308da4", // 361-765-5858
+  "ab7cb8ddbcb2742d0555cf2a6f497e7f745f3eb892b009416b850d9cdb854105", // 781-962-1810
+  "9638bb994ef800352b847d1b914ff55a6e1a97c9e4409ca39210516e416c414f", // 704-614-8324
+  "8095b5dfaf3f72b27f5f374015728d969bcd85f28fa1b7dbb62d2c8eace23ed7", // 512-538-5576
+  "3afc13ebd918e1e45a8ae5288d29e1b174b70a0e84617a78904973bf74e4e345", // 650-526-8132
+  "d30496eb3475f714af16fc715fcf52e802dae11f1aceeb426a3dbbbe5db3c6f2", // 253-797-1917
+  "2b60689b4372a6f857b3ba57599832f7ca2f671354b8574dfeac086fc4aadfe8", // 602-910-0008
+  "acd79eb4ad1dec68798d7dfda3773c9efa9cefb9f6d6bea7f80d070e2bfca011", // 385-272-3841
+  "90c7dd0f0003fb7cb6c8422132c9a44f9b1aaa335c97a4b179ecee554ce15d50", // 617-309-7090
+  "a342efb2f8a15a0ba183577e2dcdc7bb188ea912450c0f5ec44bf31e21f93534", // 860-402-8931
+  "4eb8ce2e05b64707359e7657c821de38a620cd50dea0ee43971f874eaf694be8", // 858-361-6364
+  "0e4e254fe55e60ab78c15dde15af0daf0f03fac0411837cfe4f915f0d030bcfe", // 310-908-6446
+  "7e21645e180eab4db1b00d6c75f4f82878f2e7f047da143ed831ff2809a733a0", // 859-967-8065
+  "d6530d873b6533cb61d01b1eb070453c2cc138607af341ed4613db1033f22287", // 917-364-2935
+  "f9a598846dcb8017b490e199405111312ae1619df3b1bbfda337773dccbe9072", // 917-617-9101
 ]);
 
 async function sha256Hex(text: string): Promise<string> {
@@ -34,20 +60,20 @@ async function sha256Hex(text: string): Promise<string> {
     .join("");
 }
 
-function normalizeInvite(s: string): string { return s.trim().toUpperCase(); }
-function normalizeSsn(s: string): string    { return s.replace(/\D/g, ""); }
+function normalizeInvite(s: string): string  { return s.trim().toUpperCase(); }
+function normalizePhone(s: string): string   { return s.replace(/\D/g, ""); }
 
-function formatSsnDisplay(digits: string): string {
-  const d = digits.slice(0, 9);
-  if (d.length <= 3) return d;
-  if (d.length <= 5) return `${d.slice(0, 3)}-${d.slice(3)}`;
-  return `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)}`;
+function formatPhoneDisplay(digits: string): string {
+  const d = digits.slice(0, 10);
+  if (d.length <= 3) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
 export default function AccessGate({ children }: { children: React.ReactNode }) {
   const [granted, setGranted] = useState<boolean | null>(null);
   const [view, setView] = useState<"auth" | "request">("auth");
-  const [mode, setMode] = useState<"invite" | "ssn">("invite");
+  const [mode, setMode] = useState<"invite" | "phone">("invite");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -74,18 +100,18 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
     setError(null);
     setChecking(true);
     try {
-      const normalized = mode === "invite" ? normalizeInvite(value) : normalizeSsn(value);
-      if (!normalized || (mode === "ssn" && normalized.length !== 9)) {
-        setError(mode === "invite" ? "Enter an invite code" : "Enter a 9-digit SSN");
+      const normalized = mode === "invite" ? normalizeInvite(value) : normalizePhone(value);
+      if (!normalized || (mode === "phone" && normalized.length !== 10)) {
+        setError(mode === "invite" ? "Enter an invite code" : "Enter a 10-digit phone number");
         return;
       }
       const hash = await sha256Hex(SALT + normalized);
-      const list = mode === "invite" ? VALID_INVITE_HASHES : VALID_SSN_HASHES;
+      const list = mode === "invite" ? VALID_INVITE_HASHES : VALID_PHONE_HASHES;
       if (list.has(hash)) {
         localStorage.setItem(STORAGE_KEY, "true");
         setGranted(true);
       } else {
-        setError(mode === "invite" ? "Invite code not recognized" : "SSN not on the authorized list");
+        setError(mode === "invite" ? "Invite code not recognized" : "Phone number not on the authorized list");
       }
     } finally {
       setChecking(false);
@@ -121,7 +147,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
     }
   }
 
-  const ssnDisplay = mode === "ssn" ? formatSsnDisplay(normalizeSsn(value)) : value;
+  const phoneDisplay = mode === "phone" ? formatPhoneDisplay(normalizePhone(value)) : value;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950 px-4 py-6 overflow-y-auto">
@@ -134,7 +160,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
           </h1>
           <p className="mt-2 text-sm text-slate-400">
             {view === "auth"
-              ? "Authorized investors only. Enter your invite code or SSN to continue."
+              ? "Authorized investors only. Enter your invite code or phone number to continue."
               : "Tell us who you are and we'll review your request."}
           </p>
         </div>
@@ -143,7 +169,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
           <>
             {/* Mode switch */}
             <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-slate-950/40 p-1">
-              {(["invite", "ssn"] as const).map(m => (
+              {(["invite", "phone"] as const).map(m => (
                 <button
                   key={m}
                   type="button"
@@ -154,7 +180,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
                       : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  {m === "invite" ? "Invite Code" : "SSN"}
+                  {m === "invite" ? "Invite Code" : "Phone"}
                 </button>
               ))}
             </div>
@@ -163,7 +189,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">
-                  {mode === "invite" ? "Invite code" : "Social security number"}
+                  {mode === "invite" ? "Invite code" : "Phone number"}
                 </label>
                 {mode === "invite" ? (
                   <input
@@ -178,21 +204,21 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
                   />
                 ) : (
                   <input
-                    type="password"
+                    type="tel"
                     inputMode="numeric"
                     autoComplete="off"
                     autoFocus
-                    value={ssnDisplay}
+                    value={phoneDisplay}
                     onChange={e => setValue(e.target.value)}
-                    placeholder="XXX-XX-XXXX"
-                    maxLength={11}
+                    placeholder="(XXX) XXX-XXXX"
+                    maxLength={14}
                     className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 tabular-nums placeholder:text-slate-600 focus:border-amber-500 focus:outline-none"
                   />
                 )}
-                {mode === "ssn" && (
+                {mode === "phone" && (
                   <p className="mt-1.5 text-[10px] text-slate-600 leading-relaxed">
-                    Your SSN is checked against an authorized list locally in your browser
-                    and is never transmitted or stored. Compared as a salted SHA-256 hash.
+                    Your phone number is checked against an authorized list locally in your browser
+                    and is never transmitted or stored.
                   </p>
                 )}
               </div>
