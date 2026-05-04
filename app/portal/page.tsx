@@ -332,7 +332,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-stretch h-14">
             {/* Logo */}
-            <div className="flex items-center gap-2 shrink-0 pr-4 border-r border-[#1E2D3D]">
+            <a href="/" className="flex items-center gap-2 shrink-0 pr-4 border-r border-[#1E2D3D] no-underline hover:opacity-80 transition-opacity">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png"
@@ -341,7 +341,7 @@ export default function Dashboard() {
                 style={{ filter: "brightness(0) invert(1)" }}
               />
               <span className="text-xs text-slate-500 hidden lg:block">Investor Portal</span>
-            </div>
+            </a>
 
             {/* Nav tabs — hidden on mobile, icon-only on sm–lg, full on lg+ */}
             <div className="hidden sm:flex flex-1 items-stretch">

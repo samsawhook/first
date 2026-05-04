@@ -214,6 +214,14 @@ export default function NthVentureIntro() {
                 {label}
               </button>
             ))}
+            <a
+              href="/portal"
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 0.5, color: "#fdfcfa", background: "#1a1a1a", border: "none", padding: "6px 14px", borderRadius: 5, cursor: "pointer", textDecoration: "none", transition: "background 0.2s", whiteSpace: "nowrap" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
+            >
+              Investor Portal →
+            </a>
           </div>
         </div>
       </nav>
@@ -491,13 +499,12 @@ export default function NthVentureIntro() {
       <section style={{ background: "#f5f4f0", padding: "48px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 32, justifyContent: "center" }}>
           {[
-            ["SEC Filings: nth Venture", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461"],
-            ["SEC Filings: Co-Owner Fund", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002088918"],
-            ["Investor Login (Pulley)", "https://www.pulley.com"],
+            ["SEC Filings: nth Venture", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461", true],
+            ["SEC Filings: Co-Owner Fund", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002088918", true],
           ].map(([label, url], i) => (
             <a
               key={i}
-              href={url}
+              href={url as string}
               target="_blank"
               rel="noopener noreferrer"
               style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 2, transition: "color 0.2s" }}
@@ -507,6 +514,14 @@ export default function NthVentureIntro() {
               {label} ↗
             </a>
           ))}
+          <a
+            href="/portal"
+            style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 2, transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#c45a2d")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#888")}
+          >
+            Investor Portal ↗
+          </a>
         </div>
       </section>
 
