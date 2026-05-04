@@ -25,6 +25,7 @@ import LettersSection from "@/components/LettersSection";
 import CompanyPage from "@/components/CompanyPage";
 import InvestorPortal from "@/components/InvestorPortal";
 import NDAGate from "@/components/NDAGate";
+import AccessGate from "@/components/AccessGate";
 import FeeCalculator from "@/components/FeeCalculator";
 import {
   portfolio as basePortfolio,
@@ -321,6 +322,7 @@ export default function Dashboard() {
   };
 
   return (
+    <AccessGate>
     <NDAGate>
     <div className="min-h-screen bg-[#060B14]">
       {/* Top nav bar */}
@@ -5451,5 +5453,6 @@ export default function Dashboard() {
       )}
     </div>
     </NDAGate>
+    </AccessGate>
   );
 }
