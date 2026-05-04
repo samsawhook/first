@@ -952,6 +952,198 @@ export default function NthVentureIntro() {
         </div>
       </section>
 
+      {/* Portal Transparency */}
+      <section style={{ background: "#080d15", padding: "80px clamp(20px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investor portal</p>
+            <h2 style={{ fontSize: "clamp(26px, 4.5vw, 48px)", fontWeight: 300, letterSpacing: -1.2, margin: "0 0 20px", color: "#fdfcfa", lineHeight: 1.1 }}>
+              You know exactly where<br />your money is. Always.
+            </h2>
+            <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#64748b", maxWidth: 620, marginBottom: 20, fontWeight: 300 }}>
+              Most fund managers control what you see. We built something different.
+              Every LP — and prospective LP — gets a real-time view of the fund:
+              monthly P&L for every portfolio company, fund-level performance attribution,
+              a fee calculator that shows exactly what you&apos;d pay versus a traditional structure,
+              and full documentation access. Nothing is behind a phone call.
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", marginBottom: 52 }}>
+              {[
+                "Monthly P&L by company",
+                "Real-time NAV & MOIC",
+                "Deal pipeline access",
+                "Allocator fee comparison",
+                "Fund documents & SEC filings",
+                "Secondary market",
+              ].map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#c45a2d", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#64748b", letterSpacing: 0.5 }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </FadeIn>
+
+          {/* Three portal teasers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 10, marginBottom: 40 }}>
+
+            {/* Panel 1 — Fund Overview */}
+            <SlideIn delay={0.05} from="left">
+              <div style={{ background: "#0D1421", borderRadius: 10, overflow: "hidden", border: "1px solid #1E2D3D" }}>
+                <div style={{ background: "#060a10", padding: "10px 14px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #1E2D3D" }}>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    {["#ff5f57","#febc2e","#28c840"].map(c => <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />)}
+                  </div>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#2a4a6a", marginLeft: 6 }}>Co-Owner Fund — Overview</span>
+                </div>
+                <div style={{ padding: "18px 18px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                    {[
+                      { label: "Portfolio NAV Est.", val: "$1.2M", color: "#38BDF8" },
+                      { label: "MOIC", val: "1.24×", color: "#34D399" },
+                      { label: "Active Companies", val: "6", color: "#e2e8f0" },
+                      { label: "3-yr Revenue CAGR", val: "86%", color: "#F59E0B" },
+                    ].map(({ label, val, color }) => (
+                      <div key={label} style={{ background: "#0a1120", borderRadius: 6, padding: "10px 12px" }}>
+                        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", margin: "0 0 4px", letterSpacing: 1.2, textTransform: "uppercase" }}>{label}</p>
+                        <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color, margin: 0, fontWeight: 500 }}>{val}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", letterSpacing: 1.2, textTransform: "uppercase", margin: "0 0 10px" }}>Portfolio Allocation</p>
+                  {[
+                    { name: "Audily", pct: 41, color: "#F59E0B" },
+                    { name: "SBR2TH Recruiting", pct: 27, color: "#38BDF8" },
+                    { name: "Falconer", pct: 19, color: "#34D399" },
+                    { name: "Merchant Boxes", pct: 8, color: "#8B5CF6" },
+                    { name: "Other", pct: 5, color: "#64748b" },
+                  ].map((c, i) => (
+                    <div key={i} style={{ marginBottom: 7 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <span style={{ fontSize: 10, color: "#4a6278" }}>{c.name}</span>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#2a4a6a" }}>{c.pct}%</span>
+                      </div>
+                      <div style={{ height: 3, background: "#1E2D3D", borderRadius: 2 }}>
+                        <div style={{ height: "100%", width: `${c.pct}%`, background: c.color, borderRadius: 2, transition: "width 1s ease" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SlideIn>
+
+            {/* Panel 2 — Company P&L */}
+            <FadeIn delay={0.1}>
+              <div style={{ background: "#0D1421", borderRadius: 10, overflow: "hidden", border: "1px solid #1E2D3D" }}>
+                <div style={{ background: "#060a10", padding: "10px 14px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #1E2D3D" }}>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    {["#ff5f57","#febc2e","#28c840"].map(c => <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />)}
+                  </div>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#2a4a6a", marginLeft: 6 }}>Audily — Monthly P&amp;L</span>
+                </div>
+                <div style={{ padding: "18px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 5, background: "#F59E0B22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 12, height: 12, background: "#F59E0B", borderRadius: 2 }} />
+                      </div>
+                      <span style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 500 }}>Audily</span>
+                    </div>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#2a4a6a" }}>Oct 2024</span>
+                  </div>
+                  {[
+                    { label: "Revenue",        val: "$48,200",  color: "#34D399",  bold: true,  sub: "" },
+                    { label: "COGS",           val: "−$31,500", color: "#94a3b8",  bold: false, sub: "" },
+                    { label: "Gross Profit",   val: "$16,700",  color: "#38BDF8",  bold: true,  sub: "34.6%" },
+                    { label: "Operating Exp",  val: "−$8,200",  color: "#64748b",  bold: false, sub: "" },
+                    { label: "Net Income",     val: "$8,500",   color: "#F59E0B",  bold: true,  sub: "17.6%" },
+                  ].map(({ label, val, color, bold, sub }, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 0", borderBottom: "1px solid #0f1a28" }}>
+                      <span style={{ fontSize: 11, color: "#4a6278" }}>{label}</span>
+                      <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                        {sub && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#2a4a6a" }}>{sub}</span>}
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color, fontWeight: bold ? 600 : 400 }}>{val}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 14 }}>
+                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 8px" }}>12-Month Revenue</p>
+                    <svg viewBox="0 0 200 36" style={{ width: "100%", height: "auto" }}>
+                      {[12,18,22,28,24,32,29,35,31,38,42,48].map((v, i, arr) => {
+                        const max = Math.max(...arr);
+                        const x = (i / (arr.length - 1)) * 200;
+                        const y = 36 - (v / max) * 30;
+                        return i === 0 ? null : (
+                          <line key={i} x1={(i-1)/(arr.length-1)*200} y1={36-(arr[i-1]/max)*30} x2={x} y2={y} stroke="#F59E0B" strokeWidth={1.5} strokeLinecap="round" />
+                        );
+                      })}
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+
+            {/* Panel 3 — Fee Calculator */}
+            <SlideIn delay={0.15} from="right">
+              <div style={{ background: "#0D1421", borderRadius: 10, overflow: "hidden", border: "1px solid #1E2D3D" }}>
+                <div style={{ background: "#060a10", padding: "10px 14px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #1E2D3D" }}>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    {["#ff5f57","#febc2e","#28c840"].map(c => <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />)}
+                  </div>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#2a4a6a", marginLeft: 6 }}>Allocator Fee Calculator</span>
+                </div>
+                <div style={{ padding: "18px 18px" }}>
+                  <div style={{ background: "#0a1120", borderRadius: 6, padding: "10px 14px", marginBottom: 14 }}>
+                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", margin: "0 0 3px", letterSpacing: 1, textTransform: "uppercase" }}>Portfolio Value</p>
+                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, color: "#e2e8f0", margin: 0 }}>$1,000,000</p>
+                  </div>
+                  <div style={{ background: "#0a1120", borderRadius: 6, padding: "10px 14px", marginBottom: 14 }}>
+                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#2a4a6a", margin: "0 0 3px", letterSpacing: 1, textTransform: "uppercase" }}>Gross Annual Return</p>
+                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, color: "#e2e8f0", margin: 0 }}>20%</p>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: "#0b1a10", border: "1px solid #14311e", borderRadius: 6, padding: "12px" }}>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#34D399", margin: "0 0 8px", letterSpacing: 1, textTransform: "uppercase" }}>nth Venture</p>
+                      <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Mgmt Fee</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#34D399", margin: "0 0 8px", fontWeight: 600 }}>$0</p>
+                      <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Net to LP</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#e2e8f0", margin: 0 }}>$186,000</p>
+                    </div>
+                    <div style={{ background: "#160e04", border: "1px solid #2d1e08", borderRadius: 6, padding: "12px" }}>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: "#F59E0B", margin: "0 0 8px", letterSpacing: 1, textTransform: "uppercase" }}>Trad. 2/20</p>
+                      <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Mgmt Fee</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#F59E0B", margin: "0 0 8px" }}>$20,000</p>
+                      <p style={{ fontSize: 9, color: "#2a4a6a", margin: "0 0 2px" }}>Net to LP</p>
+                      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#64748b", margin: 0 }}>$140,000</p>
+                    </div>
+                  </div>
+                  <div style={{ background: "#0b1a10", border: "1px solid #14311e", borderRadius: 6, padding: "12px", textAlign: "center" }}>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#34D399" }}>You keep $46,000 more per year.</span>
+                  </div>
+                </div>
+              </div>
+            </SlideIn>
+          </div>
+
+          {/* CTA */}
+          <FadeIn delay={0.2}>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <a
+                href="/portal"
+                style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, background: "#c45a2d", color: "#fdfcfa", padding: "14px clamp(20px, 3vw, 32px)", borderRadius: 6, textDecoration: "none", letterSpacing: 0.5, transition: "background 0.2s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#a8481f")}
+                onMouseLeave={e => (e.currentTarget.style.background = "#c45a2d")}
+              >
+                Access the investor portal →
+              </a>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#2a4a6a" }}>
+                NDA required for deeper company data · Prospective LPs welcome
+              </span>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* Annual Letters */}
       <section id="letters" style={{ background: "#1a1a1a", padding: "64px clamp(20px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
