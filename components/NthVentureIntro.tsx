@@ -287,7 +287,27 @@ const COMPANIES = [
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+const NAV_SECTIONS = [
+  { id: "track", label: "Track Record" },
+  { id: "fund", label: "Fund" },
+  { id: "approach", label: "Approach" },
+  { id: "story", label: "Story" },
+  { id: "team", label: "Team" },
+];
+
 export default function NthVentureIntro() {
+  const [scrolled, setScrolled] = useState(false);
+  const [showFloat, setShowFloat] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+      setShowFloat(window.scrollY > 320);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -297,8 +317,79 @@ export default function NthVentureIntro() {
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
+      {/* Desktop Nav — hidden on mobile */}
+      <nav
+        className="hidden md:flex"
+        style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+          alignItems: "center", justifyContent: "space-between",
+          height: 64,
+          padding: "0 clamp(20px, 5vw, 80px)",
+          background: scrolled ? "rgba(253,252,250,0.96)" : "transparent",
+          backdropFilter: scrolled ? "blur(10px)" : "none",
+          borderBottom: scrolled ? "1px solid #e8e6e0" : "1px solid transparent",
+          transition: "background 0.35s, border-color 0.35s",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", cursor: "pointer" }} onClick={() => scrollTo("mission")}>
+          <NthLogo size={30} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "clamp(20px, 3vw, 36px)" }}>
+          {NAV_SECTIONS.map(s => (
+            <button
+              key={s.id}
+              onClick={() => scrollTo(s.id)}
+              style={{
+                fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1.5,
+                textTransform: "uppercase", background: "none", border: "none",
+                color: "#888", cursor: "pointer", padding: 0, transition: "color 0.2s",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#1a1a1a")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#888")}
+            >
+              {s.label}
+            </button>
+          ))}
+          <a
+            href="/portal"
+            style={{
+              fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1,
+              background: "#1a1a1a", color: "#fdfcfa", padding: "8px 18px",
+              borderRadius: 5, textDecoration: "none", transition: "background 0.2s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
+            onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
+          >
+            Investor Portal
+          </a>
+        </div>
+      </nav>
+
+      {/* Floating Co-Owner Fund button — desktop, slides in after scroll */}
+      <a
+        className="hidden md:flex"
+        href="/portal"
+        style={{
+          position: "fixed", right: 0, top: "50%", zIndex: 98,
+          writingMode: "vertical-rl", textOrientation: "mixed",
+          fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: 2,
+          textTransform: "uppercase",
+          background: "#1a1a1a", color: "#fdfcfa",
+          padding: "20px 10px", borderRadius: "6px 0 0 6px",
+          textDecoration: "none",
+          opacity: showFloat ? 1 : 0,
+          transform: showFloat ? "translateY(-50%)" : "translateY(-50%) translateX(100%)",
+          pointerEvents: showFloat ? "auto" : "none",
+          transition: "opacity 0.4s, transform 0.4s cubic-bezier(0.16,1,0.3,1), background 0.2s",
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
+        onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
+      >
+        Co-Owner Fund →
+      </a>
+
       {/* Hero */}
-      <section id="mission" style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(48px, 8vh, 100px) clamp(20px, 5vw, 80px) 64px" }}>
+      <section id="mission" className="pt-8 md:pt-24" style={{ maxWidth: 1100, margin: "0 auto", paddingBottom: "clamp(40px, 6vh, 64px)", paddingLeft: "clamp(20px, 5vw, 80px)", paddingRight: "clamp(20px, 5vw, 80px)" }}>
         <SlideIn from="left">
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
             <NthLogo size={40} />
@@ -441,6 +532,150 @@ export default function NthVentureIntro() {
             </div>
           </div>
         </FadeIn>
+      </section>
+
+      {/* The Thesis */}
+      <section style={{ background: "#0f0f0e", padding: "80px clamp(20px, 5vw, 80px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <FadeIn>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>The thesis</p>
+            <h2 style={{ fontSize: "clamp(28px, 5vw, 52px)", fontWeight: 300, letterSpacing: -1.5, margin: "0 0 20px", color: "#fdfcfa", lineHeight: 1.1 }}>
+              The data is not subtle.
+            </h2>
+            <p style={{ fontSize: "clamp(15px, 2vw, 18px)", lineHeight: 1.7, color: "#666", maxWidth: 680, marginBottom: 56, fontWeight: 300 }}>
+              Exposure to private business interests is the primary driver of long-term wealth creation.
+              Labor is a commodity — motivated talent is not. People have never been more productive,
+              and the ones with real skin in the game are more productive still.
+              The evidence has accumulated for decades and it all points in one direction.
+            </p>
+          </FadeIn>
+
+          {/* Three headline stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: 2, marginBottom: 2 }}>
+            {[
+              {
+                stat: "99 / 100",
+                label: "Quarters private equity has outperformed public markets",
+                note: "As far back as we have data",
+                src: "Institutional Investor — Why Private Equity Wins",
+              },
+              {
+                stat: "3×",
+                label: "More assets at retirement for investors with private market exposure",
+                note: "vs. public-only allocation",
+                src: "Institutional Investor — Why Private Equity Wins",
+              },
+              {
+                stat: "#1",
+                label: "Growth equity ranks highest among all PE strategies — above VC, buyout, and infrastructure",
+                note: "Between the risk profiles of VC and buyout",
+                src: "CAIS — Introduction to Growth Equity",
+              },
+            ].map((item, i) => (
+              <SlideIn key={i} delay={i * 0.08} from={i % 2 === 0 ? "left" : "right"}>
+                <div style={{ background: "#141412", padding: "clamp(24px, 4vw, 36px)", borderTop: "2px solid #c45a2d" }}>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(24px, 4vw, 44px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 12px", letterSpacing: -1, lineHeight: 1 }}>{item.stat}</p>
+                  <p style={{ fontSize: "clamp(14px, 1.8vw, 15px)", color: "#ccc", margin: "0 0 10px", lineHeight: 1.5, fontWeight: 300 }}>{item.label}</p>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#444", margin: 0, letterSpacing: 0.5, lineHeight: 1.6 }}>↑ {item.src}</p>
+                </div>
+              </SlideIn>
+            ))}
+          </div>
+
+          {/* Employee ownership + fund size */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(340px, 100%), 1fr))", gap: 2, marginBottom: 48 }}>
+            <SlideIn delay={0.1} from="left">
+              <div style={{ background: "#111110", padding: "clamp(24px, 4vw, 36px)", borderTop: "2px solid #222" }}>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 16 }}>On employee ownership</p>
+                <p style={{ fontSize: "clamp(14px, 1.8vw, 15px)", lineHeight: 1.8, color: "#888", fontWeight: 300, marginBottom: 24 }}>
+                  Incentive alignment works. It has always worked. A person who owns what they build
+                  behaves differently from a person who is paid to maintain it. The research — from academic
+                  institutions, institutional investors, and the federal government — says the same thing.
+                  Ownership changes behavior. Behavior changes results.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[
+                    ["FCLT Global", "Long-term ownership mindset drives higher capital returns"],
+                    ["HRMJ", "Employee ownership correlates with sustained organizational performance"],
+                    ["Ownership Works", "$1.7B+ distributed to 100,000+ frontline workers across 90+ companies"],
+                    ["National Center for Employee Ownership", "30,000+ ESOPs in the U.S. — the model scales"],
+                    ["UPenn / Wharton", "Broad-based equity improves firm outcomes on every major metric"],
+                    ["GAO (1987)", "Congress's auditing arm validated the model before it was fashionable — the 1987 report is oft-cited but not fully digitized"],
+                  ].map(([src, pt], i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ color: "#c45a2d", fontSize: 12, lineHeight: "20px", flexShrink: 0 }}>—</span>
+                      <span style={{ fontSize: 13, color: "#666", lineHeight: 1.6 }}>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#555", display: "block" }}>{src}</span>
+                        {pt}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SlideIn>
+            <SlideIn delay={0.16} from="right">
+              <div style={{ background: "#111110", padding: "clamp(24px, 4vw, 36px)", borderTop: "2px solid #222" }}>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 16 }}>On fund size</p>
+                <p style={{ fontSize: "clamp(14px, 1.8vw, 15px)", lineHeight: 1.8, color: "#888", fontWeight: 300, marginBottom: 24 }}>
+                  The best-performing private equity funds are small. This is not a paradox — it&apos;s math.
+                  Larger funds are forced into larger deals with more competition and higher entry multiples.
+                  Cambridge Associates, Preqin, and every major LP database confirm it:
+                  top-quartile returns do not come from the top-quartile funds by size.
+                  We are deliberately small, and we intend to stay that way.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[
+                    "Micro-cap PE consistently outperforms mega-buyout by 3–5% annually",
+                    "Less capital chasing smaller deals = better entry multiples",
+                    "No management fees to justify — every dollar works",
+                    "Operator-led means no layers between decision and execution",
+                    "A $10M fund can move fast. A $10B fund cannot.",
+                  ].map((pt, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ color: "#c45a2d", fontSize: 12, lineHeight: "20px", flexShrink: 0 }}>—</span>
+                      <span style={{ fontSize: 13, color: "#666", lineHeight: 1.6 }}>{pt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SlideIn>
+          </div>
+
+          {/* Further reading */}
+          <FadeIn delay={0.2}>
+            <div style={{ borderTop: "1px solid #1e1e1c", paddingTop: 36 }}>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, color: "#444", textTransform: "uppercase", marginBottom: 24 }}>Further reading</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))", gap: "4px 32px" }}>
+                {[
+                  { label: "Why Private Equity Wins: Reflecting on a Quarter-Century of Outperformance", src: "Institutional Investor", href: "https://www.institutionalinvestor.com" },
+                  { label: "Introduction to Growth Equity", src: "CAIS", href: "https://caisgroup.com" },
+                  { label: "Growth Equity Primer (whitepaper)", src: "Meketa Investment Group", href: "https://meketa.com" },
+                  { label: "Long-Term Capitalism & Employee Ownership", src: "FCLT Global", href: "https://www.fcltglobal.org" },
+                  { label: "Research on Employee Ownership & Performance", src: "HRMJ — Human Resource Management Journal", href: "https://onlinelibrary.wiley.com/journal/17488583" },
+                  { label: "Broad-Based Ownership at Scale", src: "Ownership Works", href: "https://ownershipworks.org" },
+                  { label: "Employee Ownership Facts & Research", src: "National Center for Employee Ownership", href: "https://www.nceo.org" },
+                  { label: "Equity Sharing & Worker Performance", src: "UPenn / Wharton", href: "https://knowledge.wharton.upenn.edu" },
+                  { label: "I muse about this often", src: "The Wrap with Sam — Substack", href: "https://sawhook.substack.com" },
+                  { label: "Heart and soul of what we're doing", src: "nthventure.com", href: "https://www.nthventure.com" },
+                  { label: "Verify we do the paperwork correctly", src: "SEC EDGAR — nth Venture & Co-Owner Fund", href: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=1930461" },
+                ].map((item, i) => (
+                  <a
+                    key={i}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: "none", display: "block", padding: "12px 0", borderBottom: "1px solid #191917", transition: "opacity 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                  >
+                    <span style={{ fontSize: 13, color: "#aaa", display: "block", marginBottom: 3, lineHeight: 1.4 }}>{item.label}</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#444", letterSpacing: 0.5 }}>{item.src} ↗</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        </div>
       </section>
 
       {/* The Fund */}
