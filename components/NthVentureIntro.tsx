@@ -383,7 +383,7 @@ const ADVANTAGES = [
     headline: "Audit rigor from the nation's top authority.",
     stat: "U.S. GAO — supreme audit authority",
     statSub: "Audited SEC, DoD, U.S. Treasury",
-    body: "The Government Accountability Office is the supreme audit authority in the United States — the investigative arm of Congress, independent of every agency it reviews. Our principal trained there, conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That background means we reconstruct cash flows, stress-test assumptions, and look for what sellers hope you won't find. Every investment is audited before it is made.",
+    body: "The Government Accountability Office is the supreme audit authority in the United States — the investigative arm of Congress, independent of every agency it reviews. Our principal trained there, conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That background means we rebuild the books from source documents, stress-test every assumption, and look for what sellers hope you won't find.",
   },
 ];
 
@@ -784,13 +784,13 @@ export default function NthVentureIntro() {
             <SlideIn delay={0.16} from="right">
               <div style={{ background: "#111110", padding: "clamp(24px, 4vw, 36px)", borderTop: "2px solid #222" }}>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 16 }}>On fund size</p>
-                <p style={{ fontSize: "clamp(14px, 1.8vw, 15px)", lineHeight: 1.8, color: "#888", fontWeight: 300, marginBottom: 24 }}>
+                <p style={{ fontSize: "clamp(14px, 1.8vw, 15px)", lineHeight: 1.8, color: "#888", fontWeight: 300, marginBottom: 16 }}>
                   J.P. Morgan and PitchBook analyzed 1,690 private equity funds across two decades.
                   The finding is unambiguous: first-quartile performance is overwhelmingly
                   concentrated at small fund sizes. Above $10B, it nearly disappears.
                   We are deliberately small, and we intend to stay that way.
                 </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
                   {[
                     "Small funds dominate first-quartile IRR — the pattern holds across every vintage year studied",
                     "Less capital chasing smaller deals = better entry multiples",
@@ -804,17 +804,10 @@ export default function NthVentureIntro() {
                     </div>
                   ))}
                 </div>
+                <FundSizeScatter />
               </div>
             </SlideIn>
           </div>
-
-          {/* Fund size scatter chart */}
-          <FadeIn delay={0.12}>
-            <div style={{ background: "#111110", padding: "clamp(24px, 4vw, 36px)", borderTop: "2px solid #c45a2d", marginBottom: 2 }}>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>Top-performing private equity funds are generally smaller in size</p>
-              <FundSizeScatter />
-            </div>
-          </FadeIn>
 
           {/* Further reading */}
           <FadeIn delay={0.2}>
@@ -886,19 +879,16 @@ export default function NthVentureIntro() {
                     ["Vehicle", "Texas Limited Partnership"],
                     ["Max Size", "$10,000,000"],
                     ["Hurdle Rate", "6% preferred return"],
-                    ["Carry", "50% above hurdle"],
-                    ["Mgmt Fee", "None"],
+                    ["Fees", "0/50 Buffett · or 2/20 traditional"],
+                    ["Liquidity", "Quarterly redemptions up to 5% of fund"],
                     ["Structure", "Evergreen — no fixed term"],
                   ].map(([k, v], i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 5 ? "1px solid #f0efe8" : "none" }}>
-                      <span style={{ fontSize: 13, color: "#888" }}>{k}</span>
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "6px 0", borderBottom: i < 5 ? "1px solid #f0efe8" : "none", gap: 16 }}>
+                      <span style={{ fontSize: 13, color: "#888", flexShrink: 0 }}>{k}</span>
                       <span style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", textAlign: "right" }}>{v}</span>
                     </div>
                   ))}
                 </div>
-                <p style={{ fontSize: 12, color: "#aaa", marginTop: 12, lineHeight: 1.55 }}>
-                  LPs may elect traditional 2/20 terms in lieu of the no-fee structure.
-                </p>
               </div>
             </SlideIn>
           </div>
