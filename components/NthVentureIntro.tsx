@@ -3,17 +3,17 @@ import { useState, useEffect, useRef, RefObject } from "react";
 
 const SECTIONS = ["mission", "story", "track", "fund", "team", "letters", "contact"] as const;
 
-function useInView(ref: RefObject<HTMLDivElement | null>): boolean {
+function useInView(ref: RefObject<HTMLDivElement | null>, threshold = 0.15): boolean {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!ref.current) return;
     const obs = new IntersectionObserver(
       ([e]) => { if (e.isIntersecting) setVisible(true); },
-      { threshold: 0.15 },
+      { threshold },
     );
     obs.observe(ref.current);
     return () => obs.disconnect();
-  }, [ref]);
+  }, [ref, threshold]);
   return visible;
 }
 
@@ -28,8 +28,8 @@ function FadeIn({ children, delay = 0, className = "" }: {
       className={className}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(28px)",
-        transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`,
+        transform: visible ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 0.65s ease ${delay}s, transform 0.65s ease ${delay}s`,
       }}
     >
       {children}
@@ -37,8 +37,45 @@ function FadeIn({ children, delay = 0, className = "" }: {
   );
 }
 
+function SlideIn({ children, delay = 0, from = "left", className = "" }: {
+  children: React.ReactNode; delay?: number; from?: "left" | "right"; className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, 0.1);
+  const tx = from === "left" ? "-40px" : "40px";
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateX(0)" : `translateX(${tx})`,
+        transition: `opacity 0.7s ease ${delay}s, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function useCountUp(target: number, enabled: boolean, duration = 1.2): number {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = (Date.now() - start) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setVal(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [enabled, target, duration]);
+  return val;
+}
+
 // ── Asset allocation chart ────────────────────────────────────────────────────
-// Federal Reserve Survey of Consumer Finances · Visual Capitalist
 const ALLOC_TIERS = [
   { tier: "$10K",  bars: [{ label: "Liquid", pct: 0.40, color: "#d0d0d0" }, { label: "Residence", pct: 0.35, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.06, color: "#888" }, { label: "Retirement", pct: 0.13, color: "#666" }, { label: "Other", pct: 0.06, color: "#c0c0c0" }] },
   { tier: "$100K", bars: [{ label: "Liquid", pct: 0.26, color: "#d0d0d0" }, { label: "Residence", pct: 0.36, color: "#a8a8a8" }, { label: "Vehicles", pct: 0.05, color: "#888" }, { label: "Retirement", pct: 0.18, color: "#666" }, { label: "Stocks", pct: 0.07, color: "#999" }, { label: "Other", pct: 0.08, color: "#c0c0c0" }] },
@@ -100,41 +137,97 @@ function AssetAllocationChart() {
   );
 }
 
-// ── Revenue chart ─────────────────────────────────────────────────────────────
-const revenueData = [
-  { year: "2021", total: 5 },
-  { year: "2022", total: 264 },
-  { year: "2023", total: 1306 },
-  { year: "2024", total: 1887 },
+// ── Quarterly revenue chart ───────────────────────────────────────────────────
+// Aggregated from monthly P&L data across all portfolio companies
+const quarterlyData = [
+  { label: "Q4'21", total: 5,   year: "2021" },
+  { label: "Q1'22", total: 5,   year: "2022" },
+  { label: "Q2'22", total: 36,  year: "2022" },
+  { label: "Q3'22", total: 109, year: "2022" },
+  { label: "Q4'22", total: 115, year: "2022" },
+  { label: "Q1'23", total: 193, year: "2023" },
+  { label: "Q2'23", total: 343, year: "2023" },
+  { label: "Q3'23", total: 369, year: "2023" },
+  { label: "Q4'23", total: 398, year: "2023" },
+  { label: "Q1'24", total: 521, year: "2024" },
+  { label: "Q2'24", total: 338, year: "2024" },
+  { label: "Q3'24", total: 493, year: "2024" },
+  { label: "Q4'24", total: 506, year: "2024" },
+  { label: "Q1'25", total: 476, year: "2025" },
+  { label: "Q2'25", total: 372, year: "2025" },
+  { label: "Q3'25", total: 519, year: "2025" },
+  { label: "Q4'25", total: 345, year: "2025" },
 ];
 
-function RevenueChart() {
-  const max = 2000;
+const YEAR_COLORS: Record<string, string> = {
+  "2021": "#3a3a38",
+  "2022": "#2a2a28",
+  "2023": "#2b4a6a",
+  "2024": "#c45a2d",
+  "2025": "#8b3a1a",
+};
+
+function QuarterlyRevenueChart() {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, 0.1);
   const [hovered, setHovered] = useState<number | null>(null);
+  const max = Math.max(...quarterlyData.map(d => d.total));
+
   return (
-    <div style={{ padding: "2rem 0" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(12px, 3vw, 32px)", height: 220, justifyContent: "center" }}>
-        {revenueData.map((d, i) => {
-          const h = (d.total / max) * 200;
-          const active = hovered === i;
-          return (
-            <div
-              key={d.year}
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "default" }}
-            >
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, fontWeight: 500, color: active ? "#c45a2d" : "#8a8a8a", transition: "color 0.2s" }}>
-                ${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}
-              </span>
-              <div style={{ width: "clamp(36px, 8vw, 56px)", height: h, background: active ? "linear-gradient(180deg, #c45a2d, #8b3a1a)" : "linear-gradient(180deg, #2a2a2a, #1a1a1a)", borderRadius: "4px 4px 0 0", transition: "all 0.3s ease", transform: active ? "scaleY(1.03)" : "scaleY(1)", transformOrigin: "bottom" }} />
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#666", letterSpacing: 1 }}>{d.year}</span>
-            </div>
-          );
-        })}
+    <div ref={ref} style={{ padding: "2rem 0" }}>
+      <div style={{ overflowX: "auto", paddingBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(4px, 1vw, 10px)", height: 220, minWidth: 600, paddingBottom: 4 }}>
+          {quarterlyData.map((d, i) => {
+            const hPct = d.total / max;
+            const active = hovered === i;
+            const color = active ? "#c45a2d" : YEAR_COLORS[d.year] ?? "#2a2a28";
+            const delay = visible ? i * 0.035 : 0;
+            return (
+              <div
+                key={d.label}
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, cursor: "default", minWidth: 28 }}
+              >
+                <span style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: "clamp(9px, 1.2vw, 12px)",
+                  fontWeight: 500,
+                  color: active ? "#c45a2d" : "#8a8a8a",
+                  transition: "color 0.2s",
+                  whiteSpace: "nowrap",
+                  opacity: active ? 1 : 0,
+                  minHeight: 16,
+                }}>
+                  ${d.total >= 1000 ? (d.total / 1000).toFixed(1) + "M" : d.total + "K"}
+                </span>
+                <div style={{
+                  width: "100%",
+                  height: `${hPct * 180}px`,
+                  background: active ? "linear-gradient(180deg, #c45a2d, #8b3a1a)" : `linear-gradient(180deg, ${color}, ${color}99)`,
+                  borderRadius: "3px 3px 0 0",
+                  transition: `all 0.3s ease, height ${0.5 + delay}s cubic-bezier(0.16,1,0.3,1)`,
+                  transform: active ? "scaleX(1.08)" : "scaleX(1)",
+                  transformOrigin: "bottom",
+                  ...(visible ? {} : { height: "0px" }),
+                }} />
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(8px, 1vw, 10px)", color: d.label.startsWith("Q1") ? "#888" : "#555", letterSpacing: 0.5, whiteSpace: "nowrap" }}>{d.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* Year labels */}
+      <div style={{ display: "flex", justifyContent: "space-around", marginTop: 4, flexWrap: "wrap", gap: 6 }}>
+        {["2021", "2022", "2023", "2024", "2025"].map(y => (
+          <div key={y} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: YEAR_COLORS[y], display: "inline-block" }} />
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#666" }}>{y}</span>
+          </div>
+        ))}
       </div>
       <p style={{ textAlign: "center", fontSize: 12, color: "#888", marginTop: 12, fontStyle: "italic" }}>
-        Aggregate alumni revenues (000s USD) · Unaudited, non-GAAP cash basis
+        Aggregate portfolio revenues (000s USD) · Unaudited, non-GAAP cash basis · Through Q4 2025
       </p>
     </div>
   );
@@ -153,7 +246,7 @@ const teamMembers = [
 function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: number }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <FadeIn delay={index * 0.08}>
+    <FadeIn delay={index * 0.07}>
       <div
         onClick={() => setExpanded(!expanded)}
         style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "20px 22px", cursor: "pointer", transition: "all 0.25s ease", position: "relative", overflow: "hidden" }}
@@ -197,7 +290,7 @@ function NthLogo({ size = 44, invert = false }: { size?: number; invert?: boolea
 const ADVANTAGES = [
   {
     num: "01",
-    headline: "Ownership is positive-sum.",
+    headline: "Employee ownership is positive-sum.",
     stat: "Equity to every operator, from day one",
     statSub: "nth Venture standard · All portfolio companies · 2021–present",
     body: "We don't theorize about employee ownership — we practice it. Every company we've built grants meaningful equity to its frontline operators from launch. A former valet now runs an audio production company he owns. An employee who lost everything rebuilt his life and moved his family onto acreage — because he owns the company. Our portfolio companies absorbed two failing businesses, protected their investors, and generated $336K in earnings for four principals who own those companies. KKR's Ownership Works coalition validates the playbook at scale — $1.7B distributed to frontline workers across 90+ companies — but we've lived it from the start.",
@@ -207,21 +300,21 @@ const ADVANTAGES = [
     headline: "We already own the platforms.",
     stat: "Built from scratch, owned inside out",
     statSub: "No deal-hunting, no cold-start risk",
-    body: "Most funds raise capital and then hunt for deals. We built our portfolio companies ourselves, which means we understand their unit economics, talent pools, and growth constraints from the inside. Each platform is a natural magnet for bolt-on acquisitions — adjacent services, shared overhead, and customers who want more than we currently offer. We source deals others never see because we are already operating in the space.",
+    body: "Most funds raise capital and then hunt for deals. We built our portfolio companies ourselves, so we know their unit economics, talent pools, and growth constraints from the inside. Each platform is a natural landing pad for bolt-on acquisitions — adjacent services, shared overhead, customers who want more. We source deals others never see because we're already operating in the space.",
   },
   {
     num: "03",
     headline: "Small by design.",
     stat: "3–5× earnings at acquisition",
     statSub: "vs. 10–15× for PE fund targets",
-    body: "Private equity funds have grown enormous — and so have their competition. Hundreds of funds are chasing the same pool of $50M+ EBITDA businesses, and multiples reflect the crowding. A company generating $500K in earnings might trade at 4× in a private small-business sale — the same cash flow commands 12× or more in the PE market for larger businesses. By staying deliberately micro-cap, we access the arbitrage before institutional money can follow. Our overhead is minimal by design: no lavish offices, no army of analysts, no management fees to justify. Capital goes to work.",
+    body: "Private equity has grown enormous — and so has the competition for deals. Hundreds of funds chase the same pool of $50M+ EBITDA businesses, and multiples reflect it. A company with $500K in earnings might trade at 4× in a private small-business sale; the same cash flow commands 12× or more in the PE market. By staying deliberately micro-cap, we access an arbitrage before institutional money can follow. No lavish offices, no army of analysts, no management fees to justify. Capital goes to work.",
   },
   {
     num: "04",
     headline: "Audit rigor from the nation's top authority.",
     stat: "U.S. GAO — supreme audit authority",
     statSub: "Audited SEC, DoD, U.S. Treasury",
-    body: "The Government Accountability Office is the supreme audit authority in the United States — the investigative arm of Congress, independent of every agency it reviews. Our principal trained there, conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That discipline means we don't skim offering documents or rely on management projections. We reconstruct cash flows, stress-test assumptions, and look for what sellers hope you won't find. Every investment is audited before it is made.",
+    body: "The Government Accountability Office is the supreme audit authority in the United States — the investigative arm of Congress, independent of every agency it reviews. Our principal trained there, conducting financial audits of the SEC, the Department of Defense, and the U.S. Treasury. That background means we reconstruct cash flows, stress-test assumptions, and look for what sellers hope you won't find. Every investment is audited before it is made.",
   },
 ];
 
@@ -232,13 +325,13 @@ function AdvantagesSection() {
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Structural advantages</p>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px", color: "#fdfcfa" }}>Why this approach works.</h2>
-          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#666", maxWidth: 580, marginBottom: 56, fontWeight: 300 }}>
-            These are not talking points. They are structural edges — built into how we operate, whom we hire, and what we buy.
+          <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", maxWidth: 560, marginBottom: 56, fontWeight: 300 }}>
+            These are structural edges built into how we operate, whom we hire, and what we buy.
           </p>
         </FadeIn>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))", gap: 2 }}>
           {ADVANTAGES.map((a, i) => (
-            <FadeIn key={i} delay={i * 0.08}>
+            <SlideIn key={i} delay={i * 0.07} from={i % 2 === 0 ? "left" : "right"}>
               <div style={{ padding: "32px 36px", borderTop: `2px solid ${i < 2 ? "#c45a2d" : "#333"}`, background: i % 2 === 0 ? "#141412" : "#111110" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 18 }}>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d" }}>{a.num}</span>
@@ -250,7 +343,7 @@ function AdvantagesSection() {
                 </div>
                 <p style={{ fontSize: 14, lineHeight: 1.75, color: "#888", margin: 0 }}>{a.body}</p>
               </div>
-            </FadeIn>
+            </SlideIn>
           ))}
         </div>
       </div>
@@ -263,27 +356,86 @@ const PRINCIPLES = [
   {
     num: "01",
     title: "Invest for the long-term.",
-    body: "Compounding rewards patience and punishes impatience. We commit capital the way an owner would — measured in decades, not quarters — and resist every pressure to trade short-term optionality for long-term value.",
+    body: "Compounding rewards patience. We commit capital the way an owner would — measured in decades, not quarters — and resist every pressure to trade short-term optionality for long-term value.",
   },
   {
     num: "02",
     title: "Minimize fees.",
-    body: "Every dollar lost to management fees and administrative overhead is a dollar that doesn't compound for investors. We carry no management fee, no carried interest until a 6% hurdle is cleared, and no cost structure built to justify itself.",
+    body: "Every dollar lost to management fees is a dollar that doesn't compound for investors. We carry no management fee, no carried interest until a 6% hurdle is cleared, and no cost structure built to justify itself.",
   },
   {
     num: "03",
-    title: "Proper — but not excessive — diversification.",
+    title: "Ensure proper – but not excessive – diversification.",
     body: "Diversification eliminates company-specific risk. But over-diversification merely mirrors an index at a higher cost. We hold enough positions to protect the portfolio without diluting conviction into meaninglessness.",
   },
   {
     num: "04",
     title: "Straightforward businesses.",
-    body: "We don't invest in things we don't understand. Simple models, recurring revenue, high free-cash-flow conversion. No moonshots, no black boxes, no businesses whose profits depend on a single customer or contract.",
+    body: "We don't invest in things we don't understand. Simple models, recurring revenue, high free-cash-flow conversion. No moonshots, no black boxes, no businesses whose results depend on a single customer or contract.",
   },
   {
     num: "05",
     title: "Passionate, effective, high-integrity managers.",
-    body: "Strategy is cheap. Execution is everything. We back people who care deeply, operate well, and do what they say. Character is not negotiable — and it is the hardest thing to audit, so we start there.",
+    body: "Strategy is cheap. Execution is everything. We back people who care deeply, operate well, and do what they say. Character is not negotiable — and it's the hardest thing to audit, so we start there.",
+  },
+];
+
+// ── Stats counter ─────────────────────────────────────────────────────────────
+function StatCounter({ val, label, suffix = "", prefix = "" }: { val: number; label: string; suffix?: string; prefix?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, 0.3);
+  const count = useCountUp(val, visible);
+  return (
+    <div ref={ref} style={{ textAlign: "center" }}>
+      <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>
+        {prefix}{count}{suffix}
+      </p>
+      <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>{label}</p>
+    </div>
+  );
+}
+
+// ── Portfolio companies ───────────────────────────────────────────────────────
+const COMPANIES = [
+  {
+    name: "Audily Inc.",
+    desc: "Full-service podcast & audio production · Rococo Punch, Pop Ups Studio, Pinwheel",
+    rev: "$1.15M",
+    yoy: "+24%",
+    revYear: "FY 2024",
+    logo: "/logos/audily.png",
+  },
+  {
+    name: "SBR2TH Recruiting",
+    desc: "Niche tech talent sourcing for high-growth teams",
+    rev: "$498K",
+    yoy: "+155%",
+    revYear: "FY 2024",
+    logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b4520098-a769-4c69-b772-30dfb718c454/Copy%2Bof%2BUntitled%2BDesign%2B%283%29.jpg",
+  },
+  {
+    name: "Falconer Inc.",
+    desc: "Investment advisory boutique",
+    rev: "$104K",
+    yoy: "+12%",
+    revYear: "FY 2024",
+    logo: "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/b33643a1-d753-4149-9091-1f3fc580be72/FALCONER+%288%29.png",
+  },
+  {
+    name: "Merchant Boxes",
+    desc: "Packaging design & sourcing",
+    rev: "$103K",
+    yoy: "+14%",
+    revYear: "FY 2024",
+    logo: "/logos/merchant-boxes.png",
+  },
+  {
+    name: "Sentius Development",
+    desc: "Data & ML consulting",
+    rev: "$29K",
+    yoy: "New",
+    revYear: "FY 2024",
+    logo: null,
   },
 ];
 
@@ -354,22 +506,21 @@ export default function NthVentureIntro() {
 
       {/* Hero */}
       <section id="mission" style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(60px, 10vh, 120px) clamp(24px, 5vw, 80px) 80px" }}>
-        <FadeIn>
+        <SlideIn from="left">
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 20 }}>Corpus Christi, Texas · Est. 2021</p>
-        </FadeIn>
+        </SlideIn>
         <FadeIn delay={0.1}>
           <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 300, lineHeight: 1.12, letterSpacing: -1.5, margin: "0 0 28px", maxWidth: 800 }}>
             Set talented people free through the power of <span style={{ fontStyle: "italic", color: "#c45a2d" }}>ownership</span>.
           </h1>
         </FadeIn>
-        <FadeIn delay={0.2}>
-          <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", maxWidth: 640, margin: "0 0 40px", fontWeight: 300 }}>
-            nth Venture builds and invests in employee-owned companies with radically aligned incentives.
-            From a $10,000 check and an idea in 2021 to nearly $2 million in portfolio revenue —
-            we&apos;re proving that ownership changes everything.
+        <FadeIn delay={0.18}>
+          <p style={{ fontSize: 19, lineHeight: 1.7, color: "#555", maxWidth: 600, margin: "0 0 40px", fontWeight: 300 }}>
+            nth Venture builds and invests in employee-owned companies. A $10,000 check in 2021.
+            Five companies. $1.9M in portfolio revenue.
           </p>
         </FadeIn>
-        <FadeIn delay={0.3}>
+        <FadeIn delay={0.26}>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
             <a
               href="/portal"
@@ -400,21 +551,22 @@ export default function NthVentureIntro() {
       {/* Stats Strip */}
       <section style={{ background: "#1a1a1a", padding: "48px clamp(24px, 5vw, 80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 32 }}>
-          {[
-            ["$5K → $1.9M", "Revenue growth"],
-            ["100%", "Employee-owned"],
-            ["60+", "Team members"],
-            ["$0", "Investor losses to date"],
-            ["0%", "Management fee"],
-            ["44%", "YoY revenue growth ('24)"],
-          ].map(([val, label], i) => (
-            <FadeIn key={i} delay={i * 0.06}>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>{val}</p>
-                <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4, whiteSpace: "nowrap" }}>{label}</p>
-              </div>
-            </FadeIn>
-          ))}
+          <StatCounter val={0} label="Management fee" prefix="0" suffix="%" />
+          <StatCounter val={86} label="3-yr revenue CAGR (2022–2025)" suffix="%" />
+          <StatCounter val={100} label="Employee-owned" suffix="%" />
+          <StatCounter val={60} label="Team members across portfolio" suffix="+" />
+          <FadeIn delay={0.2}>
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>$5K → $1.9M</p>
+              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Portfolio revenue since launch</p>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.24}>
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 500, color: "#fdfcfa", margin: "0 0 6px" }}>6%</p>
+              <p style={{ fontSize: 12, color: "#888", margin: 0, lineHeight: 1.4 }}>Hurdle rate before any carry</p>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -426,30 +578,30 @@ export default function NthVentureIntro() {
             <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>How nth Venture got here.</h2>
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48 }}>
-            <FadeIn delay={0.08}>
+            <SlideIn delay={0.06} from="left">
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2021 — The venture studio</p>
                 <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
                   nth Venture started with a single thesis: talented people accomplish more when they own what they build.
                   We launched our first companies from scratch — a $10,000 check and the belief that founder economics
-                  should extend to every employee, not just the people at the top. No outside capital. No performance
-                  fees. Just operators who owned meaningful stakes in the companies they ran.
+                  should extend to every employee, not just the people at the top.
+                  No performance fees. Just operators who owned meaningful stakes in the companies they ran.
                 </p>
               </div>
-            </FadeIn>
-            <FadeIn delay={0.16}>
+            </SlideIn>
+            <FadeIn delay={0.12}>
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2022–2023 — Proof of concept</p>
                 <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
                   Over three years we launched and scaled a portfolio of employee-owned companies —
                   growing from $5K to $1.3M in revenue while absorbing two struggling businesses and
-                  protecting their investors. Every company remained employee-owned. Not a single investor
-                  lost money. The model worked. We wrote about it — honestly — in annual letters that didn&apos;t
+                  protecting their investors. Every company remained employee-owned.
+                  The model worked. We wrote about it honestly — in annual letters that didn&apos;t
                   hide the failures alongside the wins.
                 </p>
               </div>
             </FadeIn>
-            <FadeIn delay={0.24}>
+            <SlideIn delay={0.18} from="right">
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2024 — Co-Owner Fund LP</p>
                 <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 0 }}>
@@ -460,7 +612,7 @@ export default function NthVentureIntro() {
                   audit training comes from the supreme audit authority in the United States.
                 </p>
               </div>
-            </FadeIn>
+            </SlideIn>
           </div>
         </div>
       </section>
@@ -469,62 +621,69 @@ export default function NthVentureIntro() {
       <section id="track" style={{ maxWidth: 1100, margin: "0 auto", padding: "80px clamp(24px, 5vw, 80px)" }}>
         <FadeIn>
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Track record</p>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>From $10K to $1.9M in revenue</h2>
-          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-            Our portfolio companies follow a &quot;grow as much as you can without burning other people&apos;s money&quot; strategy.
-            The result: consistent growth at breakeven with zero investor losses.
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>$5K to $1.9M in revenue</h2>
+          <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 600, marginBottom: 48, fontWeight: 300 }}>
+            Our portfolio companies operate on a simple philosophy: grow as much as you can without burning other people&apos;s money.
           </p>
         </FadeIn>
         <FadeIn delay={0.1}>
-          <RevenueChart />
+          <QuarterlyRevenueChart />
+        </FadeIn>
+
+        {/* Press coverage */}
+        <FadeIn delay={0.12}>
+          <div style={{ marginTop: 40, marginBottom: 40, padding: "24px 28px", background: "#1a1a1a", borderRadius: 8, display: "flex", flexWrap: "wrap", gap: 32, alignItems: "center" }}>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", margin: 0, flexShrink: 0 }}>As covered by</p>
+            <div style={{ display: "flex", gap: 40, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px", letterSpacing: -0.3 }}>Bloomberg</p>
+                <p style={{ fontSize: 13, color: "#888", margin: 0, lineHeight: 1.5 }}>Podcast M&A — coverage of Rococo Punch acquisition by Audily</p>
+              </div>
+              <div>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, fontWeight: 500, color: "#fdfcfa", margin: "0 0 4px", letterSpacing: -0.3 }}>The Hollywood Reporter</p>
+                <p style={{ fontSize: 13, color: "#888", margin: 0, lineHeight: 1.5 }}>Coverage of Rococo Punch and the Audily network</p>
+              </div>
+            </div>
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.15}>
-          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5, marginTop: 48 }}>Our companies</h3>
+          <h3 style={{ fontSize: 20, fontWeight: 400, marginBottom: 24, letterSpacing: -0.5, marginTop: 16 }}>Our companies</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
-            {[
-              {
-                name: "Audily Inc.",
-                desc: "Podcast & audio production · Rococo Punch network",
-                rev: "$1.15M",
-                yoy: "+24%",
-                press: [
-                  { outlet: "Bloomberg", label: "Podcast M&A" },
-                  { outlet: "Hollywood Reporter", label: "Rococo Punch" },
-                ],
-              },
-              { name: "SBR2TH Recruiting", desc: "Niche tech talent sourcing", rev: "$498K", yoy: "+155%", press: [] },
-              { name: "Falconer Inc.", desc: "Investment advisory boutique", rev: "$104K", yoy: "+12%", press: [] },
-              { name: "Merchant Boxes", desc: "Packaging design & sourcing", rev: "$103K", yoy: "+14%", press: [] },
-              { name: "Sentius Development", desc: "Data & ML consulting", rev: "$29K", yoy: "New", press: [] },
-            ].map((co, i) => (
-              <FadeIn key={i} delay={0.1 + i * 0.05}>
-                <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px" }}>
-                  <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 4px", color: "#1a1a1a" }}>{co.name}</p>
+            {COMPANIES.map((co, i) => (
+              <SlideIn key={i} delay={0.05 + i * 0.05} from={i % 2 === 0 ? "left" : "right"}>
+                <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "18px 20px", height: "100%", transition: "border-color 0.2s, transform 0.2s", boxSizing: "border-box" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#c45a2d40"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#e8e6e0"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    {co.logo ? (
+                      <div style={{ width: 32, height: 32, borderRadius: 6, overflow: "hidden", background: "#f0efe8", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={co.logo} alt={co.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      </div>
+                    ) : (
+                      <div style={{ width: 32, height: 32, borderRadius: 6, background: "#e8e6e0", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#888" }}>{co.name.slice(0, 2).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <p style={{ fontWeight: 500, fontSize: 14, margin: 0, color: "#1a1a1a" }}>{co.name}</p>
+                  </div>
                   <p style={{ fontSize: 12, color: "#888", margin: "0 0 12px" }}>{co.desc}</p>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500 }}>{co.rev}</span>
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: co.yoy === "New" ? "#c45a2d" : "#2a7a3a" }}>{co.yoy}</span>
                   </div>
-                  <p style={{ fontSize: 11, color: "#aaa", margin: "6px 0 8px", fontStyle: "italic" }}>2024 revenue</p>
-                  {co.press.length > 0 && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {co.press.map((p, pi) => (
-                        <span key={pi} style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#888", background: "#f0efe8", padding: "2px 8px", borderRadius: 3, border: "1px solid #e0ddd5" }}>
-                          {p.outlet} · {p.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <p style={{ fontSize: 11, color: "#aaa", margin: "6px 0 0", fontStyle: "italic" }}>{co.revYear} revenue</p>
                 </div>
-              </FadeIn>
+              </SlideIn>
             ))}
           </div>
         </FadeIn>
 
         <FadeIn delay={0.25}>
           <div style={{ marginTop: 56, background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: "28px 32px" }}>
-            <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 16, letterSpacing: -0.3 }}>Real results, real people</h3>
+            <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 16, letterSpacing: -0.3 }}>Real results</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20, fontSize: 14, lineHeight: 1.65, color: "#555" }}>
               <p style={{ margin: 0 }}>A former valet earned over $85K doing work he&apos;d been doing as a passion project. He owns the company.</p>
               <p style={{ margin: 0 }}>An employee who lost everything caring for his late wife earned 2× median household income and moved his new family into a home on acreage. He owns the company.</p>
@@ -543,13 +702,13 @@ export default function NthVentureIntro() {
           <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Co-Owner Fund LP</h2>
           <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
             A Texas limited partnership investing in businesses with long histories of free cash flow,
-            at small business multiples, with an employee-ownership and incentive alignment focus.
+            at small-business multiples, with employee ownership and incentive alignment at the core.
             Seeded with ~$1M in equity transferred by the founder for $1.
           </p>
         </FadeIn>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32, marginBottom: 56 }}>
-          <FadeIn delay={0.05}>
+          <SlideIn delay={0.05} from="left">
             <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Investment focus</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -561,8 +720,8 @@ export default function NthVentureIntro() {
                 ))}
               </div>
             </div>
-          </FadeIn>
-          <FadeIn delay={0.1}>
+          </SlideIn>
+          <SlideIn delay={0.1} from="right">
             <div style={{ background: "#fafaf8", border: "1px solid #e8e6e0", borderRadius: 8, padding: 24 }}>
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 1, color: "#888", marginBottom: 16 }}>Fund structure</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -584,7 +743,7 @@ export default function NthVentureIntro() {
                 LPs may elect traditional 2/20 terms in lieu of the no-fee structure.
               </p>
             </div>
-          </FadeIn>
+          </SlideIn>
         </div>
 
         <FadeIn delay={0.15}>
@@ -601,18 +760,18 @@ export default function NthVentureIntro() {
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Investment principles</p>
             <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 12px" }}>Five principles.</h2>
             <p style={{ fontSize: 15, color: "#888", fontStyle: "italic", marginBottom: 48, maxWidth: 600 }}>
-              As laid out in the annual letters. Derived from decades of academic work and the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
+              As laid out in the annual letters. Derived from the examples of Berkshire Hathaway, Markel, and Dimensional Fund Advisors.
             </p>
           </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2 }}>
             {PRINCIPLES.map((p, i) => (
-              <FadeIn key={i} delay={i * 0.07}>
+              <SlideIn key={i} delay={i * 0.06} from={i % 2 === 0 ? "left" : "right"}>
                 <div style={{ background: i % 2 === 0 ? "#fff" : "#fafaf8", border: "1px solid #e8e6e0", borderTop: "2px solid #c45a2d", padding: "28px 30px" }}>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", display: "block", marginBottom: 12 }}>{p.num}</span>
                   <h3 style={{ fontSize: 19, fontWeight: 400, color: "#1a1a1a", margin: "0 0 14px", letterSpacing: -0.4, lineHeight: 1.3, fontStyle: "italic" }}>{p.title}</h3>
                   <p style={{ fontSize: 14, lineHeight: 1.75, color: "#666", margin: 0 }}>{p.body}</p>
                 </div>
-              </FadeIn>
+              </SlideIn>
             ))}
           </div>
         </div>
@@ -624,8 +783,7 @@ export default function NthVentureIntro() {
           <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Leadership</p>
           <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Built by operators, not administrators</h2>
           <p style={{ fontSize: 17, lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-            Our leadership team combines deep financial expertise, institutional investment management,
-            and startup operational experience. Staff and advisors invest on the same terms as LPs.
+            Our leadership team combines institutional investment management, startup operational experience, and financial audit discipline. Staff and advisors invest on the same terms as LPs.
           </p>
         </FadeIn>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
@@ -639,8 +797,8 @@ export default function NthVentureIntro() {
           <FadeIn>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Annual letters</p>
             <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px", color: "#fdfcfa" }}>The full story, unfiltered</h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#999", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-              Read Sam&apos;s annual letters for the unvarnished truth — the victories, the failures,
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: "#999", maxWidth: 600, marginBottom: 48, fontWeight: 300 }}>
+              Sam&apos;s annual letters report the unvarnished truth — the victories, the failures,
               the philosophy, and the human stories behind the numbers.
             </p>
           </FadeIn>
@@ -650,7 +808,7 @@ export default function NthVentureIntro() {
               { released: "2024", covers: "2023", title: "Second Annual Letter", quote: "I simply put my naked, stinking foot forward and say this is what I am doing.", highlight: "Written from deployment in Poland", slug: "Second-Annual-Letter" },
               { released: "2023", covers: "2022", title: "First Annual Letter", quote: "Noblesse oblige — if you have the ability to act with honor and generosity, you incur the obligation to do so.", highlight: "$10K start, $500K in first-year revenue", slug: "2022-Annual-Letter" },
             ].map((letter, i) => (
-              <FadeIn key={i} delay={i * 0.1}>
+              <SlideIn key={i} delay={i * 0.08} from={i % 2 === 0 ? "left" : "right"}>
                 <a
                   href={`https://www.nthventure.com/s/nth-Venture-${letter.slug}.pdf`}
                   target="_blank"
@@ -671,7 +829,7 @@ export default function NthVentureIntro() {
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#666", background: "#1a1a18", padding: "4px 10px", borderRadius: 4, alignSelf: "flex-start" }}>{letter.highlight}</span>
                   </div>
                 </a>
-              </FadeIn>
+              </SlideIn>
             ))}
           </div>
           <FadeIn delay={0.35}>
@@ -725,7 +883,6 @@ export default function NthVentureIntro() {
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Get in touch</p>
               <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 20px" }}>Let&apos;s talk</h2>
               <p style={{ fontSize: 16, lineHeight: 1.75, color: "#555", fontWeight: 300, marginBottom: 32 }}>
-                We enjoy forging long and profitable partnerships.
                 Reach out to learn more about the Co-Owner Fund or nth Venture.
               </p>
             </div>
