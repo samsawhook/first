@@ -467,6 +467,38 @@ function simulatePathsMonthly(
   }
   return out;
 }
+// Spread a set of label Y-positions so none are closer than minGap.
+// Preserves relative order; clamps to [clampTop, clampBottom].
+// Returns adjusted positions in the same index order as input.
+function spreadYLabels(
+  naturalYs: number[],
+  minGap: number,
+  clampTop: number,
+  clampBottom: number,
+): number[] {
+  const n = naturalYs.length;
+  if (n <= 1) return [...naturalYs];
+  // Work on sorted (index, position) pairs
+  const items = naturalYs.map((y, i) => ({ i, y })).sort((a, b) => a.y - b.y);
+  for (let pass = 0; pass < 200; pass++) {
+    let moved = false;
+    for (let j = 1; j < n; j++) {
+      const gap = items[j].y - items[j - 1].y;
+      if (gap < minGap) {
+        const push = (minGap - gap) / 2;
+        items[j - 1].y -= push;
+        items[j].y     += push;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  // Clamp and map back to original indices
+  const out = new Array<number>(n);
+  for (const item of items) out[item.i] = Math.max(clampTop, Math.min(clampBottom, item.y));
+  return out;
+}
+
 // Empirical percentile across paths at a single timestep.
 function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
@@ -658,36 +690,33 @@ function PortfolioChart({
           {layers.map(l => (
             <path key={l.row.key} d={stackedAreaPath(l)} fill={l.row.color} fillOpacity="0.55" stroke={l.row.color} strokeOpacity="0.9" strokeWidth="1" />
           ))}
-          {/* Endpoint label */}
-          {finalMedian > 0 && (
-            <>
-              <circle cx={xS(years)} cy={yS(finalMedian)} r="4" fill="#F8FAFC" />
-              <text x={xS(years) - 8} y={yS(finalMedian) - 8} textAnchor="end" fontSize="9" fontWeight="700" fill="#F8FAFC">
-                {fmt(finalMedian)}
-              </text>
-            </>
-          )}
-          {/* savings-adjusted current total — subtle offset dot + label if savingsMode active */}
-          {ms > 0 && (() => {
-            const finalAdj = totalMedianAdj[years];
-            return (
-              <>
-                <path d={linePath(totalMedianAdj)} fill="none" stroke="#F8FAFC" strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity="0.5" />
-                <circle cx={xS(years)} cy={yS(finalAdj)} r="3.5" fill="#F8FAFC" fillOpacity="0.8" />
-                <text x={xS(years) - 8} y={yS(finalAdj) - 9} textAnchor="end" fontSize="9" fontWeight="600" fill="#F8FAFC" fillOpacity="0.8">+savings {fmt(finalAdj)}</text>
-              </>
-            );
-          })()}
-          {/* Ideal allocation overlay — amber dashed line */}
-          {idealMedianDet && (() => {
-            const finalIdeal = idealMedianDet[years];
-            return (
-              <>
-                <path d={linePath(idealMedianDet)} fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="6 3" />
-                <circle cx={xS(years)} cy={yS(finalIdeal)} r="4" fill="#F59E0B" />
-                <text x={xS(years) - 8} y={yS(finalIdeal) - 9} textAnchor="end" fontSize="9" fontWeight="700" fill="#F59E0B">ideal {fmt(finalIdeal)}</text>
-              </>
-            );
+          {/* Overlay lines (drawn before dots/labels so labels stay on top) */}
+          {ms > 0 && <path d={linePath(totalMedianAdj)} fill="none" stroke="#F8FAFC" strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity="0.5" />}
+          {idealMedianDet && <path d={linePath(idealMedianDet)} fill="none" stroke="#F59E0B" strokeWidth="2" strokeDasharray="6 3" />}
+          {/* Endpoint dots + collision-resolved labels */}
+          {(() => {
+            const xE = xS(years);
+            type ML = { dataY: number; text: string; fill: string; fw: string; fs: number; dotR: number; opacity: number };
+            const labels: ML[] = [];
+            if (finalMedian > 0)
+              labels.push({ dataY: yS(finalMedian), text: fmt(finalMedian), fill: "#F8FAFC", fw: "700", fs: 9, dotR: 4, opacity: 1 });
+            if (ms > 0)
+              labels.push({ dataY: yS(totalMedianAdj[years]), text: `+contrib ${fmt(totalMedianAdj[years])}`, fill: "#F8FAFC", fw: "600", fs: 9, dotR: 3.5, opacity: 0.8 });
+            if (idealMedianDet)
+              labels.push({ dataY: yS(idealMedianDet[years]), text: `ideal ${fmt(idealMedianDet[years])}`, fill: "#F59E0B", fw: "700", fs: 9, dotR: 4, opacity: 1 });
+            const naturalYs = labels.map(l => l.dataY - 10);
+            const adjYs = spreadYLabels(naturalYs, 13, PT + 4, PT + innerH - 4);
+            return labels.map((l, i) => (
+              <g key={i}>
+                <circle cx={xE} cy={l.dataY} r={l.dotR} fill={l.fill} fillOpacity={l.opacity} />
+                {Math.abs(adjYs[i] - naturalYs[i]) > 2 && (
+                  <line x1={xE - 5} y1={l.dataY - 2} x2={xE - 5} y2={adjYs[i]} stroke={l.fill} strokeOpacity="0.3" strokeWidth="0.75" />
+                )}
+                <text x={xE - 8} y={adjYs[i]} textAnchor="end" fontSize={l.fs} fontWeight={l.fw} fill={l.fill} fillOpacity={l.opacity}>
+                  {l.text}
+                </text>
+              </g>
+            ));
           })()}
         </>
       )}
@@ -713,30 +742,35 @@ function PortfolioChart({
           <path d={linePathM(mc.p95)} fill="none" stroke={accentColor} strokeOpacity="0.6" strokeWidth="1.25" strokeDasharray="3 3" />
           {/* Analytic median — identical to Median view, no MC sampling error */}
           <path d={linePathM(totalMedianMonthly)} fill="none" stroke={accentColor} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" />
-          {/* Endpoint markers */}
-          {totalMedianMonthly[months] > 0 && (() => {
-            const fHigh = mc.p95[months];
-            const fMed  = totalMedianMonthly[months];
-            const fLow  = mc.p5[months];
-            const xEnd = xSM(months);
-            return (
-              <>
-                <circle cx={xEnd} cy={yS(fHigh)} r="3" fill={accentColor} fillOpacity="0.7" />
-                <circle cx={xEnd} cy={yS(fMed)} r="5" fill={accentColor} />
-                <circle cx={xEnd} cy={yS(fLow)} r="3" fill={accentColor} fillOpacity="0.7" />
-                <text x={xEnd - 8} y={yS(fHigh) - 4} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P95 {fmt(fHigh)}</text>
-                <text x={xEnd - 8} y={yS(fMed) - 8} textAnchor="end" fontSize="9" fontWeight="700" fill={accentColor}>median {fmt(fMed)}</text>
-                <text x={xEnd - 8} y={yS(fLow) + 12} textAnchor="end" fontSize="8" fontWeight="600" fill={accentColor}>P5 {fmt(fLow)}</text>
-              </>
-            );
-          })()}
-          {/* Ideal allocation analytic median overlay */}
+          {/* Ideal line (drawn before dots/labels) */}
           {idealMedianMonthly && (
             <path d={linePathM(idealMedianMonthly)} fill="none" stroke="#F59E0B" strokeWidth="2.25" strokeDasharray="6 3" strokeLinejoin="round" strokeLinecap="round" />
           )}
-          {idealMedianMonthly && idealMedianMonthly[months] > 0 && (
-            <text x={xSM(months) - 8} y={yS(idealMedianMonthly[months]) - 9} textAnchor="end" fontSize="9" fontWeight="700" fill="#F59E0B">ideal {fmt(idealMedianMonthly[months])}</text>
-          )}
+          {/* Endpoint dots + collision-resolved labels */}
+          {totalMedianMonthly[months] > 0 && (() => {
+            const xE = xSM(months);
+            type VL = { dataY: number; naturalY: number; text: string; fill: string; fw: string; fs: number; dotR: number; opacity: number };
+            const labels: VL[] = [
+              { dataY: yS(mc.p95[months]),              naturalY: yS(mc.p95[months]) - 11,             text: `P95 ${fmt(mc.p95[months])}`,                             fill: accentColor,  fw: "600", fs: 8, dotR: 3, opacity: 0.7 },
+              { dataY: yS(totalMedianMonthly[months]),  naturalY: yS(totalMedianMonthly[months]) - 10,  text: `median ${fmt(totalMedianMonthly[months])}`,              fill: accentColor,  fw: "700", fs: 9, dotR: 5, opacity: 1   },
+              { dataY: yS(mc.p5[months]),               naturalY: yS(mc.p5[months]) + 13,              text: `P5 ${fmt(mc.p5[months])}`,                               fill: accentColor,  fw: "600", fs: 8, dotR: 3, opacity: 0.7 },
+              ...(idealMedianMonthly && idealMedianMonthly[months] > 0
+                ? [{ dataY: yS(idealMedianMonthly[months]), naturalY: yS(idealMedianMonthly[months]) - 10, text: `ideal ${fmt(idealMedianMonthly[months])}`, fill: "#F59E0B", fw: "700", fs: 9, dotR: 0, opacity: 1 }]
+                : []),
+            ];
+            const adjYs = spreadYLabels(labels.map(l => l.naturalY), 12, PT + 4, PT + innerH - 4);
+            return labels.map((l, i) => (
+              <g key={i}>
+                {l.dotR > 0 && <circle cx={xE} cy={l.dataY} r={l.dotR} fill={l.fill} fillOpacity={l.opacity} />}
+                {Math.abs(adjYs[i] - l.naturalY) > 2 && (
+                  <line x1={xE - 5} y1={l.dataY} x2={xE - 5} y2={adjYs[i]} stroke={l.fill} strokeOpacity="0.3" strokeWidth="0.75" />
+                )}
+                <text x={xE - 8} y={adjYs[i]} textAnchor="end" fontSize={l.fs} fontWeight={l.fw} fill={l.fill} fillOpacity={l.opacity}>
+                  {l.text}
+                </text>
+              </g>
+            ));
+          })()}
         </>
       )}
     </svg>
