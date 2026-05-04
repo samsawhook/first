@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   try {
     await resend.emails.send({
       from: "nth Venture Portal <portal@nthventure.com>",
-      to: ["invest@nthventure.com"],
+      to: ["sam@nthventure.com"],
       reply_to: email,
       subject: `[Access Request] ${name} <${email}>`,
       html,
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
           </p>
           <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
             Questions? Reply to this email or contact
-            <a href="mailto:invest@nthventure.com" style="color: #3b82f6;">invest@nthventure.com</a>.
+            <a href="mailto:sam@nthventure.com" style="color: #3b82f6;">sam@nthventure.com</a>.
           </p>
         </div>
       `,
