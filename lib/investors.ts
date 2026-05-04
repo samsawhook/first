@@ -69,3 +69,49 @@ export const investors: Investor[] = [
     ],
   },
 ];
+
+// ─── Direct Shareholders ──────────────────────────────────────────────────────
+// Individuals who hold common shares directly in portfolio companies, outside
+// of the fund LP structure. The portal's Direct Holdings tab is only shown when
+// a login credential maps to one of these profiles.
+
+export interface DirectHolding {
+  companyId: string;
+  shares: number;
+  costBasisPerShare: number;  // price paid per share at time of investment
+  acquisitionDate: string;    // display string, e.g. "Jun 2023"
+  notes?: string;
+}
+
+export interface DirectInvestor {
+  id: string;
+  name: string;
+  holdings: DirectHolding[];
+}
+
+export const DIRECT_INVESTORS: DirectInvestor[] = [
+  {
+    id: "palash-jillian",
+    name: "Jillian Palash",
+    holdings: [
+      {
+        companyId: "audily",
+        shares: 2_500_000,
+        costBasisPerShare: 0.004,
+        acquisitionDate: "Jun 2023",
+        notes: "Common shares — founding investor round",
+      },
+      {
+        companyId: "merchant-boxes",
+        shares: 500_000,
+        costBasisPerShare: 0.020,
+        acquisitionDate: "Nov 2023",
+        notes: "Common shares",
+      },
+    ],
+  },
+];
+
+export function findDirectInvestor(id: string): DirectInvestor | undefined {
+  return DIRECT_INVESTORS.find(inv => inv.id === id);
+}

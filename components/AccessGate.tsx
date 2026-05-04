@@ -8,7 +8,8 @@ import { useState, useEffect } from "react";
 // real backend auth check before exposing anything genuinely sensitive.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "nth_access_granted_v1";
+const STORAGE_KEY          = "nth_access_granted_v1";
+const STORAGE_KEY_INVESTOR = "nth_investor_id_v1";
 
 // Hashes are SHA-256(SALT + normalized_value). Inputs are normalized before
 // hashing: invite codes are trimmed + uppercased, phone numbers are stripped to 10 digits.
@@ -21,7 +22,14 @@ const VALID_INVITE_HASHES = new Set<string>([
   "d41008601899815c6c2f30044c51d7fa72ebf2d898860919acf8ffc789fde2b4", // WOLFSON
   "68330324e4dd87abd15adb09e58d4cc3484302525018b7e6da9d9795285cd962", // SAWHOOK
   "4a0ea7d2ee8f422c284905d2d64354294a802db341339f8584f9bc2fda01e03d", // ALLOCATOR
+  "c66bd2086749a885a6044f8cf0a297bb1b5126d0920d55d9509414a91ebd7803", // PALASH
 ]);
+
+// Maps credential hash → direct investor profile ID.
+// Any hash not in this map gets general fund access with no Direct Holdings tab.
+const HASH_TO_INVESTOR_ID: Record<string, string> = {
+  "c66bd2086749a885a6044f8cf0a297bb1b5126d0920d55d9509414a91ebd7803": "palash-jillian", // PALASH
+};
 const VALID_PHONE_HASHES = new Set<string>([
   "5928b212a16ee6d43f47c8d0dbe270153c27803a4ed46a3ce01130c4c1d49cbe", // 972-415-6178
   "fc0bdc4e276992e1491547f9e55ef54540d8697342b4cc7c780d89601be0f14d", // 978-210-2328
@@ -112,6 +120,9 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
       const list = mode === "invite" ? VALID_INVITE_HASHES : VALID_PHONE_HASHES;
       if (list.has(hash)) {
         localStorage.setItem(STORAGE_KEY, "true");
+        const investorId = HASH_TO_INVESTOR_ID[hash] ?? null;
+        if (investorId) localStorage.setItem(STORAGE_KEY_INVESTOR, investorId);
+        else localStorage.removeItem(STORAGE_KEY_INVESTOR);
         setGranted(true);
       } else {
         setError(mode === "invite" ? "Invite code not recognized" : "Phone number not on the authorized list");

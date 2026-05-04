@@ -27,6 +27,8 @@ import InvestorPortal from "@/components/InvestorPortal";
 import NDAGate from "@/components/NDAGate";
 import AccessGate from "@/components/AccessGate";
 import FeeCalculator from "@/components/FeeCalculator";
+import DirectHoldingsTab from "@/components/DirectHoldingsTab";
+import { findDirectInvestor } from "@/lib/investors";
 import {
   portfolio as basePortfolio,
   navHistory,
@@ -105,9 +107,9 @@ const SCENARIOB_FALCONER_SHARES  = 4_735_803;
 const SCENARIOB_SBR2TH_SHARES    = 3_247_832;
 const SCENARIOB_MB_SHARES        = 4_804_351;
 
-type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees";
+type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct";
 
-const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
   { id: "fees",      label: "Allocator", icon: <Calculator size={15} /> },
@@ -275,7 +277,11 @@ export default function Dashboard() {
   // Modal state: which company is being edited, and the live pending value
   const [valuationModal, setValuationModal] = useState<{ company: typeof portfolio[0]; pendingVal: number } | null>(null);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [directInvestorId, setDirectInvestorId] = useState<string | null>(null);
+  useEffect(() => {
+    setMounted(true);
+    setDirectInvestorId(localStorage.getItem("nth_investor_id_v1"));
+  }, []);
   useEffect(() => {
     try { localStorage.setItem("nth-user-valuations", JSON.stringify(userValuations)); } catch {}
   }, [userValuations]);
@@ -321,6 +327,11 @@ export default function Dashboard() {
     setActiveTab(tab);
     setActiveCompanyId(null);
   };
+
+  const directInvestor = directInvestorId ? findDirectInvestor(directInvestorId) : undefined;
+  const tabs = directInvestor
+    ? [...BASE_TABS, { id: "direct" as Tab, label: "My Holdings", icon: <User size={15} /> }]
+    : BASE_TABS;
 
   return (
     <AccessGate>
@@ -5273,6 +5284,9 @@ export default function Dashboard() {
           <FeeCalculator />
         )}
 
+        {!activeCompany && activeTab === "direct" && directInvestor && (
+          <DirectHoldingsTab investor={directInvestor} portfolio={portfolio} />
+        )}
 
         {!activeCompany && activeTab === "investor" && (
           <InvestorPortal
