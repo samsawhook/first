@@ -543,26 +543,24 @@ function PortfolioChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, mcDepKey]);
 
-  const idealMcDepKey = useMemo(
-    () => (idealRows ?? []).map(r => `${r.key}:${r.amount.toFixed(2)}:${r.retRate.toFixed(4)}:${r.vol.toFixed(4)}`).join("|") + `|y${years}|s${ms}`,
-    [idealRows, years, ms],
+  // Monthly-resolution analytic median — exact same formula as the stacked median view
+  // but evaluated at each month so the variable view shows an identical median line.
+  // This eliminates the MC sampling error that previously made the two modes disagree.
+  const totalMedianMonthly = Array.from({ length: months + 1 }, (_, m) =>
+    rows.reduce((s, r) => s + r.amount * Math.pow(1 + Math.max(r.retRate, -0.999), m / 12), 0)
+    + fvContribForRows(rows, m / 12, ms)
   );
-  const idealMc = useMemo(() => {
-    if (view !== "variable" || !idealRows || idealRows.length === 0) return null;
-    const N_PATHS = 400;
-    const paths = simulatePathsMonthly(idealRows, years, N_PATHS, 5353, ms);
-    const median: number[] = [];
-    for (let m = 0; m <= months; m++) {
-      median.push(percentile(paths.map(p => p[m]), 0.5));
-    }
-    return { median };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, idealMcDepKey]);
+  const idealMedianMonthly = idealRows && idealRows.length > 0
+    ? Array.from({ length: months + 1 }, (_, m) =>
+        idealRows.reduce((s, r) => s + r.amount * Math.pow(1 + Math.max(r.retRate, -0.999), m / 12), 0)
+        + fvContribForRows(idealRows, m / 12, ms)
+      )
+    : null;
 
   // y-axis max — clamp to P95 endpoint in Variable mode, total median in stacked.
   const maxVal = view === "median"
     ? Math.max(...(totalMedianAdj), ...(idealMedianDet ?? [0]), 1)
-    : Math.max((mc?.p95[months] ?? 1), (idealMc?.median[months] ?? 0), 1);
+    : Math.max((mc?.p95[months] ?? 1), (idealMedianMonthly?.[months] ?? 0), 1);
 
   // x scaling — yearly index for stacked, monthly for variable.
   const xS = (t: number) => PL + (t / T) * innerW;
@@ -691,12 +689,12 @@ function PortfolioChart({
           {/* P5/P95 edges */}
           <path d={linePathM(mc.p5)}  fill="none" stroke={accentColor} strokeOpacity="0.6" strokeWidth="1.25" strokeDasharray="3 3" />
           <path d={linePathM(mc.p95)} fill="none" stroke={accentColor} strokeOpacity="0.6" strokeWidth="1.25" strokeDasharray="3 3" />
-          {/* MC empirical median (bold) */}
-          <path d={linePathM(mc.median)} fill="none" stroke={accentColor} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" />
+          {/* Analytic median — identical to Median view, no MC sampling error */}
+          <path d={linePathM(totalMedianMonthly)} fill="none" stroke={accentColor} strokeWidth="2.75" strokeLinejoin="round" strokeLinecap="round" />
           {/* Endpoint markers */}
-          {mc.median[months] > 0 && (() => {
+          {totalMedianMonthly[months] > 0 && (() => {
             const fHigh = mc.p95[months];
-            const fMed  = mc.median[months];
+            const fMed  = totalMedianMonthly[months];
             const fLow  = mc.p5[months];
             const xEnd = xSM(months);
             return (
@@ -710,12 +708,12 @@ function PortfolioChart({
               </>
             );
           })()}
-          {/* Ideal allocation MC median overlay */}
-          {idealMc && (
-            <path d={linePathM(idealMc.median)} fill="none" stroke="#F59E0B" strokeWidth="2.25" strokeDasharray="6 3" strokeLinejoin="round" strokeLinecap="round" />
+          {/* Ideal allocation analytic median overlay */}
+          {idealMedianMonthly && (
+            <path d={linePathM(idealMedianMonthly)} fill="none" stroke="#F59E0B" strokeWidth="2.25" strokeDasharray="6 3" strokeLinejoin="round" strokeLinecap="round" />
           )}
-          {idealMc && idealMc.median[months] > 0 && (
-            <text x={xSM(months) - 8} y={yS(idealMc.median[months]) - 9} textAnchor="end" fontSize="9" fontWeight="700" fill="#F59E0B">ideal {fmt(idealMc.median[months])}</text>
+          {idealMedianMonthly && idealMedianMonthly[months] > 0 && (
+            <text x={xSM(months) - 8} y={yS(idealMedianMonthly[months]) - 9} textAnchor="end" fontSize="9" fontWeight="700" fill="#F59E0B">ideal {fmt(idealMedianMonthly[months])}</text>
           )}
         </>
       )}
@@ -2486,26 +2484,8 @@ export default function FeeCalculator() {
               </p>
             )}
 
-            {/* Action toolbar — rebalancing + scenarios, attached to the chart */}
+            {/* Action toolbar — scenarios, attached to the chart */}
             <div className="flex flex-wrap items-center gap-2 mt-4 px-2 pt-3 border-t border-slate-800/60">
-              <button
-                type="button"
-                onClick={applyRebalancing}
-                className="px-3 py-1.5 text-xs font-semibold rounded bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-500/25 hover:text-indigo-200 transition-colors"
-                title="Rebalance liquid assets to the target allocation. Illiquid groups (Private Equity, Real Estate) are held at current value rather than reduced. Snapshot saved so you can Undo."
-              >
-                Apply rebalancing →
-              </button>
-              {preRebalanceSnapshot !== null && (
-                <button
-                  type="button"
-                  onClick={undoRebalance}
-                  className="px-3 py-1.5 text-xs font-medium rounded bg-slate-800/60 text-slate-300 ring-1 ring-slate-700 hover:bg-slate-800 hover:text-slate-100 transition-colors"
-                  title="Restore the allocation as it was before the last apply or reset."
-                >
-                  ↺ Undo
-                </button>
-              )}
               <span className="hidden sm:block w-px h-6 bg-slate-800 mx-1" />
               <span className="text-[10px] uppercase tracking-widest text-slate-500" title="Save and switch between named portfolio + plan snapshots, persisted in this browser.">
                 Scenarios
