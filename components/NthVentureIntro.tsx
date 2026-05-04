@@ -360,14 +360,14 @@ export default function NthVentureIntro() {
             onMouseEnter={e => (e.currentTarget.style.background = "#c45a2d")}
             onMouseLeave={e => (e.currentTarget.style.background = "#1a1a1a")}
           >
-            Investor Portal
+            Explore the Co-Owner Fund
           </a>
         </div>
       </nav>
 
-      {/* Floating Co-Owner Fund button — desktop, slides in after scroll */}
+      {/* Floating Co-Owner Fund button — slides in after scroll */}
       <a
-        className="hidden md:flex"
+        className="flex"
         href="/portal"
         style={{
           position: "fixed", right: 0, top: "50%", zIndex: 98,
@@ -655,7 +655,6 @@ export default function NthVentureIntro() {
                   { label: "Broad-Based Ownership at Scale", src: "Ownership Works", href: "https://ownershipworks.org" },
                   { label: "Employee Ownership Facts & Research", src: "National Center for Employee Ownership", href: "https://www.nceo.org" },
                   { label: "Equity Sharing & Worker Performance", src: "UPenn / Wharton", href: "https://knowledge.wharton.upenn.edu" },
-                  { label: "Heart and soul of what we're doing", src: "nthventure.com", href: "https://www.nthventure.com" },
                 ].map((item, i) => (
                   <a
                     key={i}
@@ -727,6 +726,25 @@ export default function NthVentureIntro() {
               </div>
             </SlideIn>
           </div>
+
+          {/* Verification links */}
+          <FadeIn delay={0.15}>
+            <div style={{ marginBottom: 48, display: "flex", flexWrap: "wrap", gap: "8px 24px", alignItems: "center" }}>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: 2, color: "#aaa", textTransform: "uppercase", flexShrink: 0 }}>Verify</span>
+              {[
+                { label: "BrokerCheck  CRD# 338802", href: "https://brokercheck.finra.org/firm/summary/338802" },
+                { label: "Form ADV", href: "https://reports.adviserinfo.sec.gov/reports/ADV/338802/PDF/338802.pdf" },
+                { label: "SEC Filings  CIK 0002088918", href: "https://www.sec.gov/edgar/browse/?CIK=0002088918" },
+                { label: "Texas Entity  32098599965", href: "https://comptroller.texas.gov/taxes/franchise/account-status/search/32098599965" },
+              ].map(({ label, href }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#888", textDecoration: "none", borderBottom: "1px solid #d0cec8", paddingBottom: 1, transition: "color 0.2s", whiteSpace: "nowrap" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#c45a2d")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "#888")}
+                >{label} ↗</a>
+              ))}
+            </div>
+          </FadeIn>
 
           {/* Investment Principles */}
           <FadeIn delay={0.1}>
