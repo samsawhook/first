@@ -42,9 +42,11 @@ export interface DirectPosition {
   principal?: number;           // debt: face amount
   repaid?:    number;           // debt: principal already returned to investor
   rolled?:    boolean;          // debt: principal rolled into a new note (not repaid as cash)
-  interestDividend?: number;    // interest or dividends earned
+  rolledInFromPrior?: number;   // debt: portion of this note's principal that was rolled in from prior notes (incl. capitalized interest); subtracted from "new principal invested" totals
+  interestDividend?: number;    // interest or dividends earned (cash paid out)
   estimatedValue: number;
   annualizedReturnPct?: number;
+  notes?: string;               // optional explanatory text rendered under the row
 }
 
 export interface DirectInvestor {
@@ -125,10 +127,18 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       // Audily SAFE → Series A: $50k → 625 preferreds at $80/share, converted Sept 6, 2024.
       { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00, interestDividend: 5_583.36 },
       // Audily short-term notes — older notes that rolled forward into the 10/8/25 $100k note.
-      { category: "Short-term Notes",  issueDate: "2025-02-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 14_386, rolled: true, interestDividend: 2_338.83, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5 },
-      { category: "Short-term Notes",  issueDate: "2025-09-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 0, rolled: true, interestDividend: 0, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5 },
-      // Audily $100k note from 10/8/25 (rolled in $30k from 9/3/25 + $15,614 from 2/3/25 + $54,386 new). Balance $95,639.35, 16.5% APR.
-      { category: "Short-term Notes",  issueDate: "2025-10-08", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5 },
+      // 2/3/25 $30k: $14,385.81 cash repaid + $15,614.19 principal rolled forward into 10/8/25.
+      { category: "Short-term Notes",  issueDate: "2025-02-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 14_385.81, rolled: true, interestDividend: 2_338.83, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5,
+        notes: "Partially repaid in cash; remaining $15,614.19 principal rolled into the 10/8/25 $100k note." },
+      // 9/2/25 $30k: full principal rolled forward into 10/8/25.
+      { category: "Short-term Notes",  issueDate: "2025-09-02", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 0, rolled: true, interestDividend: 0, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5,
+        notes: "Entire $30,000 principal rolled into the 10/8/25 $100k note." },
+      // Audily $100k note from 10/8/25.
+      // Composition: $46,559.19 rolled in from prior notes ($45,614.19 outstanding principal +
+      // $945.00 capitalized accrued interest from the 2/3 and 9/2 loans) + $53,440.81 new cash
+      // gross-up. Balance $95,639.35 outstanding, 16.5% APR.
+      { category: "Short-term Notes",  issueDate: "2025-10-08", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, rolledInFromPrior: 46_559.19, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5,
+        notes: "Consolidates 2/3/25 + 9/2/25 notes: $45,614.19 rolled principal + $945.00 capitalized interest = $46,559.19, plus $53,440.81 new cash gross-up." },
       // LP interest (new asset class). $100k LP basis marked-up to current NAV/unit
       // using actual bottom-up fund NAV (see top of file for computation).
       { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: NEIL_LP_INTEREST_BASIS, estimatedValue: NEIL_LP_INTEREST_VALUE },

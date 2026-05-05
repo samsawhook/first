@@ -110,9 +110,13 @@ export default function DirectHoldingsTab({
   const convertCost     = sum(convertPos, p => p.costBasis);
   const convertValue    = sum(convertPos, p => estVal(p));
   const convertInterest = sum(convertPos, p => p.interestDividend ?? 0);
-  const creditPrincipal = sum(notesPos,   p => p.principal ?? 0);
+  // "New cash invested" — net of any portion of a note's principal that was rolled
+  // in from a prior note (avoids double-counting when a note is consolidated).
+  const creditPrincipal = sum(notesPos,   p => (p.principal ?? 0) - (p.rolledInFromPrior ?? 0));
   const creditRepaid    = sum(notesPos,   p => p.repaid ?? 0);
-  const creditRolled    = sum(notesPos.filter(p => p.rolled), p => p.principal ?? 0);
+  // Rolled / capitalized — total principal (and capitalized interest) that flowed forward
+  // into a consolidating note. Reads from rolledInFromPrior on the destination note.
+  const creditRolled    = sum(notesPos,   p => p.rolledInFromPrior ?? 0);
   const creditInterest  = sum(notesPos,   p => p.interestDividend ?? 0);
   const earnedValue       = sum(earnedPos,  p => estVal(p));
   const earnedEquityValue = sum(earnedPos.filter(p => p.securityType !== "RSU"), p => estVal(p));
@@ -772,8 +776,9 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Credit" tableKey="notes" accentCol="#6366F1" stats={[
-            { label: "Principal Invested", value: fmt(creditPrincipal) },
-            { label: "Principal Repaid", value: fmt(creditRepaid + creditRolled), color: "#34D399" },
+            { label: "New Cash Invested", value: fmt(creditPrincipal) },
+            { label: "Cash Repaid",       value: fmt(creditRepaid), color: "#34D399" },
+            ...(creditRolled > 0 ? [{ label: "Rolled / Capitalized", value: fmt(creditRolled), color: "#A78BFA" }] : []),
             { label: "Working Principal", value: fmt(creditOutstanding), color: creditOutstanding > 0 ? "#e2e8f0" : "#64748B" },
             { label: "Interest",         value: fmt(creditInterest), color: "#F59E0B" },
             { label: "# Notes",          value: `${notesPos.length}` },
@@ -792,31 +797,53 @@ export default function DirectHoldingsTab({
                 {notesPos.map((p, i) => {
                   const repaid = p.repaid ?? 0;
                   const principal = p.principal ?? 0;
-                  const effectiveRepaid = p.rolled ? principal : repaid;
-                  const total = effectiveRepaid + (p.interestDividend ?? 0);
+                  const rolledIn = p.rolledInFromPrior ?? 0;
+                  const newCash = principal - rolledIn;
+                  const rolledOut = p.rolled ? principal - repaid : 0;
+                  const cashSettledPct = principal > 0 ? Math.round(repaid / principal * 100) : 0;
+                  // For MOIC: rolled notes are 100% settled (cash + roll); non-rolled use cash-repaid only.
+                  const effectiveSettled = p.rolled ? principal : repaid;
+                  const total = effectiveSettled + (p.interestDividend ?? 0);
                   const moic = p.costBasis > 0 ? total / p.costBasis : null;
-                  const settledPct = p.rolled ? 100 : principal > 0 ? Math.round(repaid / principal * 100) : 0;
                   return (
-                    <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
-                      <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
-                      <TD><CompanyName p={p} /></TD>
-                      <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
-                      <TD className="text-slate-300 tabular-nums">{fmt(principal)}</TD>
-                      <TD>
-                        {settledPct === 100
-                          ? <span className="text-emerald-400 font-semibold">100% repaid</span>
-                          : settledPct > 0
-                            ? <span className="text-yellow-400 font-semibold">{settledPct}% repaid</span>
-                            : <span className="text-slate-600">Outstanding</span>}
-                      </TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
-                      <TD className="tabular-nums" style={{ color: "#94A3B8" }}>
-                        {p.annualizedReturnPct != null ? `${p.annualizedReturnPct.toFixed(1)}%` : "—"}
-                      </TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: moic !== null ? gainColor(moic - 1) : "#94A3B8" }}>
-                        {moic !== null ? `${moic.toFixed(2)}×` : "—"}
-                      </TD>
-                    </tr>
+                    <Fragment key={i}>
+                      <tr className="hover:bg-[#111D2E]/40 transition-colors">
+                        <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
+                        <TD><CompanyName p={p} /></TD>
+                        <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
+                        <TD className="text-slate-300 tabular-nums">
+                          {fmt(principal)}
+                          {rolledIn > 0 && (
+                            <span className="block text-[9px] text-slate-600">incl. {fmt(rolledIn)} rolled-in</span>
+                          )}
+                        </TD>
+                        <TD>
+                          {p.rolled
+                            ? repaid > 0
+                              ? <span className="font-semibold"><span className="text-emerald-400">{cashSettledPct}% cash</span><span className="text-slate-500"> + </span><span style={{ color: "#A78BFA" }}>{100 - cashSettledPct}% rolled</span></span>
+                              : <span className="font-semibold" style={{ color: "#A78BFA" }}>100% rolled</span>
+                            : cashSettledPct === 100
+                              ? <span className="text-emerald-400 font-semibold">100% repaid</span>
+                              : cashSettledPct > 0
+                                ? <span className="text-yellow-400 font-semibold">{cashSettledPct}% repaid</span>
+                                : <span className="text-slate-600">Outstanding</span>}
+                        </TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
+                        <TD className="tabular-nums" style={{ color: "#94A3B8" }}>
+                          {p.annualizedReturnPct != null ? `${p.annualizedReturnPct.toFixed(1)}%` : "—"}
+                        </TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: moic !== null ? gainColor(moic - 1) : "#94A3B8" }}>
+                          {moic !== null ? `${moic.toFixed(2)}×` : "—"}
+                        </TD>
+                      </tr>
+                      {p.notes && (
+                        <tr className="bg-[#080E1A]/40">
+                          <td className="py-1 px-3" colSpan={8}>
+                            <p className="text-[10px] text-slate-500 leading-snug pl-9">{p.notes}</p>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
