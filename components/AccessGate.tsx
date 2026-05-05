@@ -81,7 +81,7 @@ function formatPhoneDisplay(digits: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-export default function AccessGate({ children }: { children: React.ReactNode }) {
+export default function AccessGate({ children, onGranted }: { children: React.ReactNode; onGranted?: (investorId: string | null) => void }) {
   const [granted, setGranted] = useState<boolean | null>(null);
   const [view, setView] = useState<"auth" | "request">("auth");
   const [mode, setMode] = useState<"invite" | "phone">("invite");
@@ -123,6 +123,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
         const investorId = HASH_TO_INVESTOR_ID[hash] ?? null;
         if (investorId) localStorage.setItem(STORAGE_KEY_INVESTOR, investorId);
         else localStorage.removeItem(STORAGE_KEY_INVESTOR);
+        onGranted?.(investorId);
         setGranted(true);
       } else {
         setError(mode === "invite" ? "Invite code not recognized" : "Phone number not on the authorized list");

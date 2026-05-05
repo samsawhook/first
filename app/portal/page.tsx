@@ -334,7 +334,7 @@ export default function Dashboard() {
     : BASE_TABS;
 
   return (
-    <AccessGate>
+    <AccessGate onGranted={(id) => setDirectInvestorId(id)}>
     <NDAGate>
     <div className="min-h-screen bg-[#060B14]">
       {/* Top nav bar */}
