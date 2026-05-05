@@ -125,6 +125,8 @@ export default function DirectHoldingsTab({
   const portfolioValue = equityValue + earnedEquityValue;    // RSUs excluded; notes fully repaid
   const totalReturn    = portfolioValue + creditInterest + convertInterest + amountRepaid;
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
+  const dpi            = amountInvested > 0 ? cashReceived / amountInvested : null;
+  const tvpi           = amountInvested > 0 ? (portfolioValue + cashReceived) / amountInvested : null;
 
   // ── Company ownership breakdown (all common/RSU shares by company) ────────
   const ownershipMap: Record<string, number> = {};
@@ -336,7 +338,7 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
 
         {/* ── Metrics strip ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D]">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
           <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Portfolio Value</p>
             <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
@@ -352,10 +354,24 @@ export default function DirectHoldingsTab({
             <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#34D399" }}>{fmt(cashReceived)}</p>
             <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{fmt(amountRepaid)} principal · {fmt(creditInterest)} interest</p>
           </div>
-          <div className="px-4 py-3.5">
+          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Principal Basis</p>
             <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
             <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">still deployed</p>
+          </div>
+          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
+            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= 0.5 ? "#34D399" : "#e2e8f0" }}>
+              {dpi !== null ? `${dpi.toFixed(2)}×` : "—"}
+            </p>
+            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">distributed / paid-in</p>
+          </div>
+          <div className="px-4 py-3.5">
+            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
+            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= 1 ? "#10B981" : "#F87171" }}>
+              {tvpi !== null ? `${tvpi.toFixed(2)}×` : "—"}
+            </p>
+            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">total value / paid-in</p>
           </div>
         </div>
 
