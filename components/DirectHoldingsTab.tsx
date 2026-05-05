@@ -117,7 +117,7 @@ export default function DirectHoldingsTab({
   const amountInvested = equityCost + creditPrincipal;
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
-  const cashReceived   = amountRepaid + creditInterest;
+  const cashReceived   = amountRepaid + creditInterest + convertInterest;
   const portfolioValue = equityValue + earnedValue;         // notes all repaid → $0 est.
   const totalReturn    = portfolioValue + creditInterest + convertInterest + amountRepaid;
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
