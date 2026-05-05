@@ -118,6 +118,7 @@ export default function DirectHoldingsTab({
   const equityInterest = convertInterest;
   const equityMoic     = equityCost > 0 ? (equityValue + equityInterest) / equityCost : null;
 
+  const creditOutstanding = sum(notesPos, p => p.estimatedValue);
   const amountInvested = equityCost + creditPrincipal;
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
@@ -170,8 +171,8 @@ export default function DirectHoldingsTab({
 
   // ── Benchmarks: Cambridge Associates VC, ~year-4 fund ────────────────────
   const BM = {
-    dpi:  { q1: 0.25, q3: 0.02 },  // top-quartile and bottom-quartile DPI at yr 4
-    tvpi: { q1: 1.55, q3: 0.92 },  // top-quartile and bottom-quartile TVPI at yr 4
+    dpi:  { q1: 0.18, q3: 0.01 },  // growth equity top/bottom quartile DPI at yr 4
+    tvpi: { q1: 1.45, q3: 0.90 },  // growth equity top/bottom quartile TVPI at yr 4
   } as const;
 
   const BenchmarkBar = ({ value, q1, q3 }: { value: number | null; q1: number; q3: number }) => {
@@ -183,7 +184,7 @@ export default function DirectHoldingsTab({
       <div className="mt-2">
         <div className="flex items-center justify-between mb-1" style={{ fontSize: 8, color: "#475569" }}>
           <span>Q3 {q3.toFixed(2)}×</span>
-          <span className="text-[7px] text-slate-700">VC yr-4</span>
+          <span className="text-[7px] text-slate-700">GE yr-4</span>
           <span>Q1 {q1.toFixed(2)}×</span>
         </div>
         <div className="relative h-1 rounded-full overflow-visible" style={{ background: "#1E2D3D" }}>
@@ -490,7 +491,9 @@ export default function DirectHoldingsTab({
                 </div>
                 <div className="flex items-center gap-2 text-[10px] tabular-nums">
                   <span className="text-slate-500">{fmt(creditPrincipal)} principal</span>
-                  <span className="text-emerald-400 font-semibold">✓ Fully repaid</span>
+                  {creditOutstanding > 0
+                    ? <span className="text-yellow-400 font-semibold">{fmt(creditOutstanding)} outstanding</span>
+                    : <span className="text-emerald-400 font-semibold">✓ Fully repaid</span>}
                   <span className="text-amber-400">+{fmt(creditInterest)}</span>
                 </div>
               </div>
@@ -626,7 +629,7 @@ export default function DirectHoldingsTab({
                   const repaid = p.repaid ?? 0;
                   const total = repaid + (p.interestDividend ?? 0);
                   const moic = p.costBasis > 0 ? total / p.costBasis : null;
-                  const fullyRepaid = repaid > 0 && repaid >= (p.principal ?? 0);
+                  const fullyRepaid = !p.rolled && repaid > 0 && repaid >= (p.principal ?? 0);
                   return (
                     <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
                       <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
@@ -634,10 +637,12 @@ export default function DirectHoldingsTab({
                       <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
                       <TD className="text-slate-300 tabular-nums">{fmt(p.principal ?? 0)}</TD>
                       <TD>
-                        {fullyRepaid
-                          ? <span className="text-emerald-400 font-semibold">Repaid</span>
-                          : repaid > 0 ? <span className="text-yellow-400">{fmt(repaid)} partial</span>
-                          : <span className="text-slate-600">Outstanding</span>}
+                        {p.rolled
+                          ? <span className="text-amber-400 font-semibold">↻ Rolled</span>
+                          : fullyRepaid
+                            ? <span className="text-emerald-400 font-semibold">Repaid</span>
+                            : repaid > 0 ? <span className="text-yellow-400">{fmt(repaid)} partial</span>
+                            : <span className="text-slate-600">Outstanding</span>}
                       </TD>
                       <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
                       <TD className="tabular-nums" style={{ color: "#34D399" }}>{fmt(total)}</TD>
