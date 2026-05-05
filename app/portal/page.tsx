@@ -2881,8 +2881,12 @@ export default function Dashboard() {
           // Cash already returned to Palash from his direct holdings (notes + interest + dividends).
           const palashHistoricalDistributions = directInvestor.positions.reduce((s, p) =>
             s + (p.repaid ?? 0) + (p.interestDividend ?? 0), 0);
-          // LP basis = portfolio value (equity, in-kind) + active credit (in-kind) + $100k cash
-          const palashLpBasis = palashPortfolioValue + palashActiveCreditValue + PALASH_CASH_CONTRIBUTION;
+          // LP basis = portfolio value all-in. The $880.2k figure already represents the
+          // full contribution Palash is locking in (equity + active credit + cash all
+          // bundled into one nominal). The active credit still flows through to fund
+          // holdings as a debt position; the cash still flows through as new cash from
+          // LPs — they just don't get double-counted on top of the $880k LP basis.
+          const palashLpBasis = palashPortfolioValue;
 
           // ── Neil's in-kind roll-in (at default PPS) ──────────────────────────
           const lpDValue = Object.entries(NEIL_ROLLUP_SHARES).reduce((s, [id, sh]) =>
@@ -3108,7 +3112,7 @@ export default function Dashboard() {
           // ── LP cap-table rows ────────────────────────────────────────────────
           const lpRows = [
             { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                                                          accent: "#64748B" },
-            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind ${fmt(palashPortfolioValue + palashActiveCreditValue)} + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
+            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `all-in (equity + ${fmt(palashActiveCreditValue)} credit + ${fmt(PALASH_CASH_CONTRIBUTION)} cash)`, accent: "#A78BFA" },
             { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_OTHER_LP_BASIS, basis: PALASH_OTHER_LP_BASIS,  type: "cash",                                                                       accent: "#34D399" },
             { id: "neil",     name: "Neil Wolfson",                 units: lpDBasis,              basis: lpDBasis,               type: "in-kind equity roll-up",                                                     accent: "#F59E0B" },
           ];
@@ -3121,7 +3125,7 @@ export default function Dashboard() {
               <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span> + outstanding credit <span className="text-white font-medium">{fmt(palashActiveCreditValue)}</span> + <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
+                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span> all-in: portfolio equity + outstanding credit ({fmt(palashActiveCreditValue)}) + cash ({fmt(PALASH_CASH_CONTRIBUTION)})</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -3152,7 +3156,7 @@ export default function Dashboard() {
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashPortfolioValue)} equity + {fmt(palashActiveCreditValue)} credit + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
+                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">all-in (equity + {fmt(palashActiveCreditValue)} credit + {fmt(PALASH_CASH_CONTRIBUTION)} cash)</p>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
@@ -3498,7 +3502,10 @@ export default function Dashboard() {
                 .filter(p => p.category === "Short-term Notes" && (p.estimatedValue ?? 0) > 0)
                 .reduce((s, p) => s + (p.estimatedValue ?? 0), 0)
             : 0;
-          const palashLpBasis = palashPortfolioValue + palashActiveCreditValue; // no cash from Palash here
+          // Palash's LP basis is the same $880.2k all-in nominal used in his own memo.
+          // The $25k credit still flows through to fund holdings as a debt position;
+          // it just isn't double-counted on top of the $880k LP basis.
+          const palashLpBasis = palashPortfolioValue;
 
           // ── Deal economics ───────────────────────────────────────────────────
           const audilyPrefCost   = 150_000;
@@ -3707,7 +3714,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Palash rolls in equity + outstanding credit at default PPS — total <span className="text-white font-medium">{fmt(palashLpBasis)}</span></span>
+                  <span>Palash rolls in his portfolio (incl. outstanding credit) at default PPS — LP basis <span className="text-white font-medium">{fmt(palashLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
