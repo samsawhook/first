@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, Pencil, RotateCcw } from "lucide-react";
 import type { PortfolioCompany } from "@/lib/types";
 import type { DirectInvestor, DirectPosition } from "@/lib/investors";
@@ -56,8 +56,10 @@ interface Props {
 export default function DirectHoldingsTab({
   investor, portfolio, userValuations, onOpenValuationModal, onResetValuation, onSelectCompany,
 }: Props) {
-  const [open, setOpen] = useState(new Set(["equity", "notes", "earned", "ownership"]));
+  const [open, setOpen] = useState(new Set(["equity", "convertibles", "notes", "ownership"]));
   const toggle = (k: string) => setOpen(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
+  const [openCompanies, setOpenCompanies] = useState<Set<string>>(new Set());
+  const toggleCompany = (k: string) => setOpenCompanies(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
   const [showConverted, setShowConverted] = useState(false);
   // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
   const PREF_CONVERSION = { companyId: "audily", extraShares: 3_250 * 1_000 } as const;
@@ -98,7 +100,6 @@ export default function DirectHoldingsTab({
   const convertPos = positions.filter(p => p.category === "Purchased Equity" && !isCommonOrRSU(p.securityType));
   const notesPos   = positions.filter(p => p.category === "Short-term Notes");
   const earnedPos  = positions.filter(p => p.category === "Earned Equity");
-  const equityPos  = positions.filter(p => p.category === "Purchased Equity");
 
   const sum = (ps: DirectPosition[], f: (p: DirectPosition) => number) =>
     ps.reduce((s, p) => s + f(p), 0);
@@ -117,8 +118,6 @@ export default function DirectHoldingsTab({
 
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
-  const equityInterest = convertInterest;
-  const equityMoic     = equityCost > 0 ? (equityValue + equityInterest) / equityCost : null;
 
   const creditOutstanding = sum(notesPos, p => p.estimatedValue);
   const amountInvested = equityCost + creditPrincipal;
@@ -130,6 +129,49 @@ export default function DirectHoldingsTab({
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
   const dpi            = amountInvested > 0 ? cashReceived / amountInvested : null;
   const tvpi           = amountInvested > 0 ? (portfolioValue + cashReceived) / amountInvested : null;
+
+  // ── Equity section (combined common + earned) — grouped per company ───────
+  // RSU value is excluded from totals (consistent with portfolioValue), but RSU rows still display.
+  const valueForTotals = (p: DirectPosition) => p.securityType === "RSU" ? 0 : estVal(p);
+
+  type EquityGroup = {
+    key: string; companyId?: string; company: string; positions: DirectPosition[];
+    totalShares: number; totalCost: number; totalValue: number; totalDist: number;
+    weightedBasis: number | null; returnPct: number | null;
+    pps: number | null; pctFD: number | null; pctVoting: number | null;
+  };
+
+  const equityGroups: EquityGroup[] = (() => {
+    const map: Record<string, { companyId?: string; company: string; positions: DirectPosition[] }> = {};
+    for (const p of [...commonPos, ...earnedPos]) {
+      const key = p.companyId ?? p.company;
+      if (!map[key]) map[key] = { companyId: p.companyId, company: p.company, positions: [] };
+      map[key].positions.push(p);
+    }
+    return Object.entries(map).map(([key, g]) => {
+      const totalShares = g.positions.reduce((s, p) => s + (p.shares ?? 0), 0);
+      const totalCost   = g.positions.reduce((s, p) => s + p.costBasis, 0);
+      const totalValue  = g.positions.reduce((s, p) => s + valueForTotals(p), 0);
+      const totalDist   = g.positions.reduce((s, p) => s + (p.interestDividend ?? 0), 0);
+      const weightedBasis = totalShares > 0 ? totalCost / totalShares : null;
+      const returnPct     = totalCost > 0 ? (totalValue + totalDist - totalCost) / totalCost : null;
+      const c   = g.companyId ? portMap[g.companyId] : undefined;
+      const pps = g.companyId ? effectivePps(g.companyId) : null;
+      const pctFD     = c?.totalShares ? totalShares / c.totalShares : null;
+      const pctVoting = c?.commonSharesOutstanding ? totalShares / c.commonSharesOutstanding : null;
+      return { key, ...g, totalShares, totalCost, totalValue, totalDist, weightedBasis, returnPct, pps, pctFD, pctVoting };
+    }).sort((a, b) => b.totalValue - a.totalValue);
+  })();
+
+  const equitySectionShares  = equityGroups.reduce((s, g) => s + g.totalShares, 0);
+  const equitySectionCost    = equityGroups.reduce((s, g) => s + g.totalCost,   0);
+  const equitySectionValue   = equityGroups.reduce((s, g) => s + g.totalValue,  0);
+  const equitySectionDist    = equityGroups.reduce((s, g) => s + g.totalDist,   0);
+  const equitySectionBasis   = equitySectionShares > 0 ? equitySectionCost / equitySectionShares : null;
+  const equitySectionReturn  = equitySectionCost > 0 ? (equitySectionValue + equitySectionDist - equitySectionCost) / equitySectionCost : null;
+
+  // Convertibles section aggregates (own card)
+  const convertReturn = convertCost > 0 ? (convertValue + convertInterest - convertCost) / convertCost : null;
 
   // ── Company ownership breakdown (Class A Common only, no RSUs) ──────────
   const ownershipMap: Record<string, number> = {};
@@ -374,40 +416,55 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
 
         {/* ── Metrics strip ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b border-[#1E2D3D]">
-          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-b border-[#1E2D3D] divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
+          {/* Portfolio Value */}
+          <div className="px-4 py-3.5 flex flex-col">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Portfolio Value</p>
-            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">incl. {fmt(earnedEquityValue)} earned</p>
+            <p className="text-base font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
+            <div className="mt-3 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Equity (purchased)</span><span className="text-slate-300">{fmt(commonValue + convertValue)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Earned</span><span className="text-amber-400">{fmt(earnedEquityValue)}</span></div>
+            </div>
           </div>
-          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Amount Invested</p>
-            <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(amountInvested)}</p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{fmt(equityCost)} equity · {fmt(creditPrincipal)} notes</p>
+
+          {/* Investor Basis */}
+          <div className="px-4 py-3.5 flex flex-col">
+            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Investor Basis</p>
+            <p className="text-base font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
+            <div className="mt-3 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Total invested</span><span className="text-slate-300">{fmt(amountInvested)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
+            </div>
           </div>
-          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Cash Received</p>
-            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#34D399" }}>{fmt(cashReceived)}</p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{fmt(amountRepaid)} principal · {fmt(creditInterest)} interest</p>
-          </div>
-          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Principal Basis</p>
-            <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">still deployed</p>
-          </div>
-          <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+
+          {/* DPI */}
+          <div className="px-4 py-3.5 flex flex-col">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
-            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
+            <p className="text-base font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
               {dpi !== null ? `${dpi.toFixed(2)}×` : "—"}
             </p>
             <BenchmarkBar value={dpi} q1={BM.dpi.q1} q3={BM.dpi.q3} />
+            <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Interest paid</span><span className="text-amber-400">{fmt(creditInterest)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Distributions</span><span className="text-amber-400">{fmt(convertInterest)}</span></div>
+            </div>
           </div>
-          <div className="px-4 py-3.5">
+
+          {/* TVPI */}
+          <div className="px-4 py-3.5 flex flex-col">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
-            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
+            <p className="text-base font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
               {tvpi !== null ? `${tvpi.toFixed(2)}×` : "—"}
             </p>
             <BenchmarkBar value={tvpi} q1={BM.tvpi.q1} q3={BM.tvpi.q3} />
+            <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Interest paid</span><span className="text-amber-400">{fmt(creditInterest)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Distributions</span><span className="text-amber-400">{fmt(convertInterest)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Investor basis</span><span className="text-slate-300">{fmt(principalBasis)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Total value</span><span className="text-emerald-400">{fmt(portfolioValue)}</span></div>
+            </div>
           </div>
         </div>
 
@@ -523,10 +580,10 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Equity" tableKey="equity" accentCol="#10B981" stats={[
-            { label: "Cost Basis",  value: fmt(equityCost) },
-            { label: "Value",       value: fmt(portfolioValue), color: "#10B981" },
-            { label: "MOIC",        value: equityMoic !== null ? `${equityMoic.toFixed(2)}×` : "—", color: equityMoic && equityMoic >= 1 ? "#10B981" : "#F87171" },
-            { label: "Earned",      value: fmt(earnedEquityValue), color: "#F59E0B" },
+            { label: "Cost Basis", value: fmt(equitySectionCost) },
+            { label: "Value",      value: fmt(equitySectionValue), color: "#10B981" },
+            { label: "Return",     value: equitySectionReturn !== null ? `${(equitySectionReturn * 100).toFixed(1)}%` : "—", color: equitySectionReturn !== null && equitySectionReturn >= 0 ? "#10B981" : "#F87171" },
+            { label: "Earned",     value: fmt(earnedEquityValue), color: "#F59E0B" },
           ]} />
         </div>
         {open.has("equity") && (
@@ -534,46 +591,140 @@ export default function DirectHoldingsTab({
             <table className="w-full text-xs">
               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                 <tr>
-                  <TH></TH><TH wide>Company</TH><TH>Type</TH><TH>Issue Date</TH>
+                  <TH></TH><TH wide>Company</TH>
                   <TH>Shares</TH><TH>Basis / Sh</TH><TH>Cost</TH><TH>Share Price</TH>
-                  <TH>Distributions</TH><TH>Est. Value</TH><TH>MOIC</TH>
+                  <TH>Distributions</TH><TH>Est. Value</TH>
+                  <TH>Return</TH><TH>% FD</TH><TH>% Voting</TH>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
-
-                {/* ── Common Stock ── */}
-                <tr className="bg-[#080E1A]">
-                  <td colSpan={11} className="px-3 py-1 text-[8px] text-slate-500 uppercase tracking-widest font-semibold border-b border-[#1E2D3D]">Common Stock</td>
-                </tr>
-                {commonPos.map((p, i) => {
-                  const v = estVal(p);
-                  const rowMoic = p.costBasis > 0 ? (v + (p.interestDividend ?? 0)) / p.costBasis : null;
+                {equityGroups.map(g => {
+                  const isOpen = openCompanies.has(g.key);
+                  const groupAllRSU = g.positions.every(p => p.securityType === "RSU");
                   return (
-                    <tr key={`c${i}`} className="hover:bg-[#111D2E]/40 transition-colors">
-                      <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
-                      <TD><CompanyName p={p} /></TD>
-                      <TD className="text-slate-400">{p.securityType}</TD>
-                      <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
-                      <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
-                      <TD className="text-slate-400 tabular-nums">{p.perShareBasis != null ? `$${p.perShareBasis.toFixed(3)}` : "—"}</TD>
-                      <TD className="text-slate-300 tabular-nums">{fmt(p.costBasis)}</TD>
-                      <TD className="tabular-nums"><PriceEditCell p={p} /></TD>
-                      <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: v >= p.costBasis ? "#34D399" : "#F87171" }}>{fmt(v)}</TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: rowMoic !== null ? gainColor(rowMoic - 1) : "#94A3B8" }}>
-                        {rowMoic !== null ? `${rowMoic.toFixed(2)}×` : "—"}
-                      </TD>
-                    </tr>
+                    <Fragment key={`g-${g.key}`}>
+                      {/* Summary row */}
+                      <tr
+                        onClick={() => toggleCompany(g.key)}
+                        className={`cursor-pointer hover:bg-[#111D2E]/60 transition-colors${groupAllRSU ? " opacity-70" : ""}`}>
+                        <TD>
+                          <div className="flex items-center gap-2">
+                            <ChevronDown size={12} className={`text-slate-500 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
+                            <CompanyAvatar id={g.companyId} name={g.company} />
+                          </div>
+                        </TD>
+                        <TD>
+                          <button
+                            className="font-medium text-slate-200 hover:text-white transition-colors text-left underline decoration-slate-600 hover:decoration-slate-400"
+                            onClick={(e) => { e.stopPropagation(); if (g.companyId && portMap[g.companyId]) onSelectCompany(g.companyId); }}>
+                            {g.company.replace(" Inc.", "").replace(" Recruiting", "")}
+                          </button>
+                          <span className="ml-2 text-[9px] text-slate-600">{g.positions.length} {g.positions.length === 1 ? "lot" : "lots"}</span>
+                        </TD>
+                        <TD className="text-slate-200 tabular-nums font-medium">{g.totalShares ? fmtShares(g.totalShares) : "—"}</TD>
+                        <TD className="text-slate-400 tabular-nums">{g.weightedBasis !== null ? `$${g.weightedBasis.toFixed(4)}` : "—"}</TD>
+                        <TD className="text-slate-200 tabular-nums font-medium">{fmt(g.totalCost)}</TD>
+                        <TD className="tabular-nums text-slate-400">{g.pps !== null ? `$${g.pps.toFixed(4)}` : "—"}</TD>
+                        <TD className="tabular-nums" style={{ color: g.totalDist > 0 ? "#F59E0B" : "#64748B" }}>{g.totalDist > 0 ? fmt(g.totalDist) : "—"}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: g.totalValue > 0 ? "#34D399" : "#64748B" }}>{g.totalValue > 0 ? fmt(g.totalValue) : "—"}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: g.returnPct !== null ? gainColor(g.returnPct) : g.totalValue > 0 ? "#34D399" : "#64748B" }}>
+                          {g.returnPct !== null ? `${(g.returnPct * 100).toFixed(1)}%` : g.totalValue > 0 ? "∞" : "—"}
+                        </TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: "#8B5CF6" }}>
+                          {g.pctFD !== null ? `${(g.pctFD * 100).toFixed(2)}%` : "—"}
+                        </TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: "#A78BFA" }}>
+                          {g.pctVoting !== null ? `${(g.pctVoting * 100).toFixed(2)}%` : "—"}
+                        </TD>
+                      </tr>
+
+                      {/* Expanded children */}
+                      {isOpen && g.positions.map((p, i) => {
+                        const v = estVal(p);
+                        const isRSU = p.securityType === "RSU";
+                        const dist = p.interestDividend ?? 0;
+                        const rowReturn = p.costBasis > 0 ? (v + dist - p.costBasis) / p.costBasis : null;
+                        return (
+                          <tr key={`g-${g.key}-${i}`} className={`bg-[#080E1A]/60 hover:bg-[#111D2E]/40 transition-colors${isRSU ? " opacity-60" : ""}`}>
+                            <TD>{null}</TD>
+                            <TD>
+                              <div className="pl-6 flex items-center gap-1.5">
+                                <span className="text-slate-700">└</span>
+                                <span className="text-slate-400 text-[11px]">{p.securityType}</span>
+                                {isRSU && <span className="text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#1E293B", color: "#64748B" }}>excl.</span>}
+                                <span className="text-slate-600 text-[10px]">· {fmtDate(p.issueDate)}</span>
+                              </div>
+                            </TD>
+                            <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
+                            <TD className="text-slate-500 tabular-nums">{p.perShareBasis != null ? `$${p.perShareBasis.toFixed(3)}` : p.costBasis === 0 ? "$0" : "—"}</TD>
+                            <TD className="text-slate-400 tabular-nums">{p.costBasis > 0 ? fmt(p.costBasis) : "$0"}</TD>
+                            <TD className="tabular-nums">
+                              {isCommonOrRSU(p.securityType) ? <PriceEditCell p={p} /> : <span className="text-slate-600">—</span>}
+                            </TD>
+                            <TD className="tabular-nums" style={{ color: dist > 0 ? "#F59E0B" : "#64748B" }}>{dist > 0 ? fmt(dist) : "—"}</TD>
+                            <TD className="tabular-nums">
+                              {p.costBasis === 0 ? <EarnedValCell p={p} />
+                                : <span className="font-semibold" style={{ color: v >= p.costBasis ? "#34D399" : "#F87171" }}>{fmt(v)}</span>}
+                            </TD>
+                            <TD className="tabular-nums font-semibold" style={{ color: rowReturn !== null ? gainColor(rowReturn) : v > 0 ? "#34D399" : "#64748B" }}>
+                              {rowReturn !== null ? `${(rowReturn * 100).toFixed(1)}%` : v > 0 ? "∞" : "—"}
+                            </TD>
+                            <TD>{null}</TD>
+                            <TD>{null}</TD>
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
                   );
                 })}
 
-                {/* ── Convertibles ── */}
-                <tr className="bg-[#080E1A]">
-                  <td colSpan={11} className="px-3 py-1 text-[8px] text-slate-500 uppercase tracking-widest font-semibold border-b border-[#1E2D3D] border-t border-t-[#1E2D3D]">Convertibles</td>
+                {/* Totals row */}
+                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                  <td className="py-2 px-3" />
+                  <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmtShares(equitySectionShares)}</td>
+                  <td className="py-2 px-3 text-xs text-slate-400 tabular-nums">{equitySectionBasis !== null ? `$${equitySectionBasis.toFixed(4)}` : "—"}</td>
+                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(equitySectionCost)}</td>
+                  <td className="py-2 px-3" />
+                  <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: equitySectionDist > 0 ? "#F59E0B" : "#64748B" }}>{equitySectionDist > 0 ? fmt(equitySectionDist) : "—"}</td>
+                  <td className="py-2 px-3 text-xs text-emerald-400 tabular-nums font-semibold">{fmt(equitySectionValue)}</td>
+                  <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: equitySectionReturn !== null ? gainColor(equitySectionReturn) : "#94A3B8" }}>
+                    {equitySectionReturn !== null ? `${(equitySectionReturn * 100).toFixed(1)}%` : "—"}
+                  </td>
+                  <td className="py-2 px-3" />
+                  <td className="py-2 px-3" />
                 </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ══ 2. Convertibles ═════════════════════════════════════════════════ */}
+      <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+        <div className="border-b border-[#1E2D3D]">
+          <SectionHeader label="Convertibles" tableKey="convertibles" accentCol="#F59E0B" stats={[
+            { label: "Cost Basis",   value: fmt(convertCost) },
+            { label: "Value",        value: fmt(convertValue), color: "#F59E0B" },
+            { label: "Distributions", value: fmt(convertInterest), color: "#F59E0B" },
+            { label: "Return",       value: convertReturn !== null ? `${(convertReturn * 100).toFixed(1)}%` : "—", color: convertReturn !== null && convertReturn >= 0 ? "#10B981" : "#F87171" },
+          ]} />
+        </div>
+        {open.has("convertibles") && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                <tr>
+                  <TH></TH><TH wide>Company</TH><TH>Type</TH><TH>Issue Date</TH>
+                  <TH>Shares</TH><TH>Basis / Sh</TH><TH>Cost</TH><TH>Share Price</TH>
+                  <TH>Distributions</TH><TH>Est. Value</TH><TH>Return</TH>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#0D1421]">
                 {convertPos.map((p, i) => {
                   const v = estVal(p);
-                  const rowMoic = p.costBasis > 0 ? (v + (p.interestDividend ?? 0)) / p.costBasis : null;
+                  const dist = p.interestDividend ?? 0;
+                  const rowReturn = p.costBasis > 0 ? (v + dist - p.costBasis) / p.costBasis : null;
                   return (
                     <tr key={`v${i}`} className="hover:bg-[#111D2E]/40 transition-colors">
                       <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
@@ -588,50 +739,36 @@ export default function DirectHoldingsTab({
                           ? <span className="text-slate-400">${(p.estimatedValue / p.shares).toFixed(2)}/sh</span>
                           : <span className="text-slate-600">N/A</span>}
                       </TD>
-                      <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
+                      <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{dist > 0 ? fmt(dist) : "—"}</TD>
                       <TD className="tabular-nums font-semibold" style={{ color: v >= p.costBasis ? "#34D399" : "#F87171" }}>{fmt(v)}</TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: rowMoic !== null ? gainColor(rowMoic - 1) : "#94A3B8" }}>
-                        {rowMoic !== null ? `${rowMoic.toFixed(2)}×` : "—"}
+                      <TD className="tabular-nums font-semibold" style={{ color: rowReturn !== null ? gainColor(rowReturn) : "#94A3B8" }}>
+                        {rowReturn !== null ? `${(rowReturn * 100).toFixed(1)}%` : "—"}
                       </TD>
                     </tr>
                   );
                 })}
-
-                {/* ── Earned ── */}
-                <tr className="bg-[#080E1A]">
-                  <td colSpan={11} className="px-3 py-1 text-[8px] text-slate-500 uppercase tracking-widest font-semibold border-b border-[#1E2D3D] border-t border-t-[#1E2D3D]">Earned</td>
+                {/* Totals */}
+                <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                  <td className="py-2 px-3" />
+                  <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                  <td /><td />
+                  <td />
+                  <td />
+                  <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(convertCost)}</td>
+                  <td />
+                  <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(convertInterest)}</td>
+                  <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(convertValue)}</td>
+                  <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: convertReturn !== null ? gainColor(convertReturn) : "#94A3B8" }}>
+                    {convertReturn !== null ? `${(convertReturn * 100).toFixed(1)}%` : "—"}
+                  </td>
                 </tr>
-                {earnedPos.map((p, i) => {
-                  const v = estVal(p);
-                  const isRSU = p.securityType === "RSU";
-                  return (
-                    <tr key={`e${i}`} className={`hover:bg-[#111D2E]/40 transition-colors${isRSU ? " opacity-60" : ""}`}>
-                      <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
-                      <TD><CompanyName p={p} /></TD>
-                      <TD>
-                        <span className="text-slate-400">{p.securityType}</span>
-                        {isRSU && <span className="ml-1.5 text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#1E293B", color: "#64748B" }}>excl.</span>}
-                      </TD>
-                      <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
-                      <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
-                      <TD className="text-slate-600">—</TD>
-                      <TD className="text-slate-600">$0</TD>
-                      <TD className="tabular-nums"><PriceEditCell p={p} /></TD>
-                      <TD className="text-slate-600">—</TD>
-                      <TD className="tabular-nums font-semibold"><EarnedValCell p={p} /></TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: v > 0 ? "#34D399" : "#64748B" }}>
-                        {v > 0 ? "∞×" : "—"}
-                      </TD>
-                    </tr>
-                  );
-                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* ══ 2. Credit ═══════════════════════════════════════════════════════ */}
+      {/* ══ 3. Credit ═══════════════════════════════════════════════════════ */}
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Credit" tableKey="notes" accentCol="#6366F1" stats={[
@@ -688,7 +825,7 @@ export default function DirectHoldingsTab({
         )}
       </div>
 
-      {/* ══ 3. Company Ownership ═════════════════════════════════════════════ */}
+      {/* ══ 4. Company Ownership ═════════════════════════════════════════════ */}
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Company Ownership" tableKey="ownership" accentCol="#8B5CF6" stats={[
