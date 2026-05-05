@@ -1,4 +1,12 @@
 import type { Investor } from "./types";
+import { fund, LP_TOTAL_UNITS } from "./data";
+
+// Neil's $100k LP basis (= 100k units at $1 par) marked up to current NAV/unit
+// using the actual bottom-up fund NAV. Computed at module load — no fake data.
+const NEIL_LP_INTEREST_BASIS = 100_000;
+const NEIL_LP_INTEREST_VALUE = Math.round(
+  (fund.nav / LP_TOTAL_UNITS) * NEIL_LP_INTEREST_BASIS
+);
 
 // ─── Investors ────────────────────────────────────────────────────────────────
 export const investors: Investor[] = [
@@ -121,8 +129,9 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       { category: "Short-term Notes",  issueDate: "2025-09-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 0, rolled: true, interestDividend: 0, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5 },
       // Audily $100k note from 10/8/25 (rolled in $30k from 9/3/25 + $15,614 from 2/3/25 + $54,386 new). Balance $95,639.35, 16.5% APR.
       { category: "Short-term Notes",  issueDate: "2025-10-08", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5 },
-      // LP interest (new asset class). $100k LP basis marked-up to relevant NAV (par $1/unit × NAV/unit).
-      { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: 100_000, estimatedValue: 6_471_408 },
+      // LP interest (new asset class). $100k LP basis marked-up to current NAV/unit
+      // using actual bottom-up fund NAV (see top of file for computation).
+      { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: NEIL_LP_INTEREST_BASIS, estimatedValue: NEIL_LP_INTEREST_VALUE },
     ],
   },
 ];

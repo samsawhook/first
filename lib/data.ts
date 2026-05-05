@@ -32,21 +32,9 @@ export const cashPositions: CashPosition[] = [
   { id: "cash-baf-4785", name: "Business Adv Fundamentals (4785)", institution: "Bank of America", type: "Checking", balance: 2_329.95, asOf: "Apr 2026" },
 ];
 
-export const fund: FundMetrics = {
-  name: "nth Venture Fund I",
-  vintage: 2021,
-  targetSize: 15_000_000,
-  calledCapital: 8_750_000,
-  nav: 13_920_000,
-  tvpi: 1.59,
-  dpi: 0.09,
-  rvpi: 1.50,
-  irr: 26.4,
-  totalInvestments: 8,
-  realized: 1,
-  unrealized: 7,
-  asOf: "March 31, 2026",
-};
+// `fund` is declared at the bottom of this file with `nav` computed bottom-up
+// from the portfolio holdings (equity + active debt + options) + cash - leverage.
+// The previous \$13.92M placeholder is gone; everything reads from real data.
 
 export const portfolio: PortfolioCompany[] = [
   {
@@ -937,6 +925,53 @@ export const portfolio: PortfolioCompany[] = [
     ] satisfies FinancialPeriod[],
   },
 ];
+
+// ── Fund metrics ────────────────────────────────────────────────────────────
+// `fund.nav` is computed bottom-up from portfolio holdings: per-active-company
+// (equity = Common shares × default PPS) + active debt currentValue + options
+// (intrinsic + time value at default variance) plus cash, minus fund-level
+// leverage. No hardcoded headline NAV.
+function computeFundNav(): number {
+  let total = 0;
+  for (const c of portfolio) {
+    if (c.status !== "active") continue;
+    const pps = c.totalShares
+      ? (c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation) / c.totalShares
+      : 0;
+    const sh = (c.shareTransactions ?? [])
+      .filter(t => t.type === "Common")
+      .reduce((s, t) => s + (t.shares ?? 0), 0);
+    const equityVal = pps > 0 && sh > 0 ? sh * pps : c.currentValue;
+    const debtVal = (c.debtPositions ?? [])
+      .filter(d => d.status !== "Repaid")
+      .reduce((s, d) => s + d.currentValue, 0);
+    const optionVal = (c.optionPositions ?? []).reduce((s, o) => {
+      const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
+      const timeVal   = o.shares * pps * ((o.defaultVariancePct ?? 0) / 100);
+      return s + intrinsic + timeVal;
+    }, 0);
+    total += equityVal + debtVal + optionVal;
+  }
+  total += cashPositions.reduce((s, cp) => s + cp.balance, 0);
+  total -= FUND_LEVERAGE;
+  return total;
+}
+
+export const fund: FundMetrics = {
+  name: "nth Venture Fund I",
+  vintage: 2021,
+  targetSize: 15_000_000,
+  calledCapital: 8_750_000,
+  nav: computeFundNav(),
+  tvpi: 1.59,
+  dpi: 0.09,
+  rvpi: 1.50,
+  irr: 26.4,
+  totalInvestments: 8,
+  realized: 1,
+  unrealized: 7,
+  asOf: "March 31, 2026",
+};
 
 // NAV history — no verified data yet; populate from fund records
 export const navHistory: QuarterlyNav[] = [
