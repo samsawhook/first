@@ -111,7 +111,7 @@ const SCENARIOB_MB_SHARES        = 4_804_351;
 type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct";
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "overview",  label: "Overview",  icon: <LayoutDashboard size={15} /> },
+  { id: "overview",  label: "Fund Overview",  icon: <LayoutDashboard size={15} /> },
   { id: "proposal",  label: "Deal Memo",  icon: <FileText size={15} /> },
   { id: "fees",      label: "Allocator", icon: <Calculator size={15} /> },
 ];
