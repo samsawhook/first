@@ -111,8 +111,9 @@ const SCENARIOB_MB_SHARES        = 4_804_351;
 type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct" | "palash-memo";
 
 // ── Palash Deal Memo additions (palash-memo tab only) ─────────────────────────
-const PALASH_LP_BASIS = 980_000;            // Palash's locked-in LP basis (in-kind contribution)
-const PALASH_CASH_LP_BASIS = 250_000;       // Cash raised elsewhere (one new LP)
+// Palash's LP basis = his rolled-in portfolio value (at default PPS) + cash contribution.
+const PALASH_CASH_CONTRIBUTION = 100_000;   // Cash Palash adds alongside his in-kind roll-in
+const PALASH_OTHER_LP_BASIS    = 250_000;   // Cash raised elsewhere (one other new LP)
 // Palash rolls in his Class A Common (purchased + earned)
 const PALASH_ROLLUP_SHARES: Record<string, number> = {
   audily:           72_850 + 4_606_158,    // purchased + earned
@@ -2837,9 +2838,22 @@ export default function Dashboard() {
             Object.entries(rollup).reduce((sum, [id, sh]) => sum + sh * ppsOf(id), 0);
 
           // Roll-in market values (at default PPS)
-          const palashRollupValue = valueOf(PALASH_ROLLUP_SHARES);
-          const lpDValue          = valueOf(PALASH_LP_D_SHARES);
-          const lpDBasis          = Math.round(lpDValue);
+          // Palash rolls in ALL holdings: Class A Common (purchased + earned) at default PPS,
+          // plus convertibles + outstanding notes at their estimated value. RSUs excluded
+          // (consistent with DirectHoldingsTab portfolioValue semantics).
+          const palashCommonRollupValue = valueOf(PALASH_ROLLUP_SHARES);
+          const palashOtherRollupValue  = directInvestor.positions.reduce((s, p) => {
+            if (p.securityType === "RSU") return s;
+            if (p.securityType === "Class A Common") return s;   // already in Common rollup
+            return s + (p.estimatedValue ?? 0);
+          }, 0);
+          const palashPortfolioValue = palashCommonRollupValue + palashOtherRollupValue;
+
+          // Palash LP basis = portfolio value (in-kind) + $100k cash contribution
+          const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
+
+          const lpDValue = valueOf(PALASH_LP_D_SHARES);
+          const lpDBasis = Math.round(lpDValue);
 
           // Deal economics
           const audilyPrefCost   = 150_000;             // cash
@@ -2849,23 +2863,24 @@ export default function Dashboard() {
           const dealCashTotal    = audilyPrefCost + nuecesCash;    // $350k cash needed
 
           // LP capital
-          const newLpBasis      = PALASH_LP_BASIS + PALASH_CASH_LP_BASIS + lpDBasis;
+          const newLpBasis      = palashLpBasis + PALASH_OTHER_LP_BASIS + lpDBasis;
           const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;          // 1 unit = $1 par
-          const newCashFromLPs  = PALASH_CASH_LP_BASIS;                      // only the cash LP brings $$$
-          const cashGapVsDeal   = dealCashTotal - newCashFromLPs;            // $100k from existing fund/financing
+          const newCashFromLPs  = PALASH_CASH_CONTRIBUTION + PALASH_OTHER_LP_BASIS; // $100k + $250k = $350k
+          const cashGapVsDeal   = dealCashTotal - newCashFromLPs;            // 0 — fully funded
 
-          // Fund NAV math (in-kind contributions add to assets at market value;
-          // deal is net-zero against NAV: -$350k cash, +$320k Nueces, +$150k Audily Pref, +$120k seller-note debt = 0)
-          const newFundNav      = baseFund.nav + palashRollupValue + lpDValue + newCashFromLPs;
+          // Fund NAV math
+          // Roll-up adds: in-kind market value + new cash. Deal is net-zero against NAV:
+          //   -$350k cash, +$320k Nueces, +$150k Audily Pref, +$120k seller-note debt = $0
+          const newFundNav      = baseFund.nav + palashPortfolioValue + lpDValue + newCashFromLPs;
           const navPerUnit      = newLpUnitsTotal > 0 ? newFundNav / newLpUnitsTotal : 0;
           const newFundLeverage = BASE_FUND_LEVERAGE + nuecesNote;           // seller note added
           const newGrossAssets  = newFundNav + newFundLeverage;              // assets before leverage netting
 
           // Palash's KPI progression
           const palashOriginalBasis = directInvestor.positions.reduce((s, p) => s + (p.costBasis ?? 0), 0);
-          const palashNav           = PALASH_LP_BASIS * navPerUnit;
-          const palashMoic          = palashNav / PALASH_LP_BASIS;
-          const palashPct           = newLpUnitsTotal > 0 ? PALASH_LP_BASIS / newLpUnitsTotal : 0;
+          const palashNav           = palashLpBasis * navPerUnit;
+          const palashMoic          = palashLpBasis > 0 ? palashNav / palashLpBasis : 0;
+          const palashPct           = newLpUnitsTotal > 0 ? palashLpBasis / newLpUnitsTotal : 0;
 
           // Per-company merged Common-share holdings
           const allCompanyIds = new Set<string>([
@@ -2926,10 +2941,10 @@ export default function Dashboard() {
 
           // LP rows
           const lpRows = [
-            { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                   accent: "#64748B" },
-            { id: "palash",   name: `${directInvestor.name} (you)`, units: PALASH_LP_BASIS,       basis: PALASH_LP_BASIS,       type: "in-kind equity roll-up", accent: "#A78BFA" },
-            { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_CASH_LP_BASIS,  basis: PALASH_CASH_LP_BASIS,  type: "cash",                accent: "#34D399" },
-            { id: "lpD",      name: "LP D",                         units: lpDBasis,              basis: lpDBasis,              type: "in-kind equity roll-up", accent: "#F59E0B" },
+            { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                       accent: "#64748B" },
+            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind ${fmt(palashPortfolioValue)} + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
+            { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_OTHER_LP_BASIS, basis: PALASH_OTHER_LP_BASIS,  type: "cash",                                    accent: "#34D399" },
+            { id: "lpD",      name: "LP D",                         units: lpDBasis,              basis: lpDBasis,               type: "in-kind equity roll-up",                  accent: "#F59E0B" },
           ];
 
           return (
@@ -2940,11 +2955,11 @@ export default function Dashboard() {
               <ul className="space-y-2 text-sm text-slate-300">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Roll your direct holdings into Co-Owner Fund LP for an LP basis (locked) of <span className="text-white font-medium">{fmt(PALASH_LP_BASIS)}</span> — in-kind contribution market value at default PPS: <span className="text-slate-400">{fmt(palashRollupValue)}</span></span>
+                  <span>You roll all direct holdings into Co-Owner Fund LP at default PPS (portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span>) and add <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Cash LP contributes <span className="text-white font-medium">{fmt(PALASH_CASH_LP_BASIS)}</span> raised elsewhere</span>
+                  <span>Another LP contributes <span className="text-white font-medium">{fmt(PALASH_OTHER_LP_BASIS)}</span> cash (raised elsewhere)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -2956,7 +2971,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> · Cash gap vs deal: <span className="text-amber-400 font-medium">{fmt(cashGapVsDeal)}</span> (existing fund cash / financing)</span>
+                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> ({fmt(PALASH_CASH_CONTRIBUTION)} from you + {fmt(PALASH_OTHER_LP_BASIS)} from other LP) · Cash gap vs deal: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 && "— fully funded"}</span>
                 </li>
               </ul>
             </div>
@@ -2970,8 +2985,8 @@ export default function Dashboard() {
               </div>
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
-                <p className="text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(PALASH_LP_BASIS)}</p>
-                <p className="text-[10px] text-purple-400/70 mt-1">{PALASH_LP_BASIS.toLocaleString()} units · locked</p>
+                <p className="text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
+                <p className="text-[10px] text-purple-400/70 mt-1">{fmt(palashPortfolioValue)} in-kind + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Roll-up + Deal)</p>
@@ -2981,7 +2996,7 @@ export default function Dashboard() {
               <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
                 <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis (locked at {fmt(PALASH_LP_BASIS)})</p>
+                <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis (locked at {fmt(palashLpBasis)})</p>
               </div>
             </div>
 
