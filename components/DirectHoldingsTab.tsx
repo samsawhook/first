@@ -416,25 +416,25 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
 
         {/* ── Metrics strip ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 border-b border-[#1E2D3D] divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-[#1E2D3D] divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
           {/* Combined: Portfolio Value + Investor Basis (with cash returned highlight) */}
-          <div className="px-4 py-3.5 flex flex-col">
+          <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Portfolio Value</p>
-                <p className="text-base font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
+                <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
               </div>
               <div>
                 <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Investor Basis</p>
-                <p className="text-base font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
+                <p className="text-sm sm:text-base font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
               </div>
             </div>
 
             {/* Cash returned — emphasized */}
-            <div className="mt-3 px-2.5 py-2 rounded-md border border-emerald-500/30 bg-emerald-500/5">
+            <div className="mt-2 sm:mt-3 px-2.5 py-2 rounded-md border border-emerald-500/30 bg-emerald-500/5">
               <div className="flex items-baseline justify-between">
                 <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: "#34D399" }}>Cash Returned</p>
-                <p className="text-base font-bold tabular-nums" style={{ color: "#34D399" }}>{fmt(cashReceived)}</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums" style={{ color: "#34D399" }}>{fmt(cashReceived)}</p>
               </div>
               <div className="mt-1 space-y-0.5 text-[9px] text-slate-500 tabular-nums">
                 <div className="flex justify-between gap-2"><span>Principal returned</span><span className="text-slate-400">{fmt(creditRepaid)}</span></div>
@@ -449,9 +449,9 @@ export default function DirectHoldingsTab({
           </div>
 
           {/* DPI */}
-          <div className="px-4 py-3.5 flex flex-col">
+          <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
-            <p className="text-base font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
+            <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
               {dpi !== null ? `${dpi.toFixed(2)}×` : "—"}
             </p>
             <BenchmarkBar value={dpi} q1={BM.dpi.q1} q3={BM.dpi.q3} />
@@ -464,9 +464,9 @@ export default function DirectHoldingsTab({
           </div>
 
           {/* TVPI */}
-          <div className="px-4 py-3.5 flex flex-col">
+          <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
-            <p className="text-base font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
+            <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
               {tvpi !== null ? `${tvpi.toFixed(2)}×` : "—"}
             </p>
             <BenchmarkBar value={tvpi} q1={BM.tvpi.q1} q3={BM.tvpi.q3} />
@@ -494,7 +494,7 @@ export default function DirectHoldingsTab({
         <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
 
           {/* LEFT: allocation + MOIC */}
-          <div className="flex-1 px-5 py-5">
+          <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
 
             {/* Total MOIC box */}
             <div className="mb-5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center justify-between">
@@ -544,7 +544,7 @@ export default function DirectHoldingsTab({
           </div>
 
           {/* RIGHT: donut + legend */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 px-5 py-5 flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 px-4 sm:px-5 py-4 sm:py-5 flex-1">
             <div className="shrink-0 flex justify-center">
               <svg width={160} height={160} viewBox="0 0 160 160">
                 {arcs.map((a, i) => <path key={i} d={a.path} fill={accentFor(a.id)} fillOpacity={0.85} />)}
@@ -921,7 +921,7 @@ export default function DirectHoldingsTab({
       </div>
 
       {/* ══ Disclosure ═══════════════════════════════════════════════════════ */}
-      <div className="rounded-lg border border-[#1E2D3D] bg-[#080E1A] px-5 py-4">
+      <div className="rounded-lg border border-[#1E2D3D] bg-[#080E1A] px-4 sm:px-5 py-3 sm:py-4">
         <p className="text-[10px] text-slate-600 leading-relaxed">
           Values are based on implied share prices derived from the most recent cap table and are for
           informational purposes only. They do not represent a guarantee of value, liquidity, or future

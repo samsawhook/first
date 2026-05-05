@@ -359,10 +359,13 @@ export default function Dashboard() {
   };
 
   const directInvestor = directInvestorId ? findDirectInvestor(directInvestorId) : undefined;
+  const isPalash = directInvestor?.id === "palash-jillian";
+  // Hide the regular Deal Memo (proposal) tab when Palash is signed in — they get the
+  // dedicated "My Deal Memo" tab instead.
   const tabs = directInvestor
     ? [
-        ...BASE_TABS,
-        ...(directInvestor.id === "palash-jillian"
+        ...(isPalash ? BASE_TABS.filter(t => t.id !== "proposal") : BASE_TABS),
+        ...(isPalash
           ? [{ id: "palash-memo" as Tab, label: "My Deal Memo", icon: <FileText size={15} /> }]
           : []),
         { id: "direct" as Tab, label: "My Holdings", icon: <User size={15} /> },
@@ -500,7 +503,7 @@ export default function Dashboard() {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 sm:pb-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 sm:pb-8">
         {/* Company detail page */}
         {activeCompany && (
           <CompanyPage
@@ -1645,7 +1648,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!activeCompany && activeTab === "proposal" && (() => {
+        {!activeCompany && activeTab === "proposal" && !isPalash && (() => {
           // ── Proposal scenario shadowing ──────────────────────────────────────
           const portfolio = withAudilyAccrued(basePortfolio).map(c => {
             if (c.id === "audily") {
@@ -3088,11 +3091,11 @@ export default function Dashboard() {
           ];
 
           return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* ── Header summary ── */}
-            <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 px-6 py-5">
-              <p className="text-xs font-semibold uppercase tracking-widest text-purple-400 mb-3">My Deal Memo — LP Roll-up Scenario</p>
-              <ul className="space-y-2 text-sm text-slate-300">
+            <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 px-4 py-4 sm:px-6 sm:py-5">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-widest text-purple-400 mb-2 sm:mb-3">My Deal Memo — LP Roll-up Scenario</p>
+              <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
                   <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span> + <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
@@ -3117,58 +3120,58 @@ export default function Dashboard() {
             </div>
 
             {/* ── My Holdings KPIs (progression + LP metrics) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
-                <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(palashOriginalBasis)}</p>
-                <p className="text-[10px] text-slate-600 mt-1">cost basis − principal repaid</p>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(palashOriginalBasis)}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">cost basis − principal repaid</p>
               </div>
-              <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
-                <p className="text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[10px] text-purple-400/70 mt-1">{fmt(palashOriginalBasis)} basis + {fmt(palashUnrealizedGains)} gains + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
+              <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
+                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashOriginalBasis)} basis + {fmt(palashUnrealizedGains)} gains + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Roll-up + Deal)</p>
-                <p className="text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(palashNav)}</p>
-                <p className="text-[10px] text-slate-500 mt-1">{(palashPct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(palashNav)}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 leading-tight">{(palashPct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
               </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
-                <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis</p>
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">NAV ÷ LP basis</p>
               </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑤ DPI</p>
-                <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{palashDpi.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">distributions ÷ basis (none yet)</p>
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑤ DPI</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{palashDpi.toFixed(2)}×</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">distributions ÷ basis</p>
               </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑥ TVPI</p>
-                <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashTvpi.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">(NAV + dist.) ÷ basis</p>
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑥ TVPI</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums mt-1" style={{ color: palashTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashTvpi.toFixed(2)}×</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">(NAV + dist.) ÷ basis</p>
               </div>
             </div>
 
             {/* ── Fund Holdings Breakdown (proposal-tab style, bottom-up) ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D]">
-                <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D] divide-x sm:divide-x divide-[#1E2D3D]">
+                <div className="px-3 sm:px-4 py-3 sm:py-3.5 border-b sm:border-b-0 border-[#1E2D3D]">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund NAV</p>
                   <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(newFundNav)}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">assets {fmt(grossAssets)} · lev. -{fmt(newFundLeverage)}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5 leading-tight">assets {fmt(grossAssets)} · lev. -{fmt(newFundLeverage)}</p>
                 </div>
-                <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+                <div className="px-3 sm:px-4 py-3 sm:py-3.5 border-b sm:border-b-0 border-[#1E2D3D]">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">LP Basis Total</p>
                   <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(BASE_LP_TOTAL_UNITS + newLpBasis)}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()} units · $1.00/unit par</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5 leading-tight">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()} units · $1/unit par</p>
                 </div>
-                <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+                <div className="px-3 sm:px-4 py-3 sm:py-3.5">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund MOIC</p>
                   <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{(newFundNav / (BASE_LP_TOTAL_UNITS + newLpBasis)).toFixed(2)}×</p>
                   <p className="text-[9px] text-slate-600 mt-0.5">NAV ÷ LP basis</p>
                 </div>
-                <div className="px-4 py-3.5">
+                <div className="px-3 sm:px-4 py-3 sm:py-3.5">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
                   <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{companyRows.length}</p>
                   <p className="text-[9px] text-slate-600 mt-0.5">active positions</p>
@@ -3177,7 +3180,7 @@ export default function Dashboard() {
 
               <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
                 {/* LEFT: Allocation by security type */}
-                <div className="flex-1 px-5 py-5">
+                <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Allocation by Security Type</p>
                   {allocByType.map(a => {
                     const pct = allocTotalByType > 0 ? a.amount / allocTotalByType : 0;
@@ -3206,9 +3209,9 @@ export default function Dashboard() {
                 </div>
 
                 {/* RIGHT: Donut by company */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-6 px-5 py-5 flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 px-4 sm:px-5 py-4 sm:py-5 flex-1">
                   <div className="shrink-0 flex justify-center">
-                    <svg width={160} height={160} viewBox="0 0 160 160">
+                    <svg width={140} height={140} viewBox="0 0 160 160" className="sm:w-40 sm:h-40">
                       {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
                       <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(donutTotal)}</text>
                       <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">gross</text>
@@ -3230,13 +3233,13 @@ export default function Dashboard() {
 
             {/* ── Look-through Asset Allocation (Palash's pro-rata view) ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#A78BFA" }} />
-                <p className="text-sm font-semibold text-slate-200">My Look-through Allocation ({(palashPct * 100).toFixed(2)}% of fund)</p>
+              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#A78BFA" }} />
+                <p className="text-xs sm:text-sm font-semibold text-slate-200">My Look-through ({(palashPct * 100).toFixed(2)}% of fund)</p>
               </div>
               <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
                 {/* By type */}
-                <div className="flex-1 px-5 py-5">
+                <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Security Type</p>
                   {lookThroughByType.map(a => {
                     const pct = allocTotalByType > 0 ? a.amount / allocTotalByType : 0;
@@ -3265,7 +3268,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* By company */}
-                <div className="flex-1 px-5 py-5">
+                <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
                   {lookThroughByCompany.map(c => {
                     const pct = donutTotal > 0 ? c.value / donutTotal : 0;
@@ -3292,17 +3295,17 @@ export default function Dashboard() {
             </div>
 
             {/* ── 3 LP Contribution cards ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               {lpRows.filter(l => l.id !== "existing").map(lp => {
                 const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
                 return (
-                  <div key={lp.id} className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
+                  <div key={lp.id} className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full" style={{ background: lp.accent }} />
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{lp.name}</p>
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: lp.accent }} />
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 truncate">{lp.name}</p>
                     </div>
-                    <p className="text-base font-bold tabular-nums" style={{ color: lp.accent }}>{fmt(lp.basis)}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">LP basis · {lp.type}</p>
+                    <p className="text-sm sm:text-base font-bold tabular-nums" style={{ color: lp.accent }}>{fmt(lp.basis)}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">LP basis · {lp.type}</p>
                     <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60">
                       <p className="text-[10px] text-slate-500 tabular-nums">{lp.units.toLocaleString()} units</p>
                       <p className="text-[10px] text-slate-600 tabular-nums">{(pct * 100).toFixed(2)}% of post-roll-up fund</p>
@@ -3314,9 +3317,9 @@ export default function Dashboard() {
 
             {/* ── Resulting Fund Portfolio table ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#10B981" }} />
-                <p className="text-sm font-semibold text-slate-200">Resulting Fund Portfolio (Post Roll-up + Deal)</p>
+              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
+                <p className="text-xs sm:text-sm font-semibold text-slate-200">Resulting Fund Portfolio</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -3374,9 +3377,9 @@ export default function Dashboard() {
 
             {/* ── LP Cap Table ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#8B5CF6" }} />
-                <p className="text-sm font-semibold text-slate-200">LP Cap Table — Post Roll-up</p>
+              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#8B5CF6" }} />
+                <p className="text-xs sm:text-sm font-semibold text-slate-200">LP Cap Table — Post Roll-up</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
