@@ -627,21 +627,21 @@ export default function DirectHoldingsTab({
               <tbody className="divide-y divide-[#0D1421]">
                 {notesPos.map((p, i) => {
                   const repaid = p.repaid ?? 0;
+                  const principal = p.principal ?? 0;
                   const total = repaid + (p.interestDividend ?? 0);
                   const moic = p.costBasis > 0 ? total / p.costBasis : null;
-                  const fullyRepaid = !p.rolled && repaid > 0 && repaid >= (p.principal ?? 0);
+                  const settledPct = p.rolled ? 100 : principal > 0 ? Math.round(repaid / principal * 100) : 0;
                   return (
                     <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
                       <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
                       <TD><CompanyName p={p} /></TD>
                       <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
-                      <TD className="text-slate-300 tabular-nums">{fmt(p.principal ?? 0)}</TD>
+                      <TD className="text-slate-300 tabular-nums">{fmt(principal)}</TD>
                       <TD>
-                        {p.rolled
-                          ? <span className="text-amber-400 font-semibold">↻ Rolled</span>
-                          : fullyRepaid
-                            ? <span className="text-emerald-400 font-semibold">Repaid</span>
-                            : repaid > 0 ? <span className="text-yellow-400">{fmt(repaid)} partial</span>
+                        {settledPct === 100
+                          ? <span className="text-emerald-400 font-semibold">100% repaid</span>
+                          : settledPct > 0
+                            ? <span className="text-yellow-400 font-semibold">{settledPct}% repaid</span>
                             : <span className="text-slate-600">Outstanding</span>}
                       </TD>
                       <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
