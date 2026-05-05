@@ -5285,7 +5285,7 @@ export default function Dashboard() {
         )}
 
         {!activeCompany && activeTab === "direct" && directInvestor && (
-          <DirectHoldingsTab investor={directInvestor} portfolio={portfolio} />
+          <DirectHoldingsTab investor={directInvestor} />
         )}
 
         {!activeCompany && activeTab === "investor" && (
