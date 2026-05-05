@@ -108,7 +108,29 @@ const SCENARIOB_FALCONER_SHARES  = 4_735_803;
 const SCENARIOB_SBR2TH_SHARES    = 3_247_832;
 const SCENARIOB_MB_SHARES        = 4_804_351;
 
-type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct";
+type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct" | "palash-memo";
+
+// ── Palash Deal Memo additions (palash-memo tab only) ─────────────────────────
+const PALASH_LP_BASIS = 980_000;
+const PALASH_LP_B_BASIS = 100_000;
+const PALASH_LP_C_BASIS = 250_000;
+// Palash rolls in his Class A Common (purchased + earned)
+const PALASH_ROLLUP_SHARES: Record<string, number> = {
+  audily:           72_850 + 4_606_158,    // purchased + earned
+  sbr2th:        2_500_000 + 250_000 + 3_108_640,
+  certd:         2_500_000 + 250_000 + 3_079_061,
+  sentius:       2_500_000 + 250_000,      // purchased only
+  galileo:       2_500_000 + 250_000,      // purchased only
+  "merchant-boxes": 4_593_450,             // earned only
+  falconer:        4_532_840,              // earned only
+};
+// LP D rolls in (matches scenario-b shares)
+const PALASH_LP_D_SHARES: Record<string, number> = {
+  certd:           SCENARIOB_PIGEON_SHARES,
+  falconer:        SCENARIOB_FALCONER_SHARES,
+  sbr2th:          SCENARIOB_SBR2TH_SHARES,
+  "merchant-boxes": SCENARIOB_MB_SHARES,
+};
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Fund Overview",  icon: <LayoutDashboard size={15} /> },
@@ -338,7 +360,13 @@ export default function Dashboard() {
 
   const directInvestor = directInvestorId ? findDirectInvestor(directInvestorId) : undefined;
   const tabs = directInvestor
-    ? [...BASE_TABS, { id: "direct" as Tab, label: "My Holdings", icon: <User size={15} /> }]
+    ? [
+        ...BASE_TABS,
+        ...(directInvestor.id === "palash-jillian"
+          ? [{ id: "palash-memo" as Tab, label: "My Deal Memo", icon: <FileText size={15} /> }]
+          : []),
+        { id: "direct" as Tab, label: "My Holdings", icon: <User size={15} /> },
+      ]
     : BASE_TABS;
 
   return (
@@ -2797,6 +2825,242 @@ export default function Dashboard() {
                   </svg>
                   sawhook.substack.com
                 </a>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
+        {!activeCompany && activeTab === "palash-memo" && directInvestor?.id === "palash-jillian" && (() => {
+          // ── Palash Deal Memo: roll-up scenario with 4 new LPs ────────────────
+          const ppsOf = (id: string) => basePortfolio.find(c => c.id === id)?.customPricePerShare ?? 0;
+          const valueOf = (rollup: Record<string, number>) =>
+            Object.entries(rollup).reduce((sum, [id, sh]) => sum + sh * ppsOf(id), 0);
+
+          const palashRollupValue = valueOf(PALASH_ROLLUP_SHARES);
+          const lpDValue          = valueOf(PALASH_LP_D_SHARES);
+          const lpDBasis          = Math.round(lpDValue);
+          const newLpCapital      = PALASH_LP_BASIS + PALASH_LP_B_BASIS + PALASH_LP_C_BASIS + lpDBasis;
+          const newLpUnitsTotal   = BASE_LP_TOTAL_UNITS + newLpCapital;
+
+          // Deal cost
+          const audilyPrefCost  = 150_000;
+          const nuecesEquityCost = 320_000;
+          const nuecesNote       = 120_000;
+
+          // Per-company merged shares
+          const allCompanyIds = new Set<string>([
+            ...Object.keys(PALASH_ROLLUP_SHARES),
+            ...Object.keys(PALASH_LP_D_SHARES),
+            "audily", "nueces-brewing",
+          ]);
+          const merged = Array.from(allCompanyIds).map(id => {
+            const c = basePortfolio.find(p => p.id === id);
+            const pps = ppsOf(id);
+            const fundCommonPre = (c?.shareTransactions ?? [])
+              .filter(t => t.type === "Common")
+              .reduce((s, t) => s + (t.shares ?? 0), 0);
+            const palashRollIn = PALASH_ROLLUP_SHARES[id] ?? 0;
+            const lpDRollIn    = PALASH_LP_D_SHARES[id] ?? 0;
+            // Nueces deal: 50,000 shares purchased
+            const dealShares = id === "nueces-brewing" ? 50_000 : 0;
+            const post = fundCommonPre + palashRollIn + lpDRollIn + dealShares;
+            const postValue = post * (id === "nueces-brewing" ? 6.40 : pps);
+            return { id, name: c?.name ?? id, accent: c?.accentColor ?? "#94A3B8",
+                     pps, fundCommonPre, palashRollIn, lpDRollIn, dealShares, post, postValue };
+          }).sort((a, b) => b.postValue - a.postValue);
+
+          // Existing LPs
+          const existingLpUnits = BASE_LP_TOTAL_UNITS;
+
+          const lpRows = [
+            { id: "existing", name: "Existing Co-Owner Fund LPs", units: existingLpUnits, basis: existingLpUnits, type: "—", accent: "#64748B" },
+            { id: "palash",   name: `${directInvestor.name} (you)`, units: PALASH_LP_BASIS, basis: PALASH_LP_BASIS, type: "in-kind equity roll-up", accent: "#A78BFA" },
+            { id: "lpB",      name: "LP B",                       units: PALASH_LP_B_BASIS, basis: PALASH_LP_B_BASIS, type: "cash", accent: "#34D399" },
+            { id: "lpC",      name: "LP C",                       units: PALASH_LP_C_BASIS, basis: PALASH_LP_C_BASIS, type: "cash", accent: "#34D399" },
+            { id: "lpD",      name: "LP D",                       units: lpDBasis,          basis: lpDBasis,          type: "in-kind equity roll-up", accent: "#F59E0B" },
+          ];
+
+          return (
+          <div className="space-y-6">
+            {/* ── Header summary ── */}
+            <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 px-6 py-5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-purple-400 mb-3">My Deal Memo — LP Roll-up Scenario</p>
+              <ul className="space-y-2 text-sm text-slate-300">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-purple-400">•</span>
+                  <span>Roll your direct holdings into Co-Owner Fund LP for an LP basis of <span className="text-white font-medium">{fmt(PALASH_LP_BASIS)}</span> (in-kind contribution valued at default share prices: <span className="text-slate-400">{fmt(palashRollupValue)}</span>)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-purple-400">•</span>
+                  <span>LP B contributes <span className="text-white font-medium">{fmt(PALASH_LP_B_BASIS)}</span> cash; LP C contributes <span className="text-white font-medium">{fmt(PALASH_LP_C_BASIS)}</span> cash</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-purple-400">•</span>
+                  <span>LP D rolls in 4 portfolio company positions — total <span className="text-white font-medium">{fmt(lpDBasis)}</span> at default PPS</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-purple-400">•</span>
+                  <span>Fund executes the deal: <span className="text-white font-medium">{fmt(audilyPrefCost)}</span> Audily Series A Preferred + <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-purple-500/50 hover:decoration-purple-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">{fmt(nuecesEquityCost)}</span> ({fmt(nuecesNote)} seller note)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-purple-400">•</span>
+                  <span>New LP capital raised: <span className="text-emerald-400 font-medium">{fmt(newLpCapital)}</span> · Outstanding units post-roll-up: <span className="text-white font-medium">{newLpUnitsTotal.toLocaleString()}</span></span>
+                </li>
+              </ul>
+            </div>
+
+            {/* ── 4 LP Contribution cards ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {lpRows.filter(l => l.id !== "existing").map(lp => {
+                const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
+                return (
+                  <div key={lp.id} className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ background: lp.accent }} />
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{lp.name}</p>
+                    </div>
+                    <p className="text-base font-bold tabular-nums" style={{ color: lp.accent }}>{fmt(lp.basis)}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">LP basis · {lp.type}</p>
+                    <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60">
+                      <p className="text-[10px] text-slate-500 tabular-nums">{lp.units.toLocaleString()} units</p>
+                      <p className="text-[10px] text-slate-600 tabular-nums">{(pct * 100).toFixed(2)}% of post-roll-up fund</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── My LP position (Palash highlight) ── */}
+            {(() => {
+              const palashPct = newLpUnitsTotal > 0 ? PALASH_LP_BASIS / newLpUnitsTotal : 0;
+              return (
+                <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 px-6 py-5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-purple-300 mb-3">My LP Position</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">LP Basis</p>
+                      <p className="text-base font-bold tabular-nums text-purple-300 mt-1">{fmt(PALASH_LP_BASIS)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">LP Units</p>
+                      <p className="text-base font-bold tabular-nums text-slate-200 mt-1">{PALASH_LP_BASIS.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">% of Fund</p>
+                      <p className="text-base font-bold tabular-nums text-purple-300 mt-1">{(palashPct * 100).toFixed(2)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">Roll-in Value</p>
+                      <p className="text-base font-bold tabular-nums text-slate-200 mt-1">{fmt(palashRollupValue)}</p>
+                      <p className="text-[9px] text-slate-600">at default PPS</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Resulting Fund Portfolio table ── */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#10B981" }} />
+                <p className="text-sm font-semibold text-slate-200">Resulting Fund Portfolio (Post Roll-up + Deal)</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                    <tr>
+                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Company</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Fund Pre</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Palash</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ LP D</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Post Total</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">PPS</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Post Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0D1421]">
+                    {merged.map(r => (
+                      <tr key={r.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: r.accent }} />
+                            <span className="font-medium text-slate-200">{r.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{r.fundCommonPre.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: r.palashRollIn > 0 ? "#A78BFA" : "#475569" }}>{r.palashRollIn > 0 ? `+${r.palashRollIn.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: r.lpDRollIn > 0 ? "#F59E0B" : "#475569" }}>{r.lpDRollIn > 0 ? `+${r.lpDRollIn.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: r.dealShares > 0 ? "#34D399" : "#475569" }}>{r.dealShares > 0 ? `+${r.dealShares.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{r.post.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-500">{r.pps > 0 ? `$${r.pps.toFixed(4)}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: r.accent }}>{r.postValue > 0 ? fmt(r.postValue) : "—"}</td>
+                      </tr>
+                    ))}
+                    {/* Totals */}
+                    <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                      <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-300">{merged.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#A78BFA" }}>+{merged.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{merged.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{merged.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{merged.reduce((s, r) => s + r.post, 0).toLocaleString()}</td>
+                      <td />
+                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(merged.reduce((s, r) => s + r.postValue, 0))}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── LP Cap Table ── */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#8B5CF6" }} />
+                <p className="text-sm font-semibold text-slate-200">LP Cap Table — Post Roll-up</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                    <tr>
+                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP</th>
+                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Type</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP Basis</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Units</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">% of Fund</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0D1421]">
+                    {lpRows.map(lp => {
+                      const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
+                      const isPalash = lp.id === "palash";
+                      return (
+                        <tr key={lp.id} className={`hover:bg-[#111D2E]/40 transition-colors ${isPalash ? "bg-purple-500/5" : ""}`}>
+                          <td className="py-2.5 px-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: lp.accent }} />
+                              <span className="font-medium text-slate-200">{lp.name}</span>
+                              {isPalash && <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#4C1D95", color: "#C4B5FD" }}>YOU</span>}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-400 text-[11px]">{lp.type}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-medium">{fmt(lp.basis)}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{lp.units.toLocaleString()}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: isPalash ? "#A78BFA" : "#94A3B8" }}>
+                            {(pct * 100).toFixed(2)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                      <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider" colSpan={2}>Total</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{fmt(BASE_LP_TOTAL_UNITS + newLpCapital)}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{(BASE_LP_TOTAL_UNITS + newLpCapital).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">100.00%</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
