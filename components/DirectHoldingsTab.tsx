@@ -56,7 +56,7 @@ interface Props {
 export default function DirectHoldingsTab({
   investor, portfolio, userValuations, onOpenValuationModal, onResetValuation, onSelectCompany,
 }: Props) {
-  const [open, setOpen] = useState(new Set(["equity", "convertibles", "notes", "ownership"]));
+  const [open, setOpen] = useState(new Set(["equity", "convertibles", "notes", "lp", "ownership"]));
   const toggle = (k: string) => setOpen(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
   const [openCompanies, setOpenCompanies] = useState<Set<string>>(new Set());
   const toggleCompany = (k: string) => setOpenCompanies(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
@@ -100,6 +100,7 @@ export default function DirectHoldingsTab({
   const convertPos = positions.filter(p => p.category === "Purchased Equity" && !isCommonOrRSU(p.securityType));
   const notesPos   = positions.filter(p => p.category === "Short-term Notes");
   const earnedPos  = positions.filter(p => p.category === "Earned Equity");
+  const lpPos      = positions.filter(p => p.category === "LP Interests");
 
   const sum = (ps: DirectPosition[], f: (p: DirectPosition) => number) =>
     ps.reduce((s, p) => s + f(p), 0);
@@ -115,16 +116,18 @@ export default function DirectHoldingsTab({
   const creditInterest  = sum(notesPos,   p => p.interestDividend ?? 0);
   const earnedValue       = sum(earnedPos,  p => estVal(p));
   const earnedEquityValue = sum(earnedPos.filter(p => p.securityType !== "RSU"), p => estVal(p));
+  const lpInterestsCost   = sum(lpPos, p => p.costBasis);
+  const lpInterestsValue  = sum(lpPos, p => p.estimatedValue);
 
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
 
   const creditOutstanding = sum(notesPos, p => p.estimatedValue);
-  const amountInvested = equityCost + creditPrincipal;
+  const amountInvested = equityCost + creditPrincipal + lpInterestsCost;
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
   const cashReceived   = amountRepaid + creditInterest + convertInterest;
-  const portfolioValue = equityValue + earnedEquityValue;    // RSUs excluded; notes fully repaid
+  const portfolioValue = equityValue + earnedEquityValue + lpInterestsValue;    // RSUs excluded; notes fully repaid
   const totalReturn    = portfolioValue + creditInterest + convertInterest + amountRepaid;
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
   const dpi            = amountInvested > 0 ? cashReceived / amountInvested : null;
@@ -514,9 +517,10 @@ export default function DirectHoldingsTab({
             {/* Allocation bars — overview style */}
             <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Capital Allocated</p>
             {[
-              { label: "Equity",       amount: commonCost,    color: "#10B981" },
-              { label: "Convertibles", amount: convertCost,   color: "#F59E0B" },
+              { label: "Equity",       amount: commonCost,      color: "#10B981" },
+              { label: "Convertibles", amount: convertCost,     color: "#F59E0B" },
               { label: "Credit",       amount: creditPrincipal, color: "#6366F1" },
+              { label: "LP Interests", amount: lpInterestsCost, color: "#A78BFA" },
             ].filter(b => b.amount > 0).map(b => {
               const pct = amountInvested > 0 ? b.amount / amountInvested : 0;
               return (
@@ -821,7 +825,61 @@ export default function DirectHoldingsTab({
         )}
       </div>
 
-      {/* ══ 4. Company Ownership ═════════════════════════════════════════════ */}
+      {/* ══ 4. LP Interests ═══════════════════════════════════════════════ */}
+      {lpPos.length > 0 && (
+        <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+          <div className="border-b border-[#1E2D3D]">
+            <SectionHeader label="LP Interests" tableKey="lp" accentCol="#A78BFA" stats={[
+              { label: "Cost Basis", value: fmt(lpInterestsCost) },
+              { label: "Est. Value", value: fmt(lpInterestsValue), color: "#A78BFA" },
+              { label: "MOIC",       value: lpInterestsCost > 0 ? `${(lpInterestsValue / lpInterestsCost).toFixed(2)}×` : "—", color: lpInterestsValue >= lpInterestsCost ? "#10B981" : "#F87171" },
+              { label: "# Positions", value: `${lpPos.length}` },
+            ]} />
+          </div>
+          {open.has("lp") && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                  <tr>
+                    <TH></TH><TH wide>Fund</TH><TH>Type</TH><TH>Issue Date</TH>
+                    <TH>Cost Basis</TH><TH>Est. Value</TH><TH>MOIC</TH>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#0D1421]">
+                  {lpPos.map((p, i) => {
+                    const moic = p.costBasis > 0 ? p.estimatedValue / p.costBasis : null;
+                    return (
+                      <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
+                        <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
+                        <TD><CompanyName p={p} /></TD>
+                        <TD className="text-slate-400">{p.securityType}</TD>
+                        <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
+                        <TD className="text-slate-300 tabular-nums">{fmt(p.costBasis)}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: "#A78BFA" }}>{fmt(p.estimatedValue)}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: moic !== null ? gainColor(moic - 1) : "#94A3B8" }}>
+                          {moic !== null ? `${moic.toFixed(2)}×` : "—"}
+                        </TD>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                    <td className="py-2 px-3" />
+                    <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                    <td /><td />
+                    <td className="py-2 px-3 text-xs text-slate-200 tabular-nums font-semibold">{fmt(lpInterestsCost)}</td>
+                    <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: "#A78BFA" }}>{fmt(lpInterestsValue)}</td>
+                    <td className="py-2 px-3 text-xs tabular-nums font-semibold" style={{ color: lpInterestsCost > 0 && lpInterestsValue >= lpInterestsCost ? "#10B981" : "#F87171" }}>
+                      {lpInterestsCost > 0 ? `${(lpInterestsValue / lpInterestsCost).toFixed(2)}×` : "—"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ 5. Company Ownership ═════════════════════════════════════════════ */}
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Company Ownership" tableKey="ownership" accentCol="#8B5CF6" stats={[
