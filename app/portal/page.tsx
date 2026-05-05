@@ -5291,6 +5291,7 @@ export default function Dashboard() {
             userValuations={userValuations}
             onOpenValuationModal={(c, v) => setValuationModal({ company: c, pendingVal: v })}
             onResetValuation={(id) => setUserValuations(prev => { const n = { ...prev }; delete n[id]; return n; })}
+            onSelectCompany={(id) => setActiveCompanyId(id)}
           />
         )}
 

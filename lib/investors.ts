@@ -32,6 +32,7 @@ export interface DirectPosition {
   perShareBasis?: number;
   costBasis:  number;           // 0 for earned / RSU
   principal?: number;           // debt: face amount
+  repaid?:    number;           // debt: principal already returned to investor
   interestDividend?: number;    // interest or dividends earned
   estimatedValue: number;
   annualizedReturnPct?: number;
