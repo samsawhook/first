@@ -14,11 +14,13 @@ const ACCENT: Record<string, string> = {
   "nth-venture":    "#64748B",
   "sentius":        "#06B6D4",
   "galileo":        "#6366F1",
+  "co-owner-fund":  "#14B8A6",
 };
 const FALLBACK_INITIALS: Record<string, string> = {
   "audily": "AU", "sbr2th": "S2", "certd": "PS",
   "merchant-boxes": "MB", "falconer": "FL",
   "nth-venture": "NV", "sentius": "SD", "galileo": "GC",
+  "co-owner-fund": "CO",
 };
 const EXTRA_LOGOS: Record<string, string> = {
   "nth-venture": "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png",
