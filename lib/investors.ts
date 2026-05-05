@@ -115,11 +115,14 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       // nth Venture Series A Preferred (purchased) — 2M shares from Feb 2, 2023.
       { category: "Purchased Equity", issueDate: "2023-02-02", securityType: "Series A Preferred", company: "nth Venture Inc.",                            shares: 2_000_000, perShareBasis: 0.10, costBasis: 200_000.00, estimatedValue: 200_000.00 },
       // Audily SAFE → Series A: $50k → 625 preferreds at $80/share, converted Sept 6, 2024.
-      { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00 },
-      // Audily short-term note: $100k principal, balance $95,639.35 (so $4,360.65 repaid), 16.5% APR, issued 10/9/25.
-      { category: "Short-term Notes",  issueDate: "2025-10-09", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5 },
-      // LP interest (new asset class). $100k LP basis.
-      { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: 100_000, estimatedValue: 100_000 },
+      { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00, interestDividend: 5_583.36 },
+      // Audily short-term notes — older notes that rolled forward into the 10/8/25 $100k note.
+      { category: "Short-term Notes",  issueDate: "2025-02-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 14_386, rolled: true, interestDividend: 2_338.83, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5 },
+      { category: "Short-term Notes",  issueDate: "2025-09-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 0, rolled: true, interestDividend: 0, costBasis: 30_000, estimatedValue: 0, annualizedReturnPct: 16.5 },
+      // Audily $100k note from 10/8/25 (rolled in $30k from 9/3/25 + $15,614 from 2/3/25 + $54,386 new). Balance $95,639.35, 16.5% APR.
+      { category: "Short-term Notes",  issueDate: "2025-10-08", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5 },
+      // LP interest (new asset class). $100k LP basis marked-up to relevant NAV (par $1/unit × NAV/unit).
+      { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: 100_000, estimatedValue: 6_471_408 },
     ],
   },
 ];
