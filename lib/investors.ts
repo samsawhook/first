@@ -109,7 +109,7 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
   {
     id:            "neil-wolfson",
     name:          "Neil Wolfson",
-    investorSince: "September 30, 2024",
+    investorSince: "August 29, 2022",
     statementDate: "May 5, 2026",
     positions: [
       // Earned Class A Common across the 5 portfolio companies.
@@ -123,7 +123,11 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       // Audily RSUs (excluded from value totals).
       { category: "Earned Equity", issueDate: "2024-09-30", securityType: "RSU",            company: "Audily Inc.",          companyId: "audily",         shares:   500_000, costBasis: 0, estimatedValue: 0 },
       // nth Venture Series A Preferred (purchased) — 2M shares from Feb 2, 2023.
-      { category: "Purchased Equity", issueDate: "2023-02-02", securityType: "Series A Preferred", company: "nth Venture Inc.",                            shares: 2_000_000, perShareBasis: 0.10, costBasis: 200_000.00, estimatedValue: 200_000.00 },
+      // Payment: $25,000 cash + 5,000,000 Class A Common shares each in PRreact (Galileo),
+      // CERTD, Sentius, and SBR2TH (20M total at $0.005 original cost = $100,000 carryover
+      // basis). Total basis = $25k cash + $100k carryover = $125,000 ($0.0625/preferred).
+      { category: "Purchased Equity", issueDate: "2023-02-02", securityType: "Series A Preferred", company: "nth Venture Inc.",                            shares: 2_000_000, perShareBasis: 0.0625, costBasis: 125_000.00, estimatedValue: 125_000.00,
+        notes: "Acquired for $25,000 cash + 20M Class A Common shares (5M each in PRreact / CERTD / Sentius / SBR2TH at $0.005 original cost = $100k carryover basis). Combined basis $125,000." },
       // Audily SAFE → Series A: $50k → 625 preferreds at $80/share, converted Sept 6, 2024.
       { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00, interestDividend: 5_583.36 },
       // Audily short-term notes — older notes that rolled forward into the 10/8/25 $100k note.

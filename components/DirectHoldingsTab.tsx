@@ -730,25 +730,34 @@ export default function DirectHoldingsTab({
                   const dist = p.interestDividend ?? 0;
                   const rowReturn = p.costBasis > 0 ? (v + dist - p.costBasis) / p.costBasis : null;
                   return (
-                    <tr key={`v${i}`} className="hover:bg-[#111D2E]/40 transition-colors">
-                      <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
-                      <TD><CompanyName p={p} /></TD>
-                      <TD className="text-slate-400">{p.securityType}</TD>
-                      <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
-                      <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
-                      <TD className="text-slate-400 tabular-nums">{p.perShareBasis != null ? `$${p.perShareBasis.toFixed(3)}` : "—"}</TD>
-                      <TD className="text-slate-300 tabular-nums">{fmt(p.costBasis)}</TD>
-                      <TD className="tabular-nums">
-                        {p.shares && p.estimatedValue > 0
-                          ? <span className="text-slate-400">${(p.estimatedValue / p.shares).toFixed(2)}/sh</span>
-                          : <span className="text-slate-600">N/A</span>}
-                      </TD>
-                      <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{dist > 0 ? fmt(dist) : "—"}</TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: v >= p.costBasis ? "#34D399" : "#F87171" }}>{fmt(v)}</TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: rowReturn !== null ? gainColor(rowReturn) : "#94A3B8" }}>
-                        {rowReturn !== null ? `${(rowReturn * 100).toFixed(1)}%` : "—"}
-                      </TD>
-                    </tr>
+                    <Fragment key={`v${i}`}>
+                      <tr className="hover:bg-[#111D2E]/40 transition-colors">
+                        <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
+                        <TD><CompanyName p={p} /></TD>
+                        <TD className="text-slate-400">{p.securityType}</TD>
+                        <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
+                        <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
+                        <TD className="text-slate-400 tabular-nums">{p.perShareBasis != null ? `$${p.perShareBasis.toFixed(4)}` : "—"}</TD>
+                        <TD className="text-slate-300 tabular-nums">{fmt(p.costBasis)}</TD>
+                        <TD className="tabular-nums">
+                          {p.shares && p.estimatedValue > 0
+                            ? <span className="text-slate-400">${(p.estimatedValue / p.shares).toFixed(2)}/sh</span>
+                            : <span className="text-slate-600">N/A</span>}
+                        </TD>
+                        <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{dist > 0 ? fmt(dist) : "—"}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: v >= p.costBasis ? "#34D399" : "#F87171" }}>{fmt(v)}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: rowReturn !== null ? gainColor(rowReturn) : "#94A3B8" }}>
+                          {rowReturn !== null ? `${(rowReturn * 100).toFixed(1)}%` : "—"}
+                        </TD>
+                      </tr>
+                      {p.notes && (
+                        <tr className="bg-[#080E1A]/40">
+                          <td className="py-1 px-3" colSpan={11}>
+                            <p className="text-[10px] text-slate-500 leading-snug pl-9">{p.notes}</p>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
                 {/* Totals */}
