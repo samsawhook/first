@@ -136,9 +136,10 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       // Audily $100k note from 10/8/25.
       // Composition: $46,559.19 rolled in from prior notes ($45,614.19 outstanding principal +
       // $945.00 capitalized accrued interest from the 2/3 and 9/2 loans) + $53,440.81 new cash
-      // gross-up. Balance $95,639.35 outstanding, 16.5% APR.
-      { category: "Short-term Notes",  issueDate: "2025-10-08", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, rolledInFromPrior: 46_559.19, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5,
-        notes: "Consolidates 2/3/25 + 9/2/25 notes: $45,614.19 rolled principal + $945.00 capitalized interest = $46,559.19, plus $53,440.81 new cash gross-up." },
+      // gross-up. Balance $95,639.35 outstanding, 16.5% APR. Cash interest paid 11/7 + 12/4
+      // + 12/9 = $1,375.00 + $533.82 + $811.41 = $2,720.23 (per QuickBooks).
+      { category: "Short-term Notes",  issueDate: "2025-10-08", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, rolledInFromPrior: 46_559.19, interestDividend: 2_720.23, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5,
+        notes: "Consolidates 2/3/25 + 9/2/25 notes: $45,614.19 rolled principal + $945.00 capitalized interest = $46,559.19, plus $53,440.81 new cash gross-up. $2,720.23 cash interest paid in Nov–Dec 2025." },
       // LP interest (new asset class). $100k LP basis marked-up to current NAV/unit
       // using actual bottom-up fund NAV (see top of file for computation).
       { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: NEIL_LP_INTEREST_BASIS, estimatedValue: NEIL_LP_INTEREST_VALUE },
