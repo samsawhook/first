@@ -16,6 +16,7 @@ import {
   RotateCcw,
   FileText,
   Calculator,
+  LogOut,
 } from "lucide-react";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart";
 import FootballField from "@/components/FootballField";
@@ -278,6 +279,7 @@ export default function Dashboard() {
   const [valuationModal, setValuationModal] = useState<{ company: typeof portfolio[0]; pendingVal: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [directInvestorId, setDirectInvestorId] = useState<string | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   useEffect(() => {
     setMounted(true);
     setDirectInvestorId(localStorage.getItem("nth_investor_id_v1"));
@@ -326,6 +328,12 @@ export default function Dashboard() {
   const handleTabClick = (tab: Tab) => {
     setActiveTab(tab);
     setActiveCompanyId(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("nth_access_granted_v1");
+    localStorage.removeItem("nth_investor_id_v1");
+    window.location.reload();
   };
 
   const directInvestor = directInvestorId ? findDirectInvestor(directInvestorId) : undefined;
@@ -381,15 +389,55 @@ export default function Dashboard() {
                 <Lock size={10} />
                 <span>Confidential</span>
               </div>
-              <div className="flex items-center gap-2 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2.5 py-1.5">
-                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-[9px] font-bold text-indigo-400">CF</span>
-                </div>
-                <div className="hidden sm:block leading-tight">
-                  <p className="text-xs font-medium text-slate-200">Co-Owner Fund LP</p>
-                  <p className="text-[9px] text-slate-500">Fund View</p>
-                </div>
-                <User size={12} className="sm:hidden text-slate-400" />
+              {/* Account widget with dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setAccountOpen(o => !o)}
+                  className="flex items-center gap-2 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2.5 py-1.5 hover:bg-[#1A2940] transition-colors"
+                >
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: directInvestor ? "#3B0764" : "#1E3A5F" }}>
+                    <span className="text-[9px] font-bold" style={{ color: directInvestor ? "#C4B5FD" : "#60A5FA" }}>
+                      {directInvestor
+                        ? directInvestor.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)
+                        : "CF"}
+                    </span>
+                  </div>
+                  <div className="hidden sm:block leading-tight text-left">
+                    <p className="text-xs font-medium text-slate-200">
+                      {directInvestor ? directInvestor.name : "Co-Owner Fund LP"}
+                    </p>
+                    <p className="text-[9px] text-slate-500">
+                      {directInvestor ? "Direct Investor" : "Fund View"}
+                    </p>
+                  </div>
+                  <ChevronDown size={10} className="text-slate-500 hidden sm:block" />
+                  <User size={12} className="sm:hidden text-slate-400" />
+                </button>
+                {accountOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1.5 w-56 bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-[#1E2D3D]">
+                        <p className="text-xs font-semibold text-slate-200">
+                          {directInvestor ? directInvestor.name : "Co-Owner Fund LP"}
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          {directInvestor
+                            ? `Investor since ${directInvestor.investorSince}`
+                            : "Fund View"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 transition-colors"
+                      >
+                        <LogOut size={12} />
+                        Log out
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
