@@ -111,9 +111,8 @@ const SCENARIOB_MB_SHARES        = 4_804_351;
 type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct" | "palash-memo";
 
 // ── Palash Deal Memo additions (palash-memo tab only) ─────────────────────────
-const PALASH_LP_BASIS = 980_000;
-const PALASH_LP_B_BASIS = 100_000;
-const PALASH_LP_C_BASIS = 250_000;
+const PALASH_LP_BASIS = 980_000;            // Palash's locked-in LP basis (in-kind contribution)
+const PALASH_CASH_LP_BASIS = 250_000;       // Cash raised elsewhere (one new LP)
 // Palash rolls in his Class A Common (purchased + earned)
 const PALASH_ROLLUP_SHARES: Record<string, number> = {
   audily:           72_850 + 4_606_158,    // purchased + earned
@@ -2832,23 +2831,43 @@ export default function Dashboard() {
         })()}
 
         {!activeCompany && activeTab === "palash-memo" && directInvestor?.id === "palash-jillian" && (() => {
-          // ── Palash Deal Memo: roll-up scenario with 4 new LPs ────────────────
+          // ── Palash Deal Memo: roll-up scenario with 3 new LPs ────────────────
           const ppsOf = (id: string) => basePortfolio.find(c => c.id === id)?.customPricePerShare ?? 0;
           const valueOf = (rollup: Record<string, number>) =>
             Object.entries(rollup).reduce((sum, [id, sh]) => sum + sh * ppsOf(id), 0);
 
+          // Roll-in market values (at default PPS)
           const palashRollupValue = valueOf(PALASH_ROLLUP_SHARES);
           const lpDValue          = valueOf(PALASH_LP_D_SHARES);
           const lpDBasis          = Math.round(lpDValue);
-          const newLpCapital      = PALASH_LP_BASIS + PALASH_LP_B_BASIS + PALASH_LP_C_BASIS + lpDBasis;
-          const newLpUnitsTotal   = BASE_LP_TOTAL_UNITS + newLpCapital;
 
-          // Deal cost
-          const audilyPrefCost  = 150_000;
-          const nuecesEquityCost = 320_000;
-          const nuecesNote       = 120_000;
+          // Deal economics
+          const audilyPrefCost   = 150_000;             // cash
+          const nuecesEquityCost = 320_000;             // 50% of $640k
+          const nuecesNote       = 120_000;             // seller note (new fund leverage)
+          const nuecesCash       = nuecesEquityCost - nuecesNote;  // $200k cash
+          const dealCashTotal    = audilyPrefCost + nuecesCash;    // $350k cash needed
 
-          // Per-company merged shares
+          // LP capital
+          const newLpBasis      = PALASH_LP_BASIS + PALASH_CASH_LP_BASIS + lpDBasis;
+          const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;          // 1 unit = $1 par
+          const newCashFromLPs  = PALASH_CASH_LP_BASIS;                      // only the cash LP brings $$$
+          const cashGapVsDeal   = dealCashTotal - newCashFromLPs;            // $100k from existing fund/financing
+
+          // Fund NAV math (in-kind contributions add to assets at market value;
+          // deal is net-zero against NAV: -$350k cash, +$320k Nueces, +$150k Audily Pref, +$120k seller-note debt = 0)
+          const newFundNav      = baseFund.nav + palashRollupValue + lpDValue + newCashFromLPs;
+          const navPerUnit      = newLpUnitsTotal > 0 ? newFundNav / newLpUnitsTotal : 0;
+          const newFundLeverage = BASE_FUND_LEVERAGE + nuecesNote;           // seller note added
+          const newGrossAssets  = newFundNav + newFundLeverage;              // assets before leverage netting
+
+          // Palash's KPI progression
+          const palashOriginalBasis = directInvestor.positions.reduce((s, p) => s + (p.costBasis ?? 0), 0);
+          const palashNav           = PALASH_LP_BASIS * navPerUnit;
+          const palashMoic          = palashNav / PALASH_LP_BASIS;
+          const palashPct           = newLpUnitsTotal > 0 ? PALASH_LP_BASIS / newLpUnitsTotal : 0;
+
+          // Per-company merged Common-share holdings
           const allCompanyIds = new Set<string>([
             ...Object.keys(PALASH_ROLLUP_SHARES),
             ...Object.keys(PALASH_LP_D_SHARES),
@@ -2862,23 +2881,55 @@ export default function Dashboard() {
               .reduce((s, t) => s + (t.shares ?? 0), 0);
             const palashRollIn = PALASH_ROLLUP_SHARES[id] ?? 0;
             const lpDRollIn    = PALASH_LP_D_SHARES[id] ?? 0;
-            // Nueces deal: 50,000 shares purchased
-            const dealShares = id === "nueces-brewing" ? 50_000 : 0;
-            const post = fundCommonPre + palashRollIn + lpDRollIn + dealShares;
-            const postValue = post * (id === "nueces-brewing" ? 6.40 : pps);
+            const dealShares   = id === "nueces-brewing" ? 50_000 : 0;       // 50% of 100k Nueces
+            const post         = fundCommonPre + palashRollIn + lpDRollIn + dealShares;
+            const postPps      = id === "nueces-brewing" ? 6.40 : pps;
+            const postValue    = post * postPps;
             return { id, name: c?.name ?? id, accent: c?.accentColor ?? "#94A3B8",
                      pps, fundCommonPre, palashRollIn, lpDRollIn, dealShares, post, postValue };
           }).sort((a, b) => b.postValue - a.postValue);
 
-          // Existing LPs
-          const existingLpUnits = BASE_LP_TOTAL_UNITS;
+          // Allocation by security type (post-deal)
+          const equityValue = merged.reduce((s, r) => s + r.postValue, 0);
+          const baseConvertibles = basePortfolio.reduce((s, c) => s + (c.debtPositions ?? [])
+            .filter(d => d.instrument === "Preferred" || d.instrument === "SAFE" || d.instrument === "Convertible Note")
+            .reduce((ss, d) => ss + d.currentValue, 0), 0);
+          const convertValue = baseConvertibles + audilyPrefCost;
+          const baseCredit  = basePortfolio.reduce((s, c) => s + (c.debtPositions ?? [])
+            .filter(d => d.instrument === "Term Loan" || d.instrument === "Line of Credit" || d.instrument === "Revenue Based Financing")
+            .filter(d => d.status !== "Repaid")
+            .reduce((ss, d) => ss + d.currentValue, 0), 0);
+          const cashValue   = cashPositions.reduce((s, c) => s + c.balance, 0) + newCashFromLPs - dealCashTotal;
+          const allocTotal  = equityValue + convertValue + baseCredit + Math.max(0, cashValue);
+          const allocations = [
+            { label: "Equity",       amount: equityValue,  color: "#10B981" },
+            { label: "Convertibles", amount: convertValue, color: "#F59E0B" },
+            { label: "Credit",       amount: baseCredit,   color: "#6366F1" },
+            { label: "Cash",         amount: Math.max(0, cashValue), color: "#60A5FA" },
+          ].filter(a => a.amount > 0);
 
+          // Donut: per-company portfolio value (using post-deal Common values)
+          const donutItems = merged.filter(r => r.postValue > 0);
+          const donutTotal = donutItems.reduce((s, d) => s + d.postValue, 0);
+          const cx = 80, cy = 80, R = 62, r = 40;
+          let ang = -Math.PI / 2;
+          const arcs = donutItems.map(d => {
+            const sweep = donutTotal > 0 ? (d.postValue / donutTotal) * 2 * Math.PI : 0;
+            const x1 = cx + R * Math.cos(ang),       y1 = cy + R * Math.sin(ang);
+            ang += sweep;
+            const x2 = cx + R * Math.cos(ang),       y2 = cy + R * Math.sin(ang);
+            const ix1 = cx + r * Math.cos(ang - sweep), iy1 = cy + r * Math.sin(ang - sweep);
+            const ix2 = cx + r * Math.cos(ang),         iy2 = cy + r * Math.sin(ang);
+            const large = sweep > Math.PI ? 1 : 0;
+            return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
+          });
+
+          // LP rows
           const lpRows = [
-            { id: "existing", name: "Existing Co-Owner Fund LPs", units: existingLpUnits, basis: existingLpUnits, type: "—", accent: "#64748B" },
-            { id: "palash",   name: `${directInvestor.name} (you)`, units: PALASH_LP_BASIS, basis: PALASH_LP_BASIS, type: "in-kind equity roll-up", accent: "#A78BFA" },
-            { id: "lpB",      name: "LP B",                       units: PALASH_LP_B_BASIS, basis: PALASH_LP_B_BASIS, type: "cash", accent: "#34D399" },
-            { id: "lpC",      name: "LP C",                       units: PALASH_LP_C_BASIS, basis: PALASH_LP_C_BASIS, type: "cash", accent: "#34D399" },
-            { id: "lpD",      name: "LP D",                       units: lpDBasis,          basis: lpDBasis,          type: "in-kind equity roll-up", accent: "#F59E0B" },
+            { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                   accent: "#64748B" },
+            { id: "palash",   name: `${directInvestor.name} (you)`, units: PALASH_LP_BASIS,       basis: PALASH_LP_BASIS,       type: "in-kind equity roll-up", accent: "#A78BFA" },
+            { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_CASH_LP_BASIS,  basis: PALASH_CASH_LP_BASIS,  type: "cash",                accent: "#34D399" },
+            { id: "lpD",      name: "LP D",                         units: lpDBasis,              basis: lpDBasis,              type: "in-kind equity roll-up", accent: "#F59E0B" },
           ];
 
           return (
@@ -2889,29 +2940,131 @@ export default function Dashboard() {
               <ul className="space-y-2 text-sm text-slate-300">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Roll your direct holdings into Co-Owner Fund LP for an LP basis of <span className="text-white font-medium">{fmt(PALASH_LP_BASIS)}</span> (in-kind contribution valued at default share prices: <span className="text-slate-400">{fmt(palashRollupValue)}</span>)</span>
+                  <span>Roll your direct holdings into Co-Owner Fund LP for an LP basis (locked) of <span className="text-white font-medium">{fmt(PALASH_LP_BASIS)}</span> — in-kind contribution market value at default PPS: <span className="text-slate-400">{fmt(palashRollupValue)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>LP B contributes <span className="text-white font-medium">{fmt(PALASH_LP_B_BASIS)}</span> cash; LP C contributes <span className="text-white font-medium">{fmt(PALASH_LP_C_BASIS)}</span> cash</span>
+                  <span>Cash LP contributes <span className="text-white font-medium">{fmt(PALASH_CASH_LP_BASIS)}</span> raised elsewhere</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>LP D rolls in 4 portfolio company positions — total <span className="text-white font-medium">{fmt(lpDBasis)}</span> at default PPS</span>
+                  <span>LP D rolls in 4 portfolio company positions at default PPS — total <span className="text-white font-medium">{fmt(lpDBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Fund executes the deal: <span className="text-white font-medium">{fmt(audilyPrefCost)}</span> Audily Series A Preferred + <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-purple-500/50 hover:decoration-purple-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">{fmt(nuecesEquityCost)}</span> ({fmt(nuecesNote)} seller note)</span>
+                  <span>Fund executes the deal: <span className="text-white font-medium">{fmt(audilyPrefCost)}</span> Audily Series A Preferred + <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-purple-500/50 hover:decoration-purple-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">{fmt(nuecesEquityCost)}</span> ({fmt(nuecesNote)} seller note, {fmt(nuecesCash)} cash) — <span className="text-amber-300">{fmt(dealCashTotal)} total cash required</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>New LP capital raised: <span className="text-emerald-400 font-medium">{fmt(newLpCapital)}</span> · Outstanding units post-roll-up: <span className="text-white font-medium">{newLpUnitsTotal.toLocaleString()}</span></span>
+                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> · Cash gap vs deal: <span className="text-amber-400 font-medium">{fmt(cashGapVsDeal)}</span> (existing fund cash / financing)</span>
                 </li>
               </ul>
             </div>
 
-            {/* ── 4 LP Contribution cards ── */}
+            {/* ── My Holdings KPIs (progression) ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
+                <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(palashOriginalBasis)}</p>
+                <p className="text-[10px] text-slate-600 mt-1">cash invested in direct holdings</p>
+              </div>
+              <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
+                <p className="text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(PALASH_LP_BASIS)}</p>
+                <p className="text-[10px] text-purple-400/70 mt-1">{PALASH_LP_BASIS.toLocaleString()} units · locked</p>
+              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Roll-up + Deal)</p>
+                <p className="text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(palashNav)}</p>
+                <p className="text-[10px] text-slate-500 mt-1">{(palashPct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
+              </div>
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
+                <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
+                <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis (locked at {fmt(PALASH_LP_BASIS)})</p>
+              </div>
+            </div>
+
+            {/* ── Fund Holdings Breakdown ── */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D]">
+                <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund NAV</p>
+                  <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(newFundNav)}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">assets {fmt(newGrossAssets)} · lev. -{fmt(newFundLeverage)}</p>
+                </div>
+                <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">LP Basis Total</p>
+                  <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(BASE_LP_TOTAL_UNITS + newLpBasis)}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()} units · $1.00/unit</p>
+                </div>
+                <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
+                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund MOIC</p>
+                  <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{(newFundNav / (BASE_LP_TOTAL_UNITS + newLpBasis)).toFixed(2)}×</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">NAV / units</p>
+                </div>
+                <div className="px-4 py-3.5">
+                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
+                  <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{donutItems.length}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">positions w/ Common</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
+                {/* LEFT: Allocation by security type */}
+                <div className="flex-1 px-5 py-5">
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Allocation by Security Type</p>
+                  {allocations.map(a => {
+                    const pct = allocTotal > 0 ? a.amount / allocTotal : 0;
+                    return (
+                      <div key={a.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ background: a.color }} />
+                            <span className="text-xs text-slate-300 font-medium">{a.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs tabular-nums text-slate-400">{fmt(a.amount)}</span>
+                            <span className="text-[10px] tabular-nums text-slate-600 w-10 text-right">{(pct * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden mb-3">
+                          <div className="h-full rounded-full" style={{ width: `${(pct * 100).toFixed(1)}%`, background: a.color, opacity: 0.8 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
+                    <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total</span>
+                    <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotal)}</span>
+                  </div>
+                </div>
+
+                {/* RIGHT: Donut by company */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6 px-5 py-5 flex-1">
+                  <div className="shrink-0 flex justify-center">
+                    <svg width={160} height={160} viewBox="0 0 160 160">
+                      {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
+                      <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(donutTotal)}</text>
+                      <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">equity</text>
+                    </svg>
+                  </div>
+                  <div className="flex flex-col gap-2 content-center justify-center min-w-0 flex-1">
+                    {donutItems.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.accent }} />
+                        <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                        <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.postValue)}</span>
+                        <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{((d.postValue / donutTotal) * 100).toFixed(1)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── 3 LP Contribution cards ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {lpRows.filter(l => l.id !== "existing").map(lp => {
                 const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
                 return (
@@ -2930,35 +3083,6 @@ export default function Dashboard() {
                 );
               })}
             </div>
-
-            {/* ── My LP position (Palash highlight) ── */}
-            {(() => {
-              const palashPct = newLpUnitsTotal > 0 ? PALASH_LP_BASIS / newLpUnitsTotal : 0;
-              return (
-                <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 px-6 py-5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-purple-300 mb-3">My LP Position</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">LP Basis</p>
-                      <p className="text-base font-bold tabular-nums text-purple-300 mt-1">{fmt(PALASH_LP_BASIS)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">LP Units</p>
-                      <p className="text-base font-bold tabular-nums text-slate-200 mt-1">{PALASH_LP_BASIS.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">% of Fund</p>
-                      <p className="text-base font-bold tabular-nums text-purple-300 mt-1">{(palashPct * 100).toFixed(2)}%</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium">Roll-in Value</p>
-                      <p className="text-base font-bold tabular-nums text-slate-200 mt-1">{fmt(palashRollupValue)}</p>
-                      <p className="text-[9px] text-slate-600">at default PPS</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* ── Resulting Fund Portfolio table ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
@@ -2981,24 +3105,23 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0D1421]">
-                    {merged.map(r => (
-                      <tr key={r.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                    {merged.map(row => (
+                      <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: r.accent }} />
-                            <span className="font-medium text-slate-200">{r.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: row.accent }} />
+                            <span className="font-medium text-slate-200">{row.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
                           </div>
                         </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{r.fundCommonPre.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: r.palashRollIn > 0 ? "#A78BFA" : "#475569" }}>{r.palashRollIn > 0 ? `+${r.palashRollIn.toLocaleString()}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: r.lpDRollIn > 0 ? "#F59E0B" : "#475569" }}>{r.lpDRollIn > 0 ? `+${r.lpDRollIn.toLocaleString()}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: r.dealShares > 0 ? "#34D399" : "#475569" }}>{r.dealShares > 0 ? `+${r.dealShares.toLocaleString()}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{r.post.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-500">{r.pps > 0 ? `$${r.pps.toFixed(4)}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: r.accent }}>{r.postValue > 0 ? fmt(r.postValue) : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.fundCommonPre.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.palashRollIn > 0 ? "#A78BFA" : "#475569" }}>{row.palashRollIn > 0 ? `+${row.palashRollIn.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn > 0 ? "#F59E0B" : "#475569" }}>{row.lpDRollIn > 0 ? `+${row.lpDRollIn.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.post.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-500">{row.pps > 0 ? `$${row.pps.toFixed(4)}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{row.postValue > 0 ? fmt(row.postValue) : "—"}</td>
                       </tr>
                     ))}
-                    {/* Totals */}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-300">{merged.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
@@ -3007,7 +3130,7 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{merged.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{merged.reduce((s, r) => s + r.post, 0).toLocaleString()}</td>
                       <td />
-                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(merged.reduce((s, r) => s + r.postValue, 0))}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityValue)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -3055,8 +3178,8 @@ export default function Dashboard() {
                     })}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider" colSpan={2}>Total</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{fmt(BASE_LP_TOTAL_UNITS + newLpCapital)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{(BASE_LP_TOTAL_UNITS + newLpCapital).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{fmt(newLpUnitsTotal)}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{newLpUnitsTotal.toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">100.00%</td>
                     </tr>
                   </tbody>

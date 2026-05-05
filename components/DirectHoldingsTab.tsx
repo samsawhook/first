@@ -416,24 +416,35 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
 
         {/* ── Metrics strip ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-b border-[#1E2D3D] divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
-          {/* Portfolio Value */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 border-b border-[#1E2D3D] divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+          {/* Combined: Portfolio Value + Investor Basis (with cash returned highlight) */}
           <div className="px-4 py-3.5 flex flex-col">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Portfolio Value</p>
-            <p className="text-base font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
-            <div className="mt-3 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Equity (purchased)</span><span className="text-slate-300">{fmt(commonValue + convertValue)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Earned</span><span className="text-amber-400">{fmt(earnedEquityValue)}</span></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Portfolio Value</p>
+                <p className="text-base font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Investor Basis</p>
+                <p className="text-base font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
+              </div>
             </div>
-          </div>
 
-          {/* Investor Basis */}
-          <div className="px-4 py-3.5 flex flex-col">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Investor Basis</p>
-            <p className="text-base font-bold mt-1 tabular-nums text-slate-200">{fmt(principalBasis)}</p>
-            <div className="mt-3 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Total invested</span><span className="text-slate-300">{fmt(amountInvested)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
+            {/* Cash returned — emphasized */}
+            <div className="mt-3 px-2.5 py-2 rounded-md border border-emerald-500/30 bg-emerald-500/5">
+              <div className="flex items-baseline justify-between">
+                <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: "#34D399" }}>Cash Returned</p>
+                <p className="text-base font-bold tabular-nums" style={{ color: "#34D399" }}>{fmt(cashReceived)}</p>
+              </div>
+              <div className="mt-1 space-y-0.5 text-[9px] text-slate-500 tabular-nums">
+                <div className="flex justify-between gap-2"><span>Principal returned</span><span className="text-slate-400">{fmt(creditRepaid)}</span></div>
+                <div className="flex justify-between gap-2"><span>Interest paid</span><span className="text-slate-400">{fmt(creditInterest)}</span></div>
+                <div className="flex justify-between gap-2"><span>Distributions</span><span className="text-slate-400">{fmt(convertInterest)}</span></div>
+              </div>
+            </div>
+
+            <div className="mt-2 space-y-0.5 text-[9px] tabular-nums">
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Total invested</span><span className="text-slate-400">{fmt(amountInvested)}</span></div>
             </div>
           </div>
 
@@ -445,6 +456,7 @@ export default function DirectHoldingsTab({
             </p>
             <BenchmarkBar value={dpi} q1={BM.dpi.q1} q3={BM.dpi.q3} />
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(cashReceived)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Interest paid</span><span className="text-amber-400">{fmt(creditInterest)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Distributions</span><span className="text-amber-400">{fmt(convertInterest)}</span></div>
@@ -459,9 +471,7 @@ export default function DirectHoldingsTab({
             </p>
             <BenchmarkBar value={tvpi} q1={BM.tvpi.q1} q3={BM.tvpi.q3} />
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Interest paid</span><span className="text-amber-400">{fmt(creditInterest)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Distributions</span><span className="text-amber-400">{fmt(convertInterest)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(cashReceived)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Investor basis</span><span className="text-slate-300">{fmt(principalBasis)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Total value</span><span className="text-emerald-400">{fmt(portfolioValue)}</span></div>
             </div>
@@ -504,9 +514,9 @@ export default function DirectHoldingsTab({
             {/* Allocation bars — overview style */}
             <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Capital Allocated</p>
             {[
-              { label: "Common Equity", amount: commonCost,    color: "#10B981" },
-              { label: "Convertibles",  amount: convertCost,   color: "#F59E0B" },
-              { label: "Credit",        amount: creditPrincipal, color: "#6366F1" },
+              { label: "Equity",       amount: commonCost,    color: "#10B981" },
+              { label: "Convertibles", amount: convertCost,   color: "#F59E0B" },
+              { label: "Credit",       amount: creditPrincipal, color: "#6366F1" },
             ].filter(b => b.amount > 0).map(b => {
               const pct = amountInvested > 0 ? b.amount / amountInvested : 0;
               return (
@@ -527,22 +537,9 @@ export default function DirectHoldingsTab({
                 </div>
               );
             })}
-            <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between mb-4">
+            <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
               <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total Invested</span>
               <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(amountInvested)}</span>
-            </div>
-
-            {/* Earned equity row */}
-            <div className="flex items-center justify-between rounded-lg border border-[#1E2D3D] px-3 py-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
-                <span className="text-xs text-slate-300">Earned Equity</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] tabular-nums">
-                <span className="text-slate-500">$0 cost</span>
-                <span className="font-semibold text-amber-400">{fmt(earnedEquityValue)} est.</span>
-                <span className="text-emerald-400">∞×</span>
-              </div>
             </div>
           </div>
 
@@ -583,7 +580,6 @@ export default function DirectHoldingsTab({
             { label: "Cost Basis", value: fmt(equitySectionCost) },
             { label: "Value",      value: fmt(equitySectionValue), color: "#10B981" },
             { label: "Return",     value: equitySectionReturn !== null ? `${(equitySectionReturn * 100).toFixed(1)}%` : "—", color: equitySectionReturn !== null && equitySectionReturn >= 0 ? "#10B981" : "#F87171" },
-            { label: "Earned",     value: fmt(earnedEquityValue), color: "#F59E0B" },
           ]} />
         </div>
         {open.has("equity") && (
