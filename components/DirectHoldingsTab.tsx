@@ -801,7 +801,7 @@ export default function DirectHoldingsTab({
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Credit" tableKey="notes" accentCol="#6366F1" stats={[
-            { label: "New Cash Invested", value: fmt(creditPrincipal) },
+            { label: "Cash Invested", value: fmt(creditPrincipal) },
             { label: "Cash Repaid",       value: fmt(creditRepaid), color: "#34D399" },
             ...(creditRolled > 0 ? [{ label: "Rolled / Capitalized", value: fmt(creditRolled), color: "#A78BFA" }] : []),
             { label: "Working Principal", value: fmt(creditOutstanding), color: creditOutstanding > 0 ? "#e2e8f0" : "#64748B" },
@@ -815,7 +815,7 @@ export default function DirectHoldingsTab({
               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                 <tr>
                   <TH></TH><TH wide>Company</TH><TH>Issue Date</TH>
-                  <TH>Principal</TH><TH>Status</TH><TH>Interest</TH><TH>Ann. Return</TH><TH>MOIC</TH>
+                  <TH>Principal</TH><TH>Status</TH><TH>Interest</TH><TH>Rate</TH><TH>MOIC</TH>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
@@ -855,7 +855,11 @@ export default function DirectHoldingsTab({
                         </TD>
                         <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
                         <TD className="tabular-nums" style={{ color: "#94A3B8" }}>
-                          {p.annualizedReturnPct != null ? `${p.annualizedReturnPct.toFixed(1)}%` : "—"}
+                          {p.interestRate != null
+                            ? `${p.interestRate.toFixed(1)}%`
+                            : p.annualizedReturnPct != null
+                              ? `${p.annualizedReturnPct.toFixed(1)}%`
+                              : "—"}
                         </TD>
                         <TD className="tabular-nums font-semibold" style={{ color: moic !== null ? gainColor(moic - 1) : "#94A3B8" }}>
                           {moic !== null ? `${moic.toFixed(2)}×` : "—"}
