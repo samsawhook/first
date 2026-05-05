@@ -42,6 +42,7 @@ const fmtDate = (iso: string) => {
 };
 const gainColor = (n: number) => n >= 0 ? "#34D399" : "#F87171";
 const isCommonOrRSU = (type: string) => type === "Class A Common" || type === "RSU";
+const isCommon      = (type: string) => type === "Class A Common";
 
 interface Props {
   investor: DirectInvestor;
@@ -109,6 +110,7 @@ export default function DirectHoldingsTab({
   const convertInterest = sum(convertPos, p => p.interestDividend ?? 0);
   const creditPrincipal = sum(notesPos,   p => p.principal ?? 0);
   const creditRepaid    = sum(notesPos,   p => p.repaid ?? 0);
+  const creditRolled    = sum(notesPos.filter(p => p.rolled), p => p.principal ?? 0);
   const creditInterest  = sum(notesPos,   p => p.interestDividend ?? 0);
   const earnedValue       = sum(earnedPos,  p => estVal(p));
   const earnedEquityValue = sum(earnedPos.filter(p => p.securityType !== "RSU"), p => estVal(p));
@@ -129,10 +131,10 @@ export default function DirectHoldingsTab({
   const dpi            = amountInvested > 0 ? cashReceived / amountInvested : null;
   const tvpi           = amountInvested > 0 ? (portfolioValue + cashReceived) / amountInvested : null;
 
-  // ── Company ownership breakdown (all common/RSU shares by company) ────────
+  // ── Company ownership breakdown (Class A Common only, no RSUs) ──────────
   const ownershipMap: Record<string, number> = {};
   for (const p of positions) {
-    if (!p.companyId || !p.shares || !isCommonOrRSU(p.securityType)) continue;
+    if (!p.companyId || !p.shares || !isCommon(p.securityType)) continue;
     ownershipMap[p.companyId] = (ownershipMap[p.companyId] ?? 0) + p.shares;
   }
   const ownershipRows = Object.entries(ownershipMap)
@@ -564,7 +566,7 @@ export default function DirectHoldingsTab({
                   <TH>Basis / Sh</TH>
                   <TH>Cost Basis</TH>
                   <TH>Share Price</TH>
-                  <TH>Interest / Div.</TH>
+                  <TH>Distributions</TH>
                   <TH>Est. Value</TH>
                   <TH>MOIC</TH>
                 </tr>
@@ -605,14 +607,15 @@ export default function DirectHoldingsTab({
         )}
       </div>
 
-      {/* ══ 2. Short-term Notes ═══════════════════════════════════════════════ */}
+      {/* ══ 2. Credit ═══════════════════════════════════════════════════════ */}
       <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
         <div className="border-b border-[#1E2D3D]">
-          <SectionHeader label="Short-term Notes" tableKey="notes" accentCol="#6366F1" stats={[
-            { label: "Principal",  value: fmt(creditPrincipal) },
-            { label: "All Repaid", value: "✓", color: "#34D399" },
-            { label: "Interest",   value: fmt(creditInterest), color: "#F59E0B" },
-            { label: "# Notes",    value: `${notesPos.length}` },
+          <SectionHeader label="Credit" tableKey="notes" accentCol="#6366F1" stats={[
+            { label: "Principal",        value: fmt(creditPrincipal) },
+            { label: "Principal Repaid", value: fmt(creditRepaid + creditRolled), color: "#34D399" },
+            { label: "Working Principal", value: fmt(creditOutstanding), color: creditOutstanding > 0 ? "#e2e8f0" : "#64748B" },
+            { label: "Interest",         value: fmt(creditInterest), color: "#F59E0B" },
+            { label: "# Notes",          value: `${notesPos.length}` },
           ]} />
         </div>
         {open.has("notes") && (
@@ -621,14 +624,15 @@ export default function DirectHoldingsTab({
               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                 <tr>
                   <TH></TH><TH wide>Company</TH><TH>Issue Date</TH>
-                  <TH>Principal</TH><TH>Status</TH><TH>Interest Earned</TH><TH>Total Return</TH><TH>MOIC</TH>
+                  <TH>Principal</TH><TH>Status</TH><TH>Interest</TH><TH>Ann. Return</TH><TH>Total Return</TH><TH>MOIC</TH>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
                 {notesPos.map((p, i) => {
                   const repaid = p.repaid ?? 0;
                   const principal = p.principal ?? 0;
-                  const total = repaid + (p.interestDividend ?? 0);
+                  const effectiveRepaid = p.rolled ? principal : repaid;
+                  const total = effectiveRepaid + (p.interestDividend ?? 0);
                   const moic = p.costBasis > 0 ? total / p.costBasis : null;
                   const settledPct = p.rolled ? 100 : principal > 0 ? Math.round(repaid / principal * 100) : 0;
                   return (
@@ -645,6 +649,9 @@ export default function DirectHoldingsTab({
                             : <span className="text-slate-600">Outstanding</span>}
                       </TD>
                       <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
+                      <TD className="tabular-nums" style={{ color: "#94A3B8" }}>
+                        {p.annualizedReturnPct != null ? `${p.annualizedReturnPct.toFixed(1)}%` : "—"}
+                      </TD>
                       <TD className="tabular-nums" style={{ color: "#34D399" }}>{fmt(total)}</TD>
                       <TD className="tabular-nums font-semibold" style={{ color: moic !== null ? gainColor(moic - 1) : "#94A3B8" }}>
                         {moic !== null ? `${moic.toFixed(2)}×` : "—"}
@@ -674,16 +681,22 @@ export default function DirectHoldingsTab({
                 <tr><TH></TH><TH wide>Company</TH><TH>Type</TH><TH>Issue Date</TH><TH>Shares / Units</TH><TH>Est. Value</TH></tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
-                {earnedPos.map((p, i) => (
-                  <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
-                    <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
-                    <TD><CompanyName p={p} /></TD>
-                    <TD className="text-slate-400">{p.securityType}</TD>
-                    <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
-                    <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
-                    <TD className="tabular-nums font-semibold"><EarnedValCell p={p} /></TD>
-                  </tr>
-                ))}
+                {earnedPos.map((p, i) => {
+                  const isRSU = p.securityType === "RSU";
+                  return (
+                    <tr key={i} className={`hover:bg-[#111D2E]/40 transition-colors${isRSU ? " opacity-60" : ""}`}>
+                      <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
+                      <TD><CompanyName p={p} /></TD>
+                      <TD>
+                        <span className="text-slate-400">{p.securityType}</span>
+                        {isRSU && <span className="ml-1.5 text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#1E293B", color: "#64748B" }}>excl. portfolio value</span>}
+                      </TD>
+                      <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
+                      <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
+                      <TD className="tabular-nums font-semibold"><EarnedValCell p={p} /></TD>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -695,7 +708,7 @@ export default function DirectHoldingsTab({
         <div className="border-b border-[#1E2D3D]">
           <SectionHeader label="Company Ownership" tableKey="ownership" accentCol="#8B5CF6" stats={[
             { label: "Companies",  value: `${ownershipRows.length}` },
-            { label: "All Classes", value: "Common + RSU" },
+            { label: "Class", value: "Class A Common" },
             { label: "Basis",      value: "Fully diluted" },
           ]} />
         </div>

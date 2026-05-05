@@ -408,7 +408,7 @@ export default function Dashboard() {
                       {directInvestor ? directInvestor.name : "Co-Owner Fund LP"}
                     </p>
                     <p className="text-[9px] text-slate-500">
-                      {directInvestor ? "Direct Investor" : "Fund View"}
+                      {directInvestor ? "Investor" : "Fund View"}
                     </p>
                   </div>
                   <ChevronDown size={10} className="text-slate-500 hidden sm:block" />
