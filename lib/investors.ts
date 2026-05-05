@@ -96,6 +96,19 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       { category: "Earned Equity", issueDate: "2024-05-29", securityType: "RSU",           company: "Falconer Inc.",       companyId: "falconer",    shares: 1_000_000, costBasis: 0, estimatedValue: 30_000.00 },
     ],
   },
+  {
+    id:            "neil-wolfson",
+    name:          "Neil Wolfson",
+    investorSince: "September 29, 2023",
+    statementDate: "May 5, 2026",
+    positions: [
+      // Earned Class A Common across the four Co-Owner Fund portfolio companies.
+      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "Pigeon Service Inc.",   companyId: "certd",          shares: 3_216_930, costBasis: 0, estimatedValue:  32_169.30 },
+      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "Falconer Inc.",         companyId: "falconer",       shares: 4_735_803, costBasis: 0, estimatedValue:  21_311.11 },
+      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "SBR2TH Recruiting Inc.",companyId: "sbr2th",         shares: 3_247_832, costBasis: 0, estimatedValue:  34_751.80 },
+      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "Merchant Boxes Inc.",   companyId: "merchant-boxes", shares: 4_804_351, costBasis: 0, estimatedValue: 136_924.00 },
+    ],
+  },
 ];
 
 export function findDirectInvestor(id: string): DirectInvestor | undefined {
