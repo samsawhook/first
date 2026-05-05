@@ -18,7 +18,7 @@ const ACCENT: Record<string, string> = {
 const FALLBACK_INITIALS: Record<string, string> = {
   "audily": "AU", "sbr2th": "S2", "certd": "PS",
   "merchant-boxes": "MB", "falconer": "FL",
-  "nth-venture": "NV", "sentius": "SD", "prreact": "PR",
+  "nth-venture": "NV", "sentius": "SD", "prreact": "GC",
 };
 const EXTRA_LOGOS: Record<string, string> = {
   "nth-venture": "https://images.squarespace-cdn.com/content/v1/64d98f1d96a44455a5eab9a8/1691979830329-NJ5W8U6WT1N0F60PRNXV/Nth.png",
@@ -110,7 +110,8 @@ export default function DirectHoldingsTab({
   const creditPrincipal = sum(notesPos,   p => p.principal ?? 0);
   const creditRepaid    = sum(notesPos,   p => p.repaid ?? 0);
   const creditInterest  = sum(notesPos,   p => p.interestDividend ?? 0);
-  const earnedValue     = sum(earnedPos,  p => estVal(p));
+  const earnedValue       = sum(earnedPos,  p => estVal(p));
+  const earnedEquityValue = sum(earnedPos.filter(p => p.securityType !== "RSU"), p => estVal(p));
 
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
@@ -121,7 +122,7 @@ export default function DirectHoldingsTab({
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
   const cashReceived   = amountRepaid + creditInterest + convertInterest;
-  const portfolioValue = equityValue + earnedValue;         // notes all repaid → $0 est.
+  const portfolioValue = equityValue + earnedEquityValue;    // RSUs excluded; notes fully repaid
   const totalReturn    = portfolioValue + creditInterest + convertInterest + amountRepaid;
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
 
@@ -339,7 +340,7 @@ export default function DirectHoldingsTab({
           <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Portfolio Value</p>
             <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(portfolioValue)}</p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">incl. {fmt(earnedValue)} earned</p>
+            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">incl. {fmt(earnedEquityValue)} earned</p>
           </div>
           <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Amount Invested</p>
@@ -460,7 +461,7 @@ export default function DirectHoldingsTab({
           </div>
 
           {/* RIGHT: donut + legend */}
-          <div className="flex flex-col sm:flex-row gap-6 px-5 py-5 sm:w-[360px] shrink-0">
+          <div className="flex flex-col sm:flex-row gap-6 px-5 py-5 flex-1">
             <div className="shrink-0 flex justify-center">
               <svg width={160} height={160} viewBox="0 0 160 160">
                 {arcs.map((a, i) => <path key={i} d={a.path} fill={accentFor(a.id)} fillOpacity={0.85} />)}
@@ -534,7 +535,9 @@ export default function DirectHoldingsTab({
                       <TD className="tabular-nums">
                         {isEditable
                           ? <PriceEditCell p={p} />
-                          : <span className="text-slate-500">—</span>
+                          : p.shares && p.estimatedValue > 0
+                            ? <span className="text-slate-400">${(p.estimatedValue / p.shares).toFixed(2)}/sh</span>
+                            : <span className="text-slate-600">N/A</span>
                         }
                       </TD>
                       <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
