@@ -57,6 +57,9 @@ export default function DirectHoldingsTab({
 }: Props) {
   const [open, setOpen] = useState(new Set(["equity", "notes", "earned", "ownership"]));
   const toggle = (k: string) => setOpen(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
+  const [showConverted, setShowConverted] = useState(false);
+  // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
+  const PREF_CONVERSION = { companyId: "audily", extraShares: 3_250 * 1_000 } as const;
 
   const portMap = useMemo(() => Object.fromEntries(portfolio.map(c => [c.id, c])), [portfolio]);
 
@@ -642,12 +645,32 @@ export default function DirectHoldingsTab({
         </div>
         {open.has("ownership") && (
           <div className="overflow-x-auto">
+            {/* As-converted toggle */}
+            <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[#1E2D3D] bg-[#080E1A]">
+              <span className="text-[10px] text-slate-500">Audily preferred → common (3,250 × 1:1,000)</span>
+              <button
+                onClick={() => setShowConverted(v => !v)}
+                className={`relative inline-flex h-4.5 w-8 shrink-0 rounded-full border transition-colors duration-200 focus:outline-none ${
+                  showConverted ? "bg-violet-600 border-violet-500" : "bg-slate-700 border-slate-600"
+                }`}
+                style={{ width: 32, height: 18 }}
+                aria-pressed={showConverted}
+              >
+                <span
+                  className="inline-block rounded-full bg-white shadow transition-transform duration-200"
+                  style={{ width: 12, height: 12, margin: 3, transform: showConverted ? "translateX(14px)" : "translateX(0)" }}
+                />
+              </button>
+              <span className="text-[10px] font-semibold" style={{ color: showConverted ? "#A78BFA" : "#475569" }}>
+                {showConverted ? "As-converted" : "Base"}
+              </span>
+            </div>
             <table className="w-full text-xs">
               <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                 <tr>
                   <TH></TH>
                   <TH wide>Company</TH>
-                  <TH>Total Shares</TH>
+                  <TH>Your Shares</TH>
                   <TH>FD Shares (co.)</TH>
                   <TH>% Fully Diluted</TH>
                   <TH>Common Out. (co.)</TH>
@@ -658,25 +681,43 @@ export default function DirectHoldingsTab({
               <tbody className="divide-y divide-[#0D1421]">
                 {ownershipRows.map(({ id, shares, company: c }) => {
                   if (!c) return null;
-                  const pps = effectivePps(id);
-                  const estValue = pps !== null ? shares * pps : null;
-                  const pctFD = c.totalShares ? shares / c.totalShares : null;
-                  const pctVoting = c.commonSharesOutstanding ? shares / c.commonSharesOutstanding : null;
+                  const isConverted = showConverted && id === PREF_CONVERSION.companyId;
+                  const adjShares    = isConverted ? shares + PREF_CONVERSION.extraShares : shares;
+                  const adjFD        = isConverted && c.totalShares ? c.totalShares + PREF_CONVERSION.extraShares : c.totalShares;
+                  const adjVoting    = isConverted && c.commonSharesOutstanding ? c.commonSharesOutstanding + PREF_CONVERSION.extraShares : c.commonSharesOutstanding;
+                  const pps          = effectivePps(id);
+                  const estValue     = pps !== null ? adjShares * pps : null;
+                  const pctFD        = adjFD ? adjShares / adjFD : null;
+                  const pctVoting    = adjVoting ? adjShares / adjVoting : null;
                   return (
                     <tr key={id} className="hover:bg-[#111D2E]/40 transition-colors">
                       <TD><CompanyAvatar id={id} name={c.name} /></TD>
                       <TD>
-                        <button className="font-medium text-slate-200 hover:text-white transition-colors text-left underline decoration-slate-600 hover:decoration-slate-400"
-                          onClick={() => onSelectCompany(id)}>
-                          {c.name.replace(" Inc.", "").replace(" Recruiting", "")}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button className="font-medium text-slate-200 hover:text-white transition-colors text-left underline decoration-slate-600 hover:decoration-slate-400"
+                            onClick={() => onSelectCompany(id)}>
+                            {c.name.replace(" Inc.", "").replace(" Recruiting", "")}
+                          </button>
+                          {isConverted && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#4C1D95", color: "#C4B5FD" }}>
+                              as-converted
+                            </span>
+                          )}
+                        </div>
                       </TD>
-                      <TD className="text-slate-300 tabular-nums">{fmtShares(shares)}</TD>
-                      <TD className="text-slate-500 tabular-nums">{c.totalShares ? fmtShares(c.totalShares) : "—"}</TD>
+                      <TD className="text-slate-300 tabular-nums">
+                        {fmtShares(adjShares)}
+                        {isConverted && (
+                          <span className="ml-1 text-[9px]" style={{ color: "#A78BFA" }}>
+                            +{fmtShares(PREF_CONVERSION.extraShares)}
+                          </span>
+                        )}
+                      </TD>
+                      <TD className="text-slate-500 tabular-nums">{adjFD ? fmtShares(adjFD) : "—"}</TD>
                       <TD className="tabular-nums font-semibold" style={{ color: "#8B5CF6" }}>
                         {pctFD !== null ? `${(pctFD * 100).toFixed(2)}%` : "—"}
                       </TD>
-                      <TD className="text-slate-500 tabular-nums">{c.commonSharesOutstanding ? fmtShares(c.commonSharesOutstanding) : "—"}</TD>
+                      <TD className="text-slate-500 tabular-nums">{adjVoting ? fmtShares(adjVoting) : "—"}</TD>
                       <TD className="tabular-nums font-semibold" style={{ color: "#A78BFA" }}>
                         {pctVoting !== null ? `${(pctVoting * 100).toFixed(2)}%` : "—"}
                       </TD>
