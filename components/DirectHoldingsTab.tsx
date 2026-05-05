@@ -1,6 +1,8 @@
 "use client";
+import { useMemo } from "react";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Pencil, RotateCcw } from "lucide-react";
+import type { PortfolioCompany } from "@/lib/types";
 import type { DirectInvestor, DirectPosition } from "@/lib/investors";
 
 // ── Company accent colors (portfolio + non-portfolio) ──────────────────────
@@ -19,8 +21,8 @@ const INITIALS: Record<string, string> = {
   "merchant-boxes": "MB", "falconer": "FL",
   "nth-venture": "NV", "sentius": "SD", "prreact": "PR",
 };
-const accent  = (id?: string) => ACCENT[id ?? ""] ?? "#94A3B8";
-const initials = (id?: string, name?: string) =>
+const accentFor  = (id?: string) => ACCENT[id ?? ""] ?? "#94A3B8";
+const initialsFor = (id?: string, name?: string) =>
   INITIALS[id ?? ""] ?? (name ?? "??").slice(0, 2).toUpperCase();
 
 // ── Formatters ────────────────────────────────────────────────────────────
@@ -39,46 +41,95 @@ const fmtDate = (iso: string) => {
 const fmtPct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
 const gainColor = (n: number) => n >= 0 ? "#34D399" : "#F87171";
 
-interface Props { investor: DirectInvestor }
+const isCommonOrRSU = (type: string) => type === "Class A Common" || type === "RSU";
 
-export default function DirectHoldingsTab({ investor }: Props) {
+interface Props {
+  investor: DirectInvestor;
+  portfolio: PortfolioCompany[];
+  userValuations: Record<string, number>;
+  onOpenValuationModal: (company: PortfolioCompany, pendingVal: number) => void;
+  onResetValuation: (companyId: string) => void;
+}
+
+export default function DirectHoldingsTab({ investor, portfolio, userValuations, onOpenValuationModal, onResetValuation }: Props) {
   const [open, setOpen] = useState(new Set(["equity", "notes", "earned"]));
   const toggle = (k: string) => setOpen(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
+
+  // ── Portfolio lookup ──────────────────────────────────────────────────────
+  const portMap = useMemo(() =>
+    Object.fromEntries(portfolio.map(c => [c.id, c])),
+    [portfolio]
+  );
+
+  const defaultImplied = (c: PortfolioCompany) =>
+    c.customPricePerShare && c.totalShares
+      ? c.customPricePerShare * c.totalShares
+      : c.impliedValuation;
+
+  const effectiveImplied = (companyId: string): number | null => {
+    const c = portMap[companyId];
+    if (!c) return null;
+    return userValuations[companyId] ?? defaultImplied(c);
+  };
+
+  const effectivePps = (companyId: string): number | null => {
+    const c = portMap[companyId];
+    if (!c || !c.totalShares) return null;
+    const val = userValuations[companyId] ?? defaultImplied(c);
+    return val / c.totalShares;
+  };
+
+  const defaultPpsForDisplay = (companyId: string): number | null => {
+    const c = portMap[companyId];
+    if (!c || !c.totalShares) return null;
+    return defaultImplied(c) / c.totalShares;
+  };
+
+  // Compute estimated value for a position, using live pps for common stock
+  const estVal = (p: DirectPosition): number => {
+    if (p.shares && p.companyId && isCommonOrRSU(p.securityType)) {
+      const pps = effectivePps(p.companyId);
+      if (pps !== null) return p.shares * pps;
+    }
+    return p.estimatedValue;
+  };
 
   const { positions } = investor;
 
   // ── Aggregates ────────────────────────────────────────────────────────────
-  const equity  = positions.filter(p => p.category === "Purchased Equity");
-  const notes   = positions.filter(p => p.category === "Short-term Notes");
-  const earned  = positions.filter(p => p.category === "Earned Equity");
+  const equityPos  = positions.filter(p => p.category === "Purchased Equity");
+  const notesPos   = positions.filter(p => p.category === "Short-term Notes");
+  const earnedPos  = positions.filter(p => p.category === "Earned Equity");
 
-  const sum = (ps: DirectPosition[], f: (p: DirectPosition) => number) => ps.reduce((s, p) => s + f(p), 0);
+  const sum = (ps: DirectPosition[], f: (p: DirectPosition) => number) =>
+    ps.reduce((s, p) => s + f(p), 0);
 
-  const equityCost    = sum(equity, p => p.costBasis);
-  const equityValue   = sum(equity, p => p.estimatedValue);
-  const equityInterest = sum(equity, p => p.interestDividend ?? 0);
-  const equityMoic    = equityCost > 0 ? equityValue / equityCost : null;
+  const equityCost     = sum(equityPos, p => p.costBasis);
+  const equityValue    = sum(equityPos, p => estVal(p));
+  const equityInterest = sum(equityPos, p => p.interestDividend ?? 0);
+  const equityMoic     = equityCost > 0 ? equityValue / equityCost : null;
 
-  const notesPrincipal = sum(notes, p => p.principal ?? 0);
-  const notesInterest  = sum(notes, p => p.interestDividend ?? 0);
-  const notesValue     = sum(notes, p => p.estimatedValue);
+  const notesPrincipal = sum(notesPos, p => p.principal ?? 0);
+  const notesInterest  = sum(notesPos, p => p.interestDividend ?? 0);
+  const notesValue     = sum(notesPos, p => p.estimatedValue);
 
-  const earnedValue = sum(earned, p => p.estimatedValue);
+  const earnedValue = sum(earnedPos, p => estVal(p));
 
-  const totalCost    = equityCost + notesPrincipal;            // $894,914
-  const totalValue   = equityValue + notesValue + earnedValue; // $1,834,698
+  const totalCost     = equityCost + notesPrincipal;
+  const totalValue    = equityValue + notesValue + earnedValue;
   const totalInterest = equityInterest + notesInterest;
-  const paidValue    = equityValue + notesValue;
-  const paidMoic     = totalCost > 0 ? paidValue / totalCost : null;
-  const unrealized   = totalValue - totalCost;
+  const paidValue     = equityValue + notesValue;
+  const paidMoic      = totalCost > 0 ? paidValue / totalCost : null;
+  const unrealized    = totalValue - totalCost;
 
-  // ── Donut: by company (estimated value > 0) ───────────────────────────────
+  // ── Donut: by company ─────────────────────────────────────────────────────
   const byCompany: Record<string, { id?: string; name: string; value: number }> = {};
   for (const p of positions) {
-    if (p.estimatedValue <= 0) continue;
+    const v = estVal(p) + (p.interestDividend ?? 0);
+    if (v <= 0) continue;
     const key = p.companyId ?? p.company;
     if (!byCompany[key]) byCompany[key] = { id: p.companyId, name: p.company, value: 0 };
-    byCompany[key].value += p.estimatedValue + (p.interestDividend ?? 0);
+    byCompany[key].value += v;
   }
   const donutItems = Object.values(byCompany).sort((a, b) => b.value - a.value);
   const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
@@ -150,10 +201,106 @@ export default function DirectHoldingsTab({ investor }: Props) {
 
   const CompanyAvatar = ({ id, name }: { id?: string; name: string }) => (
     <div className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center shrink-0"
-      style={{ background: `${accent(id)}22`, color: accent(id) }}>
-      {initials(id, name)}
+      style={{ background: `${accentFor(id)}22`, color: accentFor(id) }}>
+      {initialsFor(id, name)}
     </div>
   );
+
+  // Pencil + optional reset for editable est. value cells
+  const EditableValCell = ({ p }: { p: DirectPosition }) => {
+    if (!p.shares || !p.companyId || !isCommonOrRSU(p.securityType)) return null;
+    const c = portMap[p.companyId];
+    if (!c) return null;
+    const hasCustom = userValuations[p.companyId] !== undefined;
+    const defPps = defaultPpsForDisplay(p.companyId);
+    const effPps = effectivePps(p.companyId);
+    const v = estVal(p);
+    const isWinner = v >= p.costBasis;
+    return (
+      <div className="flex items-start gap-1.5">
+        <div className="flex flex-col gap-0.5">
+          {hasCustom && defPps !== null && (
+            <span className="text-slate-600 line-through leading-tight tabular-nums text-[10px]">
+              {fmt(p.shares * defPps)}
+            </span>
+          )}
+          <span className="font-semibold tabular-nums leading-tight" style={{ color: isWinner ? "#34D399" : "#F87171" }}>
+            {fmt(v)}
+          </span>
+          {effPps !== null && (
+            <span className="text-[9px] text-slate-600 tabular-nums leading-tight">${effPps.toFixed(4)}/sh</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); const iv = effectiveImplied(p.companyId!); onOpenValuationModal(c, iv ?? defaultImplied(c)); }}
+            className="p-0.5 rounded hover:bg-white/10 transition-colors"
+            style={{ color: hasCustom ? "#34D399" : "#64748B" }}
+            title="Edit valuation"
+          >
+            <Pencil size={10} />
+          </button>
+          {hasCustom && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onResetValuation(p.companyId!); }}
+              className="p-0.5 rounded hover:bg-rose-500/10 text-slate-600 hover:text-rose-400 transition-colors"
+              title="Reset to default"
+            >
+              <RotateCcw size={9} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const EarnedValCell = ({ p }: { p: DirectPosition }) => {
+    if (!p.shares || !p.companyId || !isCommonOrRSU(p.securityType) || !portMap[p.companyId]) {
+      const v = estVal(p);
+      return <span style={{ color: v > 0 ? "#F59E0B" : "#64748B" }}>{v > 0 ? fmt(v) : "—"}</span>;
+    }
+    const c = portMap[p.companyId];
+    const hasCustom = userValuations[p.companyId] !== undefined;
+    const defPps = defaultPpsForDisplay(p.companyId);
+    const effPps = effectivePps(p.companyId);
+    const v = estVal(p);
+    return (
+      <div className="flex items-start gap-1.5">
+        <div className="flex flex-col gap-0.5">
+          {hasCustom && defPps !== null && p.shares && (
+            <span className="text-slate-600 line-through leading-tight tabular-nums text-[10px]">
+              {fmt(p.shares * defPps)}
+            </span>
+          )}
+          <span className="font-semibold tabular-nums leading-tight" style={{ color: v > 0 ? "#F59E0B" : "#64748B" }}>
+            {v > 0 ? fmt(v) : "—"}
+          </span>
+          {effPps !== null && v > 0 && (
+            <span className="text-[9px] text-slate-600 tabular-nums leading-tight">${effPps.toFixed(4)}/sh</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); const iv = effectiveImplied(p.companyId!); onOpenValuationModal(c, iv ?? defaultImplied(c)); }}
+            className="p-0.5 rounded hover:bg-white/10 transition-colors"
+            style={{ color: hasCustom ? "#F59E0B" : "#64748B" }}
+            title="Edit valuation"
+          >
+            <Pencil size={10} />
+          </button>
+          {hasCustom && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onResetValuation(p.companyId!); }}
+              className="p-0.5 rounded hover:bg-rose-500/10 text-slate-600 hover:text-rose-400 transition-colors"
+              title="Reset to default"
+            >
+              <RotateCcw size={9} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -208,7 +355,7 @@ export default function DirectHoldingsTab({ investor }: Props) {
           <div className="shrink-0 flex justify-center">
             <svg width={160} height={160} viewBox="0 0 160 160">
               {arcs.map((a, i) => (
-                <path key={i} d={a.path} fill={accent(a.id)} fillOpacity={0.85} />
+                <path key={i} d={a.path} fill={accentFor(a.id)} fillOpacity={0.85} />
               ))}
               <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(totalValue)}</text>
               <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">est. portfolio</text>
@@ -217,7 +364,7 @@ export default function DirectHoldingsTab({ investor }: Props) {
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 content-center">
             {donutItems.map((d, i) => (
               <div key={i} className="flex items-center gap-2.5 min-w-0">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent(d.id) }} />
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accentFor(d.id) }} />
                 <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
                 <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.value)}</span>
                 <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{((d.value / donutTotal) * 100).toFixed(1)}%</span>
@@ -255,9 +402,10 @@ export default function DirectHoldingsTab({ investor }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
-                {equity.map((p, i) => {
-                  const gain = p.estimatedValue - p.costBasis;
-                  const isWinner = p.estimatedValue >= p.costBasis;
+                {equityPos.map((p, i) => {
+                  const v = estVal(p);
+                  const isWinner = v >= p.costBasis;
+                  const isEditable = !!(p.shares && p.companyId && isCommonOrRSU(p.securityType) && portMap[p.companyId]);
                   return (
                     <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
                       <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
@@ -268,7 +416,12 @@ export default function DirectHoldingsTab({ investor }: Props) {
                       <TD className="text-slate-400 tabular-nums">{p.perShareBasis != null ? `$${p.perShareBasis.toFixed(3)}` : "—"}</TD>
                       <TD className="text-slate-300 tabular-nums">{fmt(p.costBasis)}</TD>
                       <TD className="tabular-nums" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
-                      <TD className="tabular-nums font-semibold" style={{ color: isWinner ? "#34D399" : "#F87171" }}>{fmt(p.estimatedValue)}</TD>
+                      <TD className="tabular-nums">
+                        {isEditable
+                          ? <EditableValCell p={p} />
+                          : <span className="font-semibold" style={{ color: isWinner ? "#34D399" : "#F87171" }}>{fmt(v)}</span>
+                        }
+                      </TD>
                       <TD className="tabular-nums" style={{ color: p.annualizedReturnPct != null ? gainColor(p.annualizedReturnPct) : "#94A3B8" }}>
                         {p.annualizedReturnPct != null ? fmtPct(p.annualizedReturnPct) : "—"}
                       </TD>
@@ -287,7 +440,7 @@ export default function DirectHoldingsTab({ investor }: Props) {
           <SectionHeader label="Short-term Notes" tableKey="notes" accentCol="#6366F1" stats={[
             { label: "Principal",  value: fmt(notesPrincipal) },
             { label: "Interest",   value: fmt(notesInterest), color: "#F59E0B" },
-            { label: "# Notes",   value: `${notes.length}` },
+            { label: "# Notes",   value: `${notesPos.length}` },
           ]} />
         </div>
         {open.has("notes") && (
@@ -305,7 +458,7 @@ export default function DirectHoldingsTab({ investor }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
-                {notes.map((p, i) => (
+                {notesPos.map((p, i) => (
                   <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
                     <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
                     <TD className="text-slate-200 font-medium">{p.company.replace(" Inc.", "")}</TD>
@@ -330,7 +483,7 @@ export default function DirectHoldingsTab({ investor }: Props) {
           <SectionHeader label="Earned Equity" tableKey="earned" accentCol="#F59E0B" stats={[
             { label: "Cost Basis",  value: "$0" },
             { label: "Est. Value",  value: fmt(earnedValue), color: "#F59E0B" },
-            { label: "# Positions", value: `${earned.length}` },
+            { label: "# Positions", value: `${earnedPos.length}` },
           ]} />
         </div>
         {open.has("earned") && (
@@ -347,15 +500,15 @@ export default function DirectHoldingsTab({ investor }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0D1421]">
-                {earned.map((p, i) => (
+                {earnedPos.map((p, i) => (
                   <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
                     <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
                     <TD className="text-slate-200 font-medium">{p.company.replace(" Inc.", "")}</TD>
                     <TD className="text-slate-400">{p.securityType}</TD>
                     <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
                     <TD className="text-slate-300 tabular-nums">{p.shares ? fmtShares(p.shares) : "—"}</TD>
-                    <TD className="tabular-nums font-semibold" style={{ color: p.estimatedValue > 0 ? "#F59E0B" : "#64748B" }}>
-                      {p.estimatedValue > 0 ? fmt(p.estimatedValue) : "—"}
+                    <TD className="tabular-nums">
+                      <EarnedValCell p={p} />
                     </TD>
                   </tr>
                 ))}

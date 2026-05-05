@@ -5285,7 +5285,13 @@ export default function Dashboard() {
         )}
 
         {!activeCompany && activeTab === "direct" && directInvestor && (
-          <DirectHoldingsTab investor={directInvestor} />
+          <DirectHoldingsTab
+            investor={directInvestor}
+            portfolio={portfolio}
+            userValuations={userValuations}
+            onOpenValuationModal={(c, v) => setValuationModal({ company: c, pendingVal: v })}
+            onResetValuation={(id) => setUserValuations(prev => { const n = { ...prev }; delete n[id]; return n; })}
+          />
         )}
 
         {!activeCompany && activeTab === "investor" && (
