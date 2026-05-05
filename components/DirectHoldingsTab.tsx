@@ -168,6 +168,39 @@ export default function DirectHoldingsTab({
     return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
   });
 
+  // ── Benchmarks: Cambridge Associates VC, ~year-4 fund ────────────────────
+  const BM = {
+    dpi:  { q1: 0.25, q3: 0.02 },  // top-quartile and bottom-quartile DPI at yr 4
+    tvpi: { q1: 1.55, q3: 0.92 },  // top-quartile and bottom-quartile TVPI at yr 4
+  } as const;
+
+  const BenchmarkBar = ({ value, q1, q3 }: { value: number | null; q1: number; q3: number }) => {
+    const pct = value !== null ? Math.max(0, Math.min(1, (value - q3) / (q1 - q3))) : null;
+    const aboveQ1 = value !== null && value >= q1;
+    const belowQ3 = value !== null && value < q3;
+    const dotColor = aboveQ1 ? "#10B981" : belowQ3 ? "#F87171" : "#e2e8f0";
+    return (
+      <div className="mt-2">
+        <div className="flex items-center justify-between mb-1" style={{ fontSize: 8, color: "#475569" }}>
+          <span>Q3 {q3.toFixed(2)}×</span>
+          <span className="text-[7px] text-slate-700">VC yr-4</span>
+          <span>Q1 {q1.toFixed(2)}×</span>
+        </div>
+        <div className="relative h-1 rounded-full overflow-visible" style={{ background: "#1E2D3D" }}>
+          <div className="absolute inset-0 rounded-full opacity-30"
+            style={{ background: "linear-gradient(to right, #F87171, #10B981)" }} />
+          {pct !== null && (
+            <div className="absolute top-1/2 w-2 h-2 rounded-full border border-[#0D1421]"
+              style={{ left: `${pct * 100}%`, transform: "translate(-50%, -50%)", background: dotColor }} />
+          )}
+        </div>
+        <p className="mt-1" style={{ fontSize: 8, color: aboveQ1 ? "#10B981" : belowQ3 ? "#F87171" : "#64748B" }}>
+          {value === null ? "" : aboveQ1 ? "▲ Top quartile" : belowQ3 ? "▼ Below Q3" : "● Mid-range"}
+        </p>
+      </div>
+    );
+  };
+
   // ── Sub-components ────────────────────────────────────────────────────────
   const TH = ({ children, wide }: { children?: React.ReactNode; wide?: boolean }) => (
     <th className={`py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider whitespace-nowrap${wide ? " min-w-[160px]" : ""}`}>{children}</th>
@@ -361,17 +394,17 @@ export default function DirectHoldingsTab({
           </div>
           <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
-            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= 0.5 ? "#34D399" : "#e2e8f0" }}>
+            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
               {dpi !== null ? `${dpi.toFixed(2)}×` : "—"}
             </p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">distributed / paid-in</p>
+            <BenchmarkBar value={dpi} q1={BM.dpi.q1} q3={BM.dpi.q3} />
           </div>
           <div className="px-4 py-3.5">
             <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
-            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= 1 ? "#10B981" : "#F87171" }}>
+            <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
               {tvpi !== null ? `${tvpi.toFixed(2)}×` : "—"}
             </p>
-            <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">total value / paid-in</p>
+            <BenchmarkBar value={tvpi} q1={BM.tvpi.q1} q3={BM.tvpi.q3} />
           </div>
         </div>
 
