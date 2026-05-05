@@ -414,7 +414,6 @@ export default function DirectHoldingsTab({
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium shrink-0">Direct Shareholder</p>
             <p className="text-[10px] text-slate-400 font-semibold">{investor.name}</p>
             <p className="text-[10px] text-slate-600">Investor since {investor.investorSince}</p>
-            <p className="text-[10px] text-slate-600">Statement {investor.statementDate}</p>
             <div className="ml-auto flex items-center gap-1.5 text-[10px] text-slate-600">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />nth Venture Inc.
             </div>
@@ -735,7 +734,7 @@ export default function DirectHoldingsTab({
                   if (!c) return null;
                   const isConverted = showConverted && id === PREF_CONVERSION.companyId;
                   const adjShares    = isConverted ? shares + PREF_CONVERSION.extraShares : shares;
-                  const adjFD        = isConverted && c.totalShares ? c.totalShares + PREF_CONVERSION.extraShares : c.totalShares;
+                  const adjFD        = c.totalShares;  // preferred already included in FD count
                   const adjVoting    = isConverted && c.commonSharesOutstanding ? c.commonSharesOutstanding + PREF_CONVERSION.extraShares : c.commonSharesOutstanding;
                   const pps          = effectivePps(id);
                   const estValue     = pps !== null ? adjShares * pps : null;
