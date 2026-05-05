@@ -2866,6 +2866,13 @@ export default function Dashboard() {
           // LP basis = portfolio value (in-kind) + $100k cash contribution
           const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
 
+          // Pre-deal metrics (Palash's direct holdings as a standalone position).
+          const palashPreDealContributions = directInvestor.positions.reduce((s, p) => s + (p.costBasis ?? 0), 0); // gross of repayments
+          const palashPreDealDistributions = palashHistoricalDistributions;
+          const palashPreDealValue         = palashPortfolioValue;
+          const palashPreDealDpi  = palashPreDealContributions > 0 ? palashPreDealDistributions / palashPreDealContributions : 0;
+          const palashPreDealTvpi = palashPreDealContributions > 0 ? (palashPreDealValue + palashPreDealDistributions) / palashPreDealContributions : 0;
+
           // ── LP D in-kind roll-in (at default PPS) ────────────────────────────
           const lpDValue = Object.entries(PALASH_LP_D_SHARES).reduce((s, [id, sh]) =>
             s + sh * ppsForCompany(id), 0);
@@ -3055,9 +3062,17 @@ export default function Dashboard() {
           const palashPct       = newLpUnitsTotal > 0 ? palashLpBasis / newLpUnitsTotal : 0;
           const palashNav       = palashPct * newFundNav;
           const palashMoic      = palashLpBasis > 0 ? palashNav / palashLpBasis : 0;
-          // DPI/TVPI from Palash's LP perspective post lock-in: no fund distributions to him yet.
-          const palashDpi       = 0;
-          const palashTvpi      = palashMoic;
+
+          // Post-deal metrics (cumulative: pre-deal contributions + $100k cash for LP;
+          // historical distributions carry; current value is now palashNav).
+          const palashPostDealContributions = palashPreDealContributions + PALASH_CASH_CONTRIBUTION;
+          const palashPostDealDistributions = palashPreDealDistributions; // no fund distributions yet
+          const palashPostDealValue         = palashNav;
+          const palashPostDealDpi  = palashPostDealContributions > 0 ? palashPostDealDistributions / palashPostDealContributions : 0;
+          const palashPostDealTvpi = palashPostDealContributions > 0 ? (palashPostDealValue + palashPostDealDistributions) / palashPostDealContributions : 0;
+          // NAV step-up: $1 LP basis → $X NAV at lock-in (driven by sharing existing fund accrued NAV).
+          const navStepUpAbs = palashNav - palashLpBasis;
+          const navStepUpPct = palashLpBasis > 0 ? navStepUpAbs / palashLpBasis : 0;
 
           // ── Look-through: Palash's pro-rata share of fund ────────────────────
           const lookThroughByType = allocByType.map(a => ({ ...a, palashShare: a.amount * palashPct }));
@@ -3116,8 +3131,8 @@ export default function Dashboard() {
               </ul>
             </div>
 
-            {/* ── My Holdings KPIs (progression + LP metrics) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* ── My Holdings KPIs (progression) ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
                 <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(palashOriginalBasis)}</p>
@@ -3138,15 +3153,75 @@ export default function Dashboard() {
                 <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
                 <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis</p>
               </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑤ DPI</p>
-                <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{palashDpi.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">distributions ÷ basis (none yet)</p>
+            </div>
+
+            {/* ── Pre vs Post Deal Comparison (DPI / TVPI + NAV step-up) ── */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#A78BFA" }} />
+                <p className="text-sm font-semibold text-slate-200">Pre vs Post Deal — DPI / TVPI Step-Up</p>
               </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑥ TVPI</p>
-                <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashTvpi.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">(NAV + dist.) ÷ basis</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                    <tr>
+                      <th className="py-2 px-4 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Metric</th>
+                      <th className="py-2 px-4 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Pre-Deal (Direct Holdings)</th>
+                      <th className="py-2 px-4 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Post-Deal (LP)</th>
+                      <th className="py-2 px-4 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0D1421]">
+                    <tr>
+                      <td className="py-2.5 px-4 text-slate-300 font-medium">Contributions</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-slate-300">{fmt(palashPreDealContributions)}</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-slate-300">{fmt(palashPostDealContributions)}</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums" style={{ color: "#94A3B8" }}>+{fmt(PALASH_CASH_CONTRIBUTION)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-4 text-slate-300 font-medium">Distributions</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-emerald-400">{fmt(palashPreDealDistributions)}</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-emerald-400">{fmt(palashPostDealDistributions)}</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-slate-500">— (carried)</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-4 text-slate-300 font-medium">Current Value</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-slate-300">{fmt(palashPreDealValue)} <span className="text-[9px] text-slate-600">portfolio</span></td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-emerald-300">{fmt(palashPostDealValue)} <span className="text-[9px] text-slate-600">NAV stake</span></td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold" style={{ color: palashPostDealValue >= palashPreDealValue ? "#34D399" : "#F87171" }}>
+                        {palashPostDealValue >= palashPreDealValue ? "+" : ""}{fmt(palashPostDealValue - palashPreDealValue)}
+                      </td>
+                    </tr>
+                    <tr className="bg-[#080E1A]/50">
+                      <td className="py-2.5 px-4 text-slate-200 font-semibold">DPI</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold text-slate-200">{palashPreDealDpi.toFixed(2)}×</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold text-slate-200">{palashPostDealDpi.toFixed(2)}×</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold" style={{ color: palashPostDealDpi >= palashPreDealDpi ? "#34D399" : "#F87171" }}>
+                        {(palashPostDealDpi - palashPreDealDpi >= 0 ? "+" : "")}{(palashPostDealDpi - palashPreDealDpi).toFixed(2)}×
+                      </td>
+                    </tr>
+                    <tr className="bg-[#080E1A]/50">
+                      <td className="py-2.5 px-4 text-slate-200 font-semibold">TVPI</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold" style={{ color: palashPreDealTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashPreDealTvpi.toFixed(2)}×</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold" style={{ color: palashPostDealTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashPostDealTvpi.toFixed(2)}×</td>
+                      <td className="py-2.5 px-4 text-right tabular-nums font-semibold" style={{ color: palashPostDealTvpi >= palashPreDealTvpi ? "#34D399" : "#F87171" }}>
+                        {(palashPostDealTvpi - palashPreDealTvpi >= 0 ? "+" : "")}{(palashPostDealTvpi - palashPreDealTvpi).toFixed(2)}×
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="border-t border-[#1E2D3D] bg-[#080E1A] px-5 py-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                  <span className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">NAV Step-up at Lock-in</span>
+                  <span className="tabular-nums">LP basis <span className="text-slate-300">{fmt(palashLpBasis)}</span></span>
+                  <span className="text-slate-600">→</span>
+                  <span className="tabular-nums">NAV stake <span className="text-emerald-300">{fmt(palashNav)}</span></span>
+                  <span className="tabular-nums font-semibold" style={{ color: navStepUpAbs >= 0 ? "#34D399" : "#F87171" }}>
+                    {navStepUpAbs >= 0 ? "+" : ""}{fmt(navStepUpAbs)} ({navStepUpPct >= 0 ? "+" : ""}{(navStepUpPct * 100).toFixed(1)}%)
+                  </span>
+                  <span className="text-[10px] text-slate-600">— pro-rata share of existing fund's accrued NAV</span>
+                </div>
               </div>
             </div>
 
