@@ -99,29 +99,26 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
   {
     id:            "neil-wolfson",
     name:          "Neil Wolfson",
-    investorSince: "September 29, 2023",
+    investorSince: "September 30, 2024",
     statementDate: "May 5, 2026",
     positions: [
-      // Earned Class A Common (initial cohort).
-      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "Pigeon Service Inc.",   companyId: "certd",          shares: 3_216_930, costBasis: 0, estimatedValue:  32_169.30 },
-      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "Falconer Inc.",         companyId: "falconer",       shares: 4_735_803, costBasis: 0, estimatedValue:  21_311.11 },
-      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "SBR2TH Recruiting Inc.",companyId: "sbr2th",         shares: 3_247_832, costBasis: 0, estimatedValue:  34_751.80 },
-      { category: "Earned Equity", issueDate: "2023-09-29", securityType: "Class A Common", company: "Merchant Boxes Inc.",   companyId: "merchant-boxes", shares: 4_804_351, costBasis: 0, estimatedValue: 136_924.00 },
-      // Earned Class A Common (subsequent grants).
-      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Pigeon Service Inc.",   companyId: "certd",          shares: 1_838_246, costBasis: 0, estimatedValue:  18_382.46 },
-      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Falconer Inc.",         companyId: "falconer",       shares: 2_706_173, costBasis: 0, estimatedValue:  12_177.78 },
-      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "SBR2TH Recruiting Inc.",companyId: "sbr2th",         shares: 1_855_904, costBasis: 0, estimatedValue:  19_858.17 },
-      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Merchant Boxes Inc.",   companyId: "merchant-boxes", shares: 2_745_343, costBasis: 0, estimatedValue:  78_242.28 },
-      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Audily Inc.",           companyId: "audily",         shares: 2_749_945, costBasis: 0, estimatedValue:  22_274.55 },
+      // Earned Class A Common across the 5 portfolio companies.
+      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Pigeon Service Inc.",   companyId: "certd",          shares: 1_838_246, costBasis: 0, estimatedValue: 18_382.46 },
+      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Falconer Inc.",         companyId: "falconer",       shares: 2_706_173, costBasis: 0, estimatedValue: 12_177.78 },
+      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "SBR2TH Recruiting Inc.",companyId: "sbr2th",         shares: 1_855_904, costBasis: 0, estimatedValue: 19_858.17 },
+      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Merchant Boxes Inc.",   companyId: "merchant-boxes", shares: 2_745_343, costBasis: 0, estimatedValue: 78_242.28 },
+      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "Class A Common", company: "Audily Inc.",           companyId: "audily",         shares: 2_749_945, costBasis: 0, estimatedValue: 22_274.55 },
       // nth Venture RSUs (excluded from value totals).
       { category: "Earned Equity", issueDate: "2024-01-01", securityType: "RSU",            company: "nth Venture Inc.",                                  shares: 2_000_000, costBasis: 0, estimatedValue: 0 },
-      // nth Venture Series A Preferred (purchased).
+      // Audily RSUs (excluded from value totals).
+      { category: "Earned Equity", issueDate: "2024-09-30", securityType: "RSU",            company: "Audily Inc.",          companyId: "audily",         shares:   500_000, costBasis: 0, estimatedValue: 0 },
+      // nth Venture Series A Preferred (purchased) — 2M shares from Feb 2, 2023.
       { category: "Purchased Equity", issueDate: "2023-02-02", securityType: "Series A Preferred", company: "nth Venture Inc.",                            shares: 2_000_000, perShareBasis: 0.10, costBasis: 200_000.00, estimatedValue: 200_000.00 },
-      // Audily SAFE → Series A (50k → 625 preferreds at $80/share, converted Sept 6, 2024).
-      { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue:  62_500.00, interestDividend: 5_583.36 },
+      // Audily SAFE → Series A: $50k → 625 preferreds at $80/share, converted Sept 6, 2024.
+      { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00 },
       // Audily short-term note: $100k principal, balance $95,639.35 (so $4,360.65 repaid), 16.5% APR, issued 10/9/25.
       { category: "Short-term Notes",  issueDate: "2025-10-09", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 100_000, repaid: 4_360.65, interestDividend: 0, costBasis: 100_000, estimatedValue: 95_639.35, annualizedReturnPct: 16.5 },
-      // LP interest (new asset class). $100k LP basis in Co-Owner Fund LP.
+      // LP interest (new asset class). $100k LP basis.
       { category: "LP Interests", issueDate: "2024-01-01", securityType: "LP Interest", company: "Co-Owner Fund LP", companyId: "co-owner-fund", costBasis: 100_000, estimatedValue: 100_000 },
     ],
   },
