@@ -2846,8 +2846,8 @@ export default function Dashboard() {
           // ── Palash's portfolio value (= DirectHoldingsTab portfolioValue, $880.2K) ──
           // Class A Common (purchased + earned): use shares × default PPS where the company
           // is in the fund portfolio; otherwise fall back to the position's estimatedValue.
-          // Convertibles + preferred: estimatedValue. RSUs and notes excluded — notes stay
-          // with Palash (the active $25k working note isn't rolled into the fund).
+          // Convertibles + preferred: estimatedValue. RSUs excluded. Outstanding notes are
+          // tracked separately as palashActiveCreditValue (Credit allocation, not Equity).
           const palashPortfolioValue = directInvestor.positions.reduce((s, p) => {
             if (p.securityType === "RSU") return s;
             if (p.category === "Short-term Notes") return s;
@@ -2857,6 +2857,11 @@ export default function Dashboard() {
             }
             return s + (p.estimatedValue ?? 0);
           }, 0);
+          // Active outstanding credit Palash is rolling in — currently the $25k working
+          // portion of the 2026-02-03 Audily note. Goes onto the fund as debt + into LP basis.
+          const palashActiveCreditValue = directInvestor.positions
+            .filter(p => p.category === "Short-term Notes" && (p.estimatedValue ?? 0) > 0)
+            .reduce((s, p) => s + (p.estimatedValue ?? 0), 0);
 
           // ── Palash's KPI inputs ──────────────────────────────────────────────
           // Original basis = total cost basis - total principal repaid (= principalBasis).
@@ -2866,8 +2871,8 @@ export default function Dashboard() {
           // Cash already returned to Palash from his direct holdings (notes + interest + dividends).
           const palashHistoricalDistributions = directInvestor.positions.reduce((s, p) =>
             s + (p.repaid ?? 0) + (p.interestDividend ?? 0), 0);
-          // LP basis = portfolio value (in-kind) + $100k cash contribution
-          const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
+          // LP basis = portfolio value (equity, in-kind) + active credit (in-kind) + $100k cash
+          const palashLpBasis = palashPortfolioValue + palashActiveCreditValue + PALASH_CASH_CONTRIBUTION;
 
           // ── LP D in-kind roll-in (at default PPS) ────────────────────────────
           const lpDValue = Object.entries(PALASH_LP_D_SHARES).reduce((s, [id, sh]) =>
@@ -2884,7 +2889,7 @@ export default function Dashboard() {
           const cashGapVsDeal    = dealCashTotal - newCashFromLPs;     // 0
 
           // ── Palash's roll-in as new debtPositions on existing companies ──────
-          // Convertibles + preferred only — notes stay with Palash (not rolled into fund).
+          // Convertibles, preferred, and the active outstanding short-term note.
           const palashAudilyPrefRollIn: DebtPosition = {
             id: "palash-audily-pref-rollin", date: "May 2026", instrument: "Preferred",
             principal: 200_000, status: "Current", currentValue: 200_000,
@@ -2894,6 +2899,13 @@ export default function Dashboard() {
             id: "palash-audily-safe-rollin", date: "Mar 2024", instrument: "SAFE",
             principal: 100_000, status: "Current", currentValue: 125_000,
             notes: "Palash roll-in: SAFE → Series A (1,250 shares).",
+          };
+          // Active outstanding portion of the 2026-02-03 Audily working note ($25k).
+          // Term Loan instrument so it lands in the Credit allocation bucket.
+          const palashAudilyNoteRollIn: DebtPosition = {
+            id: "palash-audily-note-rollin", date: "Feb 2026", instrument: "Term Loan",
+            principal: 25_000, status: "Current", currentValue: palashActiveCreditValue,
+            notes: "Palash roll-in: outstanding portion of 2026-02-03 short-term note.",
           };
 
           // ── Build modified portfolio (bottom-up, mirrors proposal tab) ───────
@@ -2906,6 +2918,7 @@ export default function Dashboard() {
                 PROPOSAL_AUDILY_PREFERRED,
                 palashAudilyPrefRollIn,
                 palashAudilySafeRollIn,
+                ...(palashActiveCreditValue > 0 ? [palashAudilyNoteRollIn] : []),
               ]};
             }
 
@@ -3085,7 +3098,7 @@ export default function Dashboard() {
           // ── LP cap-table rows ────────────────────────────────────────────────
           const lpRows = [
             { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                                                          accent: "#64748B" },
-            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind ${fmt(palashPortfolioValue)} + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
+            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind ${fmt(palashPortfolioValue + palashActiveCreditValue)} + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
             { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_OTHER_LP_BASIS, basis: PALASH_OTHER_LP_BASIS,  type: "cash",                                                                       accent: "#34D399" },
             { id: "lpD",      name: "LP D",                         units: lpDBasis,              basis: lpDBasis,               type: "in-kind equity roll-up",                                                     accent: "#F59E0B" },
           ];
@@ -3098,7 +3111,7 @@ export default function Dashboard() {
               <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span> + <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
+                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span> + outstanding credit <span className="text-white font-medium">{fmt(palashActiveCreditValue)}</span> + <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -3129,7 +3142,7 @@ export default function Dashboard() {
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashOriginalBasis)} basis + {fmt(palashUnrealizedGains)} gains + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
+                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashPortfolioValue)} equity + {fmt(palashActiveCreditValue)} credit + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
