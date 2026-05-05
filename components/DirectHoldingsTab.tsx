@@ -3,6 +3,7 @@ import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, Pencil, RotateCcw } from "lucide-react";
 import type { PortfolioCompany } from "@/lib/types";
 import type { DirectInvestor, DirectPosition } from "@/lib/investors";
+import { computeFundNav, LP_TOTAL_UNITS } from "@/lib/data";
 
 // ── Company accent colors ────────────────────────────────────────────────
 const ACCENT: Record<string, string> = {
@@ -88,10 +89,23 @@ export default function DirectHoldingsTab({
     return defaultImplied(c) / c.totalShares;
   };
 
+  // Bottom-up fund NAV with the user's share-price overrides applied. Drives the
+  // LP Interest mark-to-NAV below so editing any company's share price flows
+  // through to the LP-interest current value.
+  const dynamicFundNav = useMemo(
+    () => computeFundNav(userValuations),
+    [userValuations]
+  );
+
   const estVal = (p: DirectPosition): number => {
     if (p.shares && p.companyId && isCommonOrRSU(p.securityType)) {
       const pps = effectivePps(p.companyId);
       if (pps !== null) return p.shares * pps;
+    }
+    // LP Interest in Co-Owner Fund LP — value = LP basis (units at $1 par)
+    // × current NAV/unit, recomputed whenever underlying share prices change.
+    if (p.category === "LP Interests" && p.companyId === "co-owner-fund" && LP_TOTAL_UNITS > 0) {
+      return Math.round((dynamicFundNav / LP_TOTAL_UNITS) * p.costBasis);
     }
     return p.estimatedValue;
   };
@@ -123,7 +137,7 @@ export default function DirectHoldingsTab({
   const earnedValue       = sum(earnedPos,  p => estVal(p));
   const earnedEquityValue = sum(earnedPos.filter(p => p.securityType !== "RSU"), p => estVal(p));
   const lpInterestsCost   = sum(lpPos, p => p.costBasis);
-  const lpInterestsValue  = sum(lpPos, p => p.estimatedValue);
+  const lpInterestsValue  = sum(lpPos, p => estVal(p));
 
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
@@ -885,7 +899,8 @@ export default function DirectHoldingsTab({
                 </thead>
                 <tbody className="divide-y divide-[#0D1421]">
                   {lpPos.map((p, i) => {
-                    const moic = p.costBasis > 0 ? p.estimatedValue / p.costBasis : null;
+                    const v = estVal(p);
+                    const moic = p.costBasis > 0 ? v / p.costBasis : null;
                     return (
                       <tr key={i} className="hover:bg-[#111D2E]/40 transition-colors">
                         <TD><CompanyAvatar id={p.companyId} name={p.company} /></TD>
@@ -893,7 +908,7 @@ export default function DirectHoldingsTab({
                         <TD className="text-slate-400">{p.securityType}</TD>
                         <TD className="text-slate-500">{fmtDate(p.issueDate)}</TD>
                         <TD className="text-slate-300 tabular-nums">{fmt(p.costBasis)}</TD>
-                        <TD className="tabular-nums font-semibold" style={{ color: "#A78BFA" }}>{fmt(p.estimatedValue)}</TD>
+                        <TD className="tabular-nums font-semibold" style={{ color: "#A78BFA" }}>{fmt(v)}</TD>
                         <TD className="tabular-nums font-semibold" style={{ color: moic !== null ? gainColor(moic - 1) : "#94A3B8" }}>
                           {moic !== null ? `${moic.toFixed(2)}×` : "—"}
                         </TD>

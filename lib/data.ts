@@ -927,17 +927,21 @@ export const portfolio: PortfolioCompany[] = [
 ];
 
 // ── Fund metrics ────────────────────────────────────────────────────────────
-// `fund.nav` is computed bottom-up from portfolio holdings: per-active-company
-// (equity = Common shares × default PPS) + active debt currentValue + options
-// (intrinsic + time value at default variance) plus cash, minus fund-level
-// leverage. No hardcoded headline NAV.
-function computeFundNav(): number {
+// Fund NAV is computed bottom-up from portfolio holdings:
+//   per-active-company (Common shares × PPS) + active debt currentValue +
+//   options (intrinsic + time value at default variance) + cash − leverage.
+// `computeFundNav(userValuations)` accepts an optional override map keyed by
+// companyId — pass userValuations from a component to mark NAV to user-edited
+// share prices. The static `fund.nav` below uses no overrides.
+export function computeFundNav(userValuations: Record<string, number> = {}): number {
   let total = 0;
   for (const c of portfolio) {
     if (c.status !== "active") continue;
-    const pps = c.totalShares
-      ? (c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation) / c.totalShares
-      : 0;
+    const defaultImplied = c.customPricePerShare && c.totalShares
+      ? c.customPricePerShare * c.totalShares
+      : c.impliedValuation;
+    const implied = userValuations[c.id] ?? defaultImplied;
+    const pps = c.totalShares ? implied / c.totalShares : 0;
     const sh = (c.shareTransactions ?? [])
       .filter(t => t.type === "Common")
       .reduce((s, t) => s + (t.shares ?? 0), 0);

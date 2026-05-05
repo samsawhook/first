@@ -38,6 +38,7 @@ import {
   LP_TOTAL_UNITS as BASE_LP_TOTAL_UNITS,
   FUND_LEVERAGE as BASE_FUND_LEVERAGE,
   managedFundPositions,
+  computeFundNav,
 } from "@/lib/data";
 import { investors } from "@/lib/investors";
 import type { Investor, ShareTransaction, DebtPosition } from "@/lib/types";
@@ -2865,12 +2866,18 @@ export default function Dashboard() {
           // is in the fund portfolio; otherwise fall back to the position's estimatedValue.
           // Convertibles + preferred: estimatedValue. RSUs excluded. Outstanding notes are
           // tracked separately as palashActiveCreditValue (Credit allocation, not Equity).
+          // LP Interests in Co-Owner Fund LP are marked-to-NAV with the user's share-price
+          // edits applied (so editing PPS in My Holdings flows through here too).
+          const dynamicFundNavWithEdits = computeFundNav(userValuations);
           const palashPortfolioValue = directInvestor.positions.reduce((s, p) => {
             if (p.securityType === "RSU") return s;
             if (p.category === "Short-term Notes") return s;
             if (p.shares && p.companyId && p.securityType === "Class A Common") {
               const pps = ppsForCompany(p.companyId);
               if (pps > 0) return s + p.shares * pps;
+            }
+            if (p.category === "LP Interests" && p.companyId === "co-owner-fund" && BASE_LP_TOTAL_UNITS > 0) {
+              return s + Math.round((dynamicFundNavWithEdits / BASE_LP_TOTAL_UNITS) * p.costBasis);
             }
             return s + (p.estimatedValue ?? 0);
           }, 0);
@@ -2881,9 +2888,11 @@ export default function Dashboard() {
             .reduce((s, p) => s + (p.estimatedValue ?? 0), 0);
 
           // ── Palash's KPI inputs ──────────────────────────────────────────────
-          // Original basis = total cost basis - total principal repaid (= principalBasis).
+          // Original basis = principalBasis from My Holdings — total cost basis less
+          // principal repaid less the portion rolled in from prior notes (which was
+          // already counted as basis when those prior notes were originally invested).
           const palashOriginalBasis = directInvestor.positions.reduce((s, p) =>
-            s + (p.costBasis ?? 0) - (p.repaid ?? 0), 0);
+            s + (p.costBasis ?? 0) - (p.repaid ?? 0) - (p.rolledInFromPrior ?? 0), 0);
           const palashUnrealizedGains = palashPortfolioValue - palashOriginalBasis;
           // Cash already returned to Palash from his direct holdings (notes + interest + dividends).
           const palashHistoricalDistributions = directInvestor.positions.reduce((s, p) =>
@@ -3472,12 +3481,18 @@ export default function Dashboard() {
           };
 
           // ── Neil's portfolio value (= DirectHoldingsTab portfolioValue) ──────
+          // LP Interests are marked-to-NAV using the dynamic fund NAV (with the user's
+          // share-price edits applied) so PPS edits in My Holdings flow through here.
+          const neilDynamicFundNav = computeFundNav(userValuations);
           const neilPortfolioValue = directInvestor.positions.reduce((s, p) => {
             if (p.securityType === "RSU") return s;
             if (p.category === "Short-term Notes") return s;
             if (p.shares && p.companyId && p.securityType === "Class A Common") {
               const pps = ppsForCompany(p.companyId);
               if (pps > 0) return s + p.shares * pps;
+            }
+            if (p.category === "LP Interests" && p.companyId === "co-owner-fund" && BASE_LP_TOTAL_UNITS > 0) {
+              return s + Math.round((neilDynamicFundNav / BASE_LP_TOTAL_UNITS) * p.costBasis);
             }
             return s + (p.estimatedValue ?? 0);
           }, 0);
@@ -3487,8 +3502,10 @@ export default function Dashboard() {
             .reduce((s, p) => s + (p.estimatedValue ?? 0), 0);
 
           // ── Neil's KPI inputs ────────────────────────────────────────────────
+          // Original basis matches My Holdings principalBasis: cost basis less principal
+          // repaid less rolled-in-from-prior (avoid double-count when notes consolidate).
           const neilOriginalBasis = directInvestor.positions.reduce((s, p) =>
-            s + (p.costBasis ?? 0) - (p.repaid ?? 0), 0);
+            s + (p.costBasis ?? 0) - (p.repaid ?? 0) - (p.rolledInFromPrior ?? 0), 0);
           const neilLpBasis = neilPortfolioValue + neilActiveCreditValue + NEIL_CASH_CONTRIBUTION;
 
           // ── Palash's in-kind contribution in Neil's view (no cash from Palash) ──
