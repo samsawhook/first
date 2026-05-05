@@ -2832,104 +2832,244 @@ export default function Dashboard() {
         })()}
 
         {!activeCompany && activeTab === "palash-memo" && directInvestor?.id === "palash-jillian" && (() => {
-          // ── Palash Deal Memo: roll-up scenario with 3 new LPs ────────────────
-          const ppsOf = (id: string) => basePortfolio.find(c => c.id === id)?.customPricePerShare ?? 0;
-          const valueOf = (rollup: Record<string, number>) =>
-            Object.entries(rollup).reduce((sum, [id, sh]) => sum + sh * ppsOf(id), 0);
+          // ── Helpers (mirror DirectHoldingsTab estVal logic) ──────────────────
+          const ppsForCompany = (id: string): number => {
+            const c = basePortfolio.find(p => p.id === id);
+            if (!c || !c.totalShares) return 0;
+            const implied = c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation;
+            return implied / c.totalShares;
+          };
 
-          // Roll-in market values (at default PPS)
-          // Palash rolls in ALL holdings: Class A Common (purchased + earned) at default PPS,
-          // plus convertibles + outstanding notes at their estimated value. RSUs excluded
-          // (consistent with DirectHoldingsTab portfolioValue semantics).
-          const palashCommonRollupValue = valueOf(PALASH_ROLLUP_SHARES);
-          const palashOtherRollupValue  = directInvestor.positions.reduce((s, p) => {
+          // ── Palash's portfolio value (= DirectHoldingsTab portfolioValue, $880.2K) ──
+          // Class A Common (purchased + earned): use shares × default PPS where the company
+          // is in the fund portfolio; otherwise fall back to the position's estimatedValue.
+          // Convertibles + preferred: estimatedValue. RSUs and notes excluded — notes stay
+          // with Palash (the active $25k working note isn't rolled into the fund).
+          const palashPortfolioValue = directInvestor.positions.reduce((s, p) => {
             if (p.securityType === "RSU") return s;
-            if (p.securityType === "Class A Common") return s;   // already in Common rollup
+            if (p.category === "Short-term Notes") return s;
+            if (p.shares && p.companyId && p.securityType === "Class A Common") {
+              const pps = ppsForCompany(p.companyId);
+              if (pps > 0) return s + p.shares * pps;
+            }
             return s + (p.estimatedValue ?? 0);
           }, 0);
-          const palashPortfolioValue = palashCommonRollupValue + palashOtherRollupValue;
 
-          // Palash LP basis = portfolio value (in-kind) + $100k cash contribution
+          // ── Palash's KPI inputs ──────────────────────────────────────────────
+          // Original basis = total cost basis - total principal repaid (= principalBasis).
+          const palashOriginalBasis = directInvestor.positions.reduce((s, p) =>
+            s + (p.costBasis ?? 0) - (p.repaid ?? 0), 0);
+          const palashUnrealizedGains = palashPortfolioValue - palashOriginalBasis;
+          // Cash already returned to Palash from his direct holdings (notes + interest + dividends).
+          const palashHistoricalDistributions = directInvestor.positions.reduce((s, p) =>
+            s + (p.repaid ?? 0) + (p.interestDividend ?? 0), 0);
+          // LP basis = portfolio value (in-kind) + $100k cash contribution
           const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
 
-          const lpDValue = valueOf(PALASH_LP_D_SHARES);
+          // ── LP D in-kind roll-in (at default PPS) ────────────────────────────
+          const lpDValue = Object.entries(PALASH_LP_D_SHARES).reduce((s, [id, sh]) =>
+            s + sh * ppsForCompany(id), 0);
           const lpDBasis = Math.round(lpDValue);
 
-          // Deal economics
-          const audilyPrefCost   = 150_000;             // cash
-          const nuecesEquityCost = 320_000;             // 50% of $640k
-          const nuecesNote       = 120_000;             // seller note (new fund leverage)
-          const nuecesCash       = nuecesEquityCost - nuecesNote;  // $200k cash
-          const dealCashTotal    = audilyPrefCost + nuecesCash;    // $350k cash needed
+          // ── Deal economics ───────────────────────────────────────────────────
+          const audilyPrefCost   = 150_000;
+          const nuecesEquityCost = 320_000;
+          const nuecesNote       = 120_000;
+          const nuecesCash       = nuecesEquityCost - nuecesNote;     // $200k
+          const dealCashTotal    = audilyPrefCost + nuecesCash;        // $350k
+          const newCashFromLPs   = PALASH_CASH_CONTRIBUTION + PALASH_OTHER_LP_BASIS; // $350k
+          const cashGapVsDeal    = dealCashTotal - newCashFromLPs;     // 0
 
-          // LP capital
-          const newLpBasis      = palashLpBasis + PALASH_OTHER_LP_BASIS + lpDBasis;
-          const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;          // 1 unit = $1 par
-          const newCashFromLPs  = PALASH_CASH_CONTRIBUTION + PALASH_OTHER_LP_BASIS; // $100k + $250k = $350k
-          const cashGapVsDeal   = dealCashTotal - newCashFromLPs;            // 0 — fully funded
+          // ── Palash's roll-in as new debtPositions on existing companies ──────
+          // Convertibles + preferred only — notes stay with Palash (not rolled into fund).
+          const palashAudilyPrefRollIn: DebtPosition = {
+            id: "palash-audily-pref-rollin", date: "May 2026", instrument: "Preferred",
+            principal: 200_000, status: "Current", currentValue: 200_000,
+            notes: "Palash roll-in: Audily Series A Preferred (2,000 shares).",
+          };
+          const palashAudilySafeRollIn: DebtPosition = {
+            id: "palash-audily-safe-rollin", date: "Mar 2024", instrument: "SAFE",
+            principal: 100_000, status: "Current", currentValue: 125_000,
+            notes: "Palash roll-in: SAFE → Series A (1,250 shares).",
+          };
 
-          // Fund NAV math
-          // Roll-up adds: in-kind market value + new cash. Deal is net-zero against NAV:
-          //   -$350k cash, +$320k Nueces, +$150k Audily Pref, +$120k seller-note debt = $0
-          const newFundNav      = baseFund.nav + palashPortfolioValue + lpDValue + newCashFromLPs;
-          const navPerUnit      = newLpUnitsTotal > 0 ? newFundNav / newLpUnitsTotal : 0;
-          const newFundLeverage = BASE_FUND_LEVERAGE + nuecesNote;           // seller note added
-          const newGrossAssets  = newFundNav + newFundLeverage;              // assets before leverage netting
+          // ── Build modified portfolio (bottom-up, mirrors proposal tab) ───────
+          const portfolioPalash = withAudilyAccrued(basePortfolio).map(c => {
+            let modified: typeof c = c;
 
-          // Palash's KPI progression
-          const palashOriginalBasis = directInvestor.positions.reduce((s, p) => s + (p.costBasis ?? 0), 0);
-          const palashNav           = palashLpBasis * navPerUnit;
-          const palashMoic          = palashLpBasis > 0 ? palashNav / palashLpBasis : 0;
-          const palashPct           = newLpUnitsTotal > 0 ? palashLpBasis / newLpUnitsTotal : 0;
+            if (c.id === "audily") {
+              modified = { ...modified, debtPositions: [
+                ...(modified.debtPositions ?? []),
+                PROPOSAL_AUDILY_PREFERRED,
+                palashAudilyPrefRollIn,
+                palashAudilySafeRollIn,
+              ]};
+            }
 
-          // Per-company merged Common-share holdings
-          const allCompanyIds = new Set<string>([
-            ...Object.keys(PALASH_ROLLUP_SHARES),
-            ...Object.keys(PALASH_LP_D_SHARES),
-            "audily", "nueces-brewing",
-          ]);
-          const merged = Array.from(allCompanyIds).map(id => {
-            const c = basePortfolio.find(p => p.id === id);
-            const pps = ppsOf(id);
-            const fundCommonPre = (c?.shareTransactions ?? [])
-              .filter(t => t.type === "Common")
+            if (c.id === "nueces-brewing") {
+              modified = {
+                ...modified,
+                invested: 320_000,
+                currentValue: 320_000,
+                ownership: 50,
+                votingOwnership: 50,
+                impliedValuation: 640_000,
+                customPricePerShare: 6.40,
+                totalShares: 100_000,
+                shareTransactions: [
+                  ...(modified.shareTransactions ?? []),
+                  { date: "May 2026", type: "Common" as const, shares: 50_000, amount: 320_000, notes: "Nueces Brewing 50% acquisition." },
+                ],
+              };
+            }
+
+            // Common roll-ins from Palash and LP D
+            const palashCommonAdd = PALASH_ROLLUP_SHARES[c.id] ?? 0;
+            const lpDCommonAdd    = PALASH_LP_D_SHARES[c.id] ?? 0;
+            if (palashCommonAdd > 0 || lpDCommonAdd > 0) {
+              const pps = ppsForCompany(c.id);
+              const additions: ShareTransaction[] = [];
+              if (palashCommonAdd > 0) {
+                additions.push({ date: "May 2026", type: "Common", shares: palashCommonAdd, amount: Math.round(palashCommonAdd * pps), notes: "Palash in-kind roll-in." });
+              }
+              if (lpDCommonAdd > 0) {
+                additions.push({ date: "May 2026", type: "Common", shares: lpDCommonAdd, amount: Math.round(lpDCommonAdd * pps), notes: "LP D in-kind roll-in." });
+              }
+              modified = { ...modified, shareTransactions: [...(modified.shareTransactions ?? []), ...additions] };
+            }
+
+            return modified;
+          });
+
+          // Synthetic entries for companies Palash holds that aren't in basePortfolio.
+          type CompanyLike = {
+            id: string; name: string; accentColor?: string; status: string;
+            currentValue?: number; totalShares?: number; customPricePerShare?: number; impliedValuation?: number;
+            shareTransactions?: ShareTransaction[]; debtPositions?: DebtPosition[]; optionPositions?: typeof basePortfolio[number]["optionPositions"];
+          };
+          // nth Venture — Palash's SAFE + Convertible Notes roll-in (debt-only).
+          const nthVentureSynthetic: CompanyLike = {
+            id: "nth-venture",
+            name: "nth Venture",
+            accentColor: "#64748B",
+            status: "active",
+            currentValue: 170_000,
+            shareTransactions: [],
+            debtPositions: [
+              { id: "palash-nth-safe", date: "Feb 2022", instrument: "SAFE", principal: 20_000, status: "Current", currentValue: 20_000, notes: "Palash roll-in: nth Venture SAFE → Series A (200,000 shares)." },
+              { id: "palash-nth-conv", date: "Jun 2023", instrument: "Convertible Note", principal: 150_000, status: "Current", currentValue: 150_000, notes: "Palash roll-in: nth Venture Convertible Notes." },
+            ],
+          };
+          // Sentius Development — Palash's Class A Common roll-in (no PPS in fund data; use estVal).
+          const palashSentiusShares = PALASH_ROLLUP_SHARES["sentius"] ?? 0;
+          const sentiusSynthetic: CompanyLike = {
+            id: "sentius",
+            name: "Sentius Development",
+            accentColor: "#06B6D4",
+            status: "active",
+            currentValue: 27_500,   // sum of Palash's Sentius position estimatedValue
+            shareTransactions: palashSentiusShares > 0
+              ? [{ date: "May 2026", type: "Common", shares: palashSentiusShares, amount: 27_500, notes: "Palash in-kind roll-in." }]
+              : [],
+            debtPositions: [],
+          };
+
+          // ── Bottom-up per-company values (no fake NAV) ───────────────────────
+          const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
+          const allCompanies: CompanyLike[] = [
+            ...portfolioPalash.filter(c => c.status === "active"),
+            sentiusSynthetic,
+            nthVentureSynthetic,
+          ];
+
+          const companyRows = allCompanies.map(c => {
+            const pps = c.totalShares
+              ? (c.customPricePerShare ? c.customPricePerShare * c.totalShares : (c.impliedValuation ?? 0)) / c.totalShares
+              : 0;
+
+            // Pre-deal Common shares (excluding rollups + deal additions; checks transaction notes)
+            const commonAll = (c.shareTransactions ?? []).filter(t => t.type === "Common");
+            const fundCommonPre = commonAll
+              .filter(t => !t.notes?.startsWith("Palash") && !t.notes?.startsWith("LP D") && !t.notes?.startsWith("Nueces Brewing 50%"))
               .reduce((s, t) => s + (t.shares ?? 0), 0);
-            const palashRollIn = PALASH_ROLLUP_SHARES[id] ?? 0;
-            const lpDRollIn    = PALASH_LP_D_SHARES[id] ?? 0;
-            const dealShares   = id === "nueces-brewing" ? 50_000 : 0;       // 50% of 100k Nueces
-            const post         = fundCommonPre + palashRollIn + lpDRollIn + dealShares;
-            const postPps      = id === "nueces-brewing" ? 6.40 : pps;
-            const postValue    = post * postPps;
-            return { id, name: c?.name ?? id, accent: c?.accentColor ?? "#94A3B8",
-                     pps, fundCommonPre, palashRollIn, lpDRollIn, dealShares, post, postValue };
-          }).sort((a, b) => b.postValue - a.postValue);
+            const palashRollIn = PALASH_ROLLUP_SHARES[c.id] ?? 0;
+            const lpDRollIn    = PALASH_LP_D_SHARES[c.id] ?? 0;
+            const dealShares   = c.id === "nueces-brewing" ? 50_000 : 0;
+            const postShares   = fundCommonPre + palashRollIn + lpDRollIn + dealShares;
 
-          // Allocation by security type (post-deal)
-          const equityValue = merged.reduce((s, r) => s + r.postValue, 0);
-          const baseConvertibles = basePortfolio.reduce((s, c) => s + (c.debtPositions ?? [])
-            .filter(d => d.instrument === "Preferred" || d.instrument === "SAFE" || d.instrument === "Convertible Note")
-            .reduce((ss, d) => ss + d.currentValue, 0), 0);
-          const convertValue = baseConvertibles + audilyPrefCost;
-          const baseCredit  = basePortfolio.reduce((s, c) => s + (c.debtPositions ?? [])
-            .filter(d => d.instrument === "Term Loan" || d.instrument === "Line of Credit" || d.instrument === "Revenue Based Financing")
-            .filter(d => d.status !== "Repaid")
-            .reduce((ss, d) => ss + d.currentValue, 0), 0);
-          const cashValue   = cashPositions.reduce((s, c) => s + c.balance, 0) + newCashFromLPs - dealCashTotal;
-          const allocTotal  = equityValue + convertValue + baseCredit + Math.max(0, cashValue);
-          const allocations = [
-            { label: "Equity",       amount: equityValue,  color: "#10B981" },
-            { label: "Convertibles", amount: convertValue, color: "#F59E0B" },
-            { label: "Credit",       amount: baseCredit,   color: "#6366F1" },
-            { label: "Cash",         amount: Math.max(0, cashValue), color: "#60A5FA" },
+            const equityVal = pps > 0 && postShares > 0
+              ? postShares * pps
+              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0));
+            const debtVal = (c.debtPositions ?? [])
+              .filter(d => d.status !== "Repaid")
+              .reduce((s, d) => s + d.currentValue, 0);
+            const optionVal = (c.optionPositions ?? []).reduce((s: number, o) => {
+              const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
+              const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
+              return s + intrinsic + timeVal;
+            }, 0);
+
+            return {
+              id: c.id,
+              name: c.name,
+              accent: c.accentColor || "#64748B",
+              pps,
+              fundCommonPre, palashRollIn, lpDRollIn, dealShares, postShares,
+              equityVal, debtVal, optionVal,
+              value: equityVal + debtVal + optionVal,
+              isNew: c.id === "nueces-brewing" || c.id === "nth-venture",
+            };
+          }).filter(r => r.value > 0).sort((a, b) => b.value - a.value);
+
+          // Allocation by security type (post-deal, post-rollup)
+          const equityTypeBasis  = companyRows.reduce((s, r) => s + r.equityVal, 0);
+          const optionsTypeBasis = companyRows.reduce((s, r) => s + r.optionVal, 0);
+          let creditTypeBasis = 0, convertTypeBasis = 0;
+          for (const c of allCompanies) {
+            for (const d of (c.debtPositions ?? [])) {
+              if (d.status === "Repaid") continue;
+              if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += d.currentValue;
+              else convertTypeBasis += d.currentValue;
+            }
+          }
+          // Fund cash: existing + new from LPs - deal cash spend = existing only ($2,329.95)
+          const cashTypeBasis = cashPositions.reduce((s, c) => s + c.balance, 0);
+
+          const allocByType = [
+            { label: "Equity",       amount: equityTypeBasis,  color: "#10B981" },
+            { label: "Convertibles", amount: convertTypeBasis, color: "#F59E0B" },
+            { label: "Credit",       amount: creditTypeBasis,  color: "#6366F1" },
+            { label: "Options",      amount: optionsTypeBasis, color: "#F43F5E" },
+            { label: "Cash",         amount: cashTypeBasis,    color: "#60A5FA" },
           ].filter(a => a.amount > 0);
+          const allocTotalByType = allocByType.reduce((s, a) => s + a.amount, 0);
 
-          // Donut: per-company portfolio value (using post-deal Common values)
-          const donutItems = merged.filter(r => r.postValue > 0);
-          const donutTotal = donutItems.reduce((s, d) => s + d.postValue, 0);
+          // ── NAV: bottom-up gross assets minus leverage ───────────────────────
+          const grossAssets    = companyRows.reduce((s, r) => s + r.value, 0) + cashTypeBasis;
+          const newFundLeverage = BASE_FUND_LEVERAGE + nuecesNote;
+          const newFundNav      = grossAssets - newFundLeverage;
+
+          // ── LP units ($1/unit par convention) ────────────────────────────────
+          const newLpBasis      = palashLpBasis + PALASH_OTHER_LP_BASIS + lpDBasis;
+          const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;
+          const palashPct       = newLpUnitsTotal > 0 ? palashLpBasis / newLpUnitsTotal : 0;
+          const palashNav       = palashPct * newFundNav;
+          const palashMoic      = palashLpBasis > 0 ? palashNav / palashLpBasis : 0;
+          // DPI/TVPI from Palash's LP perspective post lock-in: no fund distributions to him yet.
+          const palashDpi       = 0;
+          const palashTvpi      = palashMoic;
+
+          // ── Look-through: Palash's pro-rata share of fund ────────────────────
+          const lookThroughByType = allocByType.map(a => ({ ...a, palashShare: a.amount * palashPct }));
+          const lookThroughByCompany = companyRows.map(r => ({ ...r, palashShare: r.value * palashPct }));
+
+          // ── Donut arcs ───────────────────────────────────────────────────────
+          const donutItems = companyRows;
+          const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
           const cx = 80, cy = 80, R = 62, r = 40;
           let ang = -Math.PI / 2;
           const arcs = donutItems.map(d => {
-            const sweep = donutTotal > 0 ? (d.postValue / donutTotal) * 2 * Math.PI : 0;
+            const sweep = donutTotal > 0 ? (d.value / donutTotal) * 2 * Math.PI : 0;
             const x1 = cx + R * Math.cos(ang),       y1 = cy + R * Math.sin(ang);
             ang += sweep;
             const x2 = cx + R * Math.cos(ang),       y2 = cy + R * Math.sin(ang);
@@ -2939,12 +3079,12 @@ export default function Dashboard() {
             return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
           });
 
-          // LP rows
+          // ── LP cap-table rows ────────────────────────────────────────────────
           const lpRows = [
-            { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                       accent: "#64748B" },
+            { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                                                          accent: "#64748B" },
             { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind ${fmt(palashPortfolioValue)} + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
-            { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_OTHER_LP_BASIS, basis: PALASH_OTHER_LP_BASIS,  type: "cash",                                    accent: "#34D399" },
-            { id: "lpD",      name: "LP D",                         units: lpDBasis,              basis: lpDBasis,               type: "in-kind equity roll-up",                  accent: "#F59E0B" },
+            { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_OTHER_LP_BASIS, basis: PALASH_OTHER_LP_BASIS,  type: "cash",                                                                       accent: "#34D399" },
+            { id: "lpD",      name: "LP D",                         units: lpDBasis,              basis: lpDBasis,               type: "in-kind equity roll-up",                                                     accent: "#F59E0B" },
           ];
 
           return (
@@ -2955,7 +3095,7 @@ export default function Dashboard() {
               <ul className="space-y-2 text-sm text-slate-300">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>You roll all direct holdings into Co-Owner Fund LP at default PPS (portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span>) and add <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
+                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — portfolio value <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span> + <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -2971,22 +3111,22 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> ({fmt(PALASH_CASH_CONTRIBUTION)} from you + {fmt(PALASH_OTHER_LP_BASIS)} from other LP) · Cash gap vs deal: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 && "— fully funded"}</span>
+                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> ({fmt(PALASH_CASH_CONTRIBUTION)} from you + {fmt(PALASH_OTHER_LP_BASIS)} from other LP) · Deal cash gap: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 && "— fully funded"}</span>
                 </li>
               </ul>
             </div>
 
-            {/* ── My Holdings KPIs (progression) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* ── My Holdings KPIs (progression + LP metrics) ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
                 <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(palashOriginalBasis)}</p>
-                <p className="text-[10px] text-slate-600 mt-1">cash invested in direct holdings</p>
+                <p className="text-[10px] text-slate-600 mt-1">cost basis − principal repaid</p>
               </div>
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[10px] text-purple-400/70 mt-1">{fmt(palashPortfolioValue)} in-kind + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
+                <p className="text-[10px] text-purple-400/70 mt-1">{fmt(palashOriginalBasis)} basis + {fmt(palashUnrealizedGains)} gains + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Roll-up + Deal)</p>
@@ -2996,32 +3136,42 @@ export default function Dashboard() {
               <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
                 <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
-                <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis (locked at {fmt(palashLpBasis)})</p>
+                <p className="text-[10px] text-slate-600 mt-1">NAV ÷ LP basis</p>
+              </div>
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑤ DPI</p>
+                <p className="text-base font-bold tabular-nums text-slate-300 mt-1">{palashDpi.toFixed(2)}×</p>
+                <p className="text-[10px] text-slate-600 mt-1">distributions ÷ basis (none yet)</p>
+              </div>
+              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑥ TVPI</p>
+                <p className="text-base font-bold tabular-nums mt-1" style={{ color: palashTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashTvpi.toFixed(2)}×</p>
+                <p className="text-[10px] text-slate-600 mt-1">(NAV + dist.) ÷ basis</p>
               </div>
             </div>
 
-            {/* ── Fund Holdings Breakdown ── */}
+            {/* ── Fund Holdings Breakdown (proposal-tab style, bottom-up) ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
               <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D]">
                 <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund NAV</p>
                   <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(newFundNav)}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">assets {fmt(newGrossAssets)} · lev. -{fmt(newFundLeverage)}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">assets {fmt(grossAssets)} · lev. -{fmt(newFundLeverage)}</p>
                 </div>
                 <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">LP Basis Total</p>
                   <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(BASE_LP_TOTAL_UNITS + newLpBasis)}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()} units · $1.00/unit</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()} units · $1.00/unit par</p>
                 </div>
                 <div className="px-4 py-3.5 border-r border-[#1E2D3D]">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund MOIC</p>
                   <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{(newFundNav / (BASE_LP_TOTAL_UNITS + newLpBasis)).toFixed(2)}×</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">NAV / units</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">NAV ÷ LP basis</p>
                 </div>
                 <div className="px-4 py-3.5">
                   <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
-                  <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{donutItems.length}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">positions w/ Common</p>
+                  <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{companyRows.length}</p>
+                  <p className="text-[9px] text-slate-600 mt-0.5">active positions</p>
                 </div>
               </div>
 
@@ -3029,8 +3179,8 @@ export default function Dashboard() {
                 {/* LEFT: Allocation by security type */}
                 <div className="flex-1 px-5 py-5">
                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Allocation by Security Type</p>
-                  {allocations.map(a => {
-                    const pct = allocTotal > 0 ? a.amount / allocTotal : 0;
+                  {allocByType.map(a => {
+                    const pct = allocTotalByType > 0 ? a.amount / allocTotalByType : 0;
                     return (
                       <div key={a.label}>
                         <div className="flex items-center justify-between mb-1">
@@ -3051,7 +3201,7 @@ export default function Dashboard() {
                   })}
                   <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
                     <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total</span>
-                    <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotal)}</span>
+                    <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotalByType)}</span>
                   </div>
                 </div>
 
@@ -3061,19 +3211,82 @@ export default function Dashboard() {
                     <svg width={160} height={160} viewBox="0 0 160 160">
                       {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
                       <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(donutTotal)}</text>
-                      <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">equity</text>
+                      <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">gross</text>
                     </svg>
                   </div>
                   <div className="flex flex-col gap-2 content-center justify-center min-w-0 flex-1">
                     {donutItems.map((d, i) => (
                       <div key={i} className="flex items-center gap-2.5 min-w-0">
                         <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.accent }} />
-                        <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
-                        <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.postValue)}</span>
-                        <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{((d.postValue / donutTotal) * 100).toFixed(1)}%</span>
+                        <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}{d.isNew && <span className="ml-1 text-[8px] text-emerald-400">NEW</span>}</span>
+                        <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.value)}</span>
+                        <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{donutTotal > 0 ? ((d.value / donutTotal) * 100).toFixed(1) : "0.0"}%</span>
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Look-through Asset Allocation (Palash's pro-rata view) ── */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              <div className="border-b border-[#1E2D3D] px-5 py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#A78BFA" }} />
+                <p className="text-sm font-semibold text-slate-200">My Look-through Allocation ({(palashPct * 100).toFixed(2)}% of fund)</p>
+              </div>
+              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
+                {/* By type */}
+                <div className="flex-1 px-5 py-5">
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Security Type</p>
+                  {lookThroughByType.map(a => {
+                    const pct = allocTotalByType > 0 ? a.amount / allocTotalByType : 0;
+                    return (
+                      <div key={a.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ background: a.color }} />
+                            <span className="text-xs text-slate-300 font-medium">{a.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs tabular-nums text-purple-300">{fmt(a.palashShare)}</span>
+                            <span className="text-[10px] tabular-nums text-slate-600 w-10 text-right">{(pct * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden mb-3">
+                          <div className="h-full rounded-full" style={{ width: `${(pct * 100).toFixed(1)}%`, background: a.color, opacity: 0.8 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
+                    <span className="text-[10px] text-slate-600 uppercase tracking-wider">My Total</span>
+                    <span className="text-xs font-semibold text-purple-300 tabular-nums">{fmt(lookThroughByType.reduce((s, a) => s + a.palashShare, 0))}</span>
+                  </div>
+                </div>
+
+                {/* By company */}
+                <div className="flex-1 px-5 py-5">
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
+                  {lookThroughByCompany.map(c => {
+                    const pct = donutTotal > 0 ? c.value / donutTotal : 0;
+                    return (
+                      <div key={c.id}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.accent }} />
+                            <span className="text-xs text-slate-300 font-medium truncate">{c.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs tabular-nums text-purple-300">{fmt(c.palashShare)}</span>
+                            <span className="text-[10px] tabular-nums text-slate-600 w-10 text-right">{(pct * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden mb-2">
+                          <div className="h-full rounded-full" style={{ width: `${(pct * 100).toFixed(1)}%`, background: c.accent, opacity: 0.8 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -3110,42 +3323,49 @@ export default function Dashboard() {
                   <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
                     <tr>
                       <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Company</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Fund Pre</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Pre</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Palash</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ LP D</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Post Total</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">PPS</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Post Value</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Equity Value</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Debt/Pref</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Options</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Company Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0D1421]">
-                    {merged.map(row => (
+                    {companyRows.map(row => (
                       <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ background: row.accent }} />
                             <span className="font-medium text-slate-200">{row.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                            {row.isNew && <span className="text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#064E3B", color: "#34D399" }}>NEW</span>}
                           </div>
                         </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.fundCommonPre.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.fundCommonPre > 0 ? row.fundCommonPre.toLocaleString() : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.palashRollIn > 0 ? "#A78BFA" : "#475569" }}>{row.palashRollIn > 0 ? `+${row.palashRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn > 0 ? "#F59E0B" : "#475569" }}>{row.lpDRollIn > 0 ? `+${row.lpDRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.post.toLocaleString()}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-500">{row.pps > 0 ? `$${row.pps.toFixed(4)}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{row.postValue > 0 ? fmt(row.postValue) : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.debtVal > 0 ? "#F59E0B" : "#475569" }}>{row.debtVal > 0 ? fmt(row.debtVal) : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.optionVal > 0 ? "#F43F5E" : "#475569" }}>{row.optionVal > 0 ? fmt(row.optionVal) : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{fmt(row.value)}</td>
                       </tr>
                     ))}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-300">{merged.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#A78BFA" }}>+{merged.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{merged.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{merged.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{merged.reduce((s, r) => s + r.post, 0).toLocaleString()}</td>
-                      <td />
-                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityValue)}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#A78BFA" }}>+{companyRows.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{companyRows.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityTypeBasis)}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>{fmt(creditTypeBasis + convertTypeBasis)}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(grossAssets - cashTypeBasis)}</td>
                     </tr>
                   </tbody>
                 </table>
