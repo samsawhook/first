@@ -253,15 +253,17 @@ export default function DirectHoldingsTab({
   } as const;
 
   const BenchmarkBar = ({ value, metric }: { value: number | null; metric: "dpi" | "tvpi" }) => {
+    const SCALE_MAX = 3.0;
+    const pos = (v: number) => Math.max(0, Math.min(100, (v / SCALE_MAX) * 100));
+    const ticks = [0, 0.5, 1, 1.5, 2, 2.5, 3];
     return (
       <div className="mt-2">
         <p className="text-[8px] text-slate-500 leading-tight mb-1.5">
           Growth Equity Benchmark <span className="text-slate-700">· Cambridge Associates</span>
         </p>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {BM_YEARS.map(b => {
             const { q1, q3 } = b[metric];
-            const pct = value !== null ? Math.max(0, Math.min(1, (value - q3) / (q1 - q3))) : null;
             const aboveQ1 = value !== null && value >= q1;
             const belowQ3 = value !== null && value < q3;
             const dotColor = aboveQ1 ? "#10B981" : belowQ3 ? "#F87171" : "#e2e8f0";
@@ -271,22 +273,45 @@ export default function DirectHoldingsTab({
                 <span className={`text-[8px] tabular-nums shrink-0 ${isCurrent ? "text-slate-300 font-semibold" : "text-slate-600"}`} style={{ width: 22 }}>
                   Yr {b.year}
                 </span>
-                <span className="text-[7px] text-slate-700 tabular-nums shrink-0 text-right" style={{ width: 22 }}>{q3.toFixed(2)}</span>
-                <div className={`relative flex-1 rounded-full overflow-visible ${isCurrent ? "h-1.5" : "h-1"}`} style={{ background: "#1E2D3D" }}>
-                  <div className="absolute inset-0 rounded-full opacity-30" style={{ background: "linear-gradient(to right, #F87171, #10B981)" }} />
-                  {pct !== null && (
-                    <div className="absolute top-1/2 rounded-full border border-[#0D1421]"
-                      style={{ left: `${pct * 100}%`, transform: "translate(-50%, -50%)", background: dotColor, width: isCurrent ? 8 : 6, height: isCurrent ? 8 : 6 }} />
+                <div className={`relative flex-1 rounded-full ${isCurrent ? "h-1.5" : "h-1"}`} style={{ background: "#1E2D3D" }}>
+                  {/* IQR band */}
+                  <div className="absolute top-0 bottom-0 rounded-full opacity-60"
+                    style={{ left: `${pos(q3)}%`, width: `${Math.max(0, pos(q1) - pos(q3))}%`, background: "#334155" }} />
+                  {/* Q3 tick */}
+                  <div className="absolute bg-slate-500"
+                    style={{ left: `calc(${pos(q3)}% - 0.5px)`, top: -3, bottom: -3, width: 1 }} />
+                  {/* Q1 tick */}
+                  <div className="absolute bg-emerald-400/80"
+                    style={{ left: `calc(${pos(q1)}% - 0.5px)`, top: -3, bottom: -3, width: 1 }} />
+                  {/* User's value */}
+                  {value !== null && (
+                    <div className="absolute top-1/2 rounded-full border border-[#0D1421] z-10"
+                      style={{ left: `${pos(value)}%`, transform: "translate(-50%, -50%)", background: dotColor, width: isCurrent ? 8 : 6, height: isCurrent ? 8 : 6 }} />
                   )}
                 </div>
-                <span className="text-[7px] text-slate-700 tabular-nums shrink-0" style={{ width: 22 }}>{q1.toFixed(2)}</span>
               </div>
             );
           })}
+          {/* Scale axis */}
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <span className="shrink-0" style={{ width: 22 }}></span>
+            <div className="relative flex-1 h-2">
+              {ticks.map(t => (
+                <span key={t} className="absolute top-0 text-[7px] text-slate-700 tabular-nums" style={{ left: `${pos(t)}%`, transform: "translateX(-50%)" }}>
+                  {t.toFixed(t === 0 || t === Math.floor(t) ? 0 : 1)}×
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
-        <p className="mt-1.5" style={{ fontSize: 8, color: value !== null && value >= BM[metric].q1 ? "#10B981" : value !== null && value < BM[metric].q3 ? "#F87171" : "#64748B" }}>
-          {value === null ? "" : value >= BM[metric].q1 ? "▲ Top quartile (Yr 4)" : value < BM[metric].q3 ? "▼ Below Q3 (Yr 4)" : "● Mid-range (Yr 4)"}
-        </p>
+        <div className="mt-2 flex items-center gap-2 text-[7px] text-slate-600">
+          <span className="flex items-center gap-1"><span className="inline-block w-px h-2 bg-slate-500" />Q3</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-px h-2 bg-emerald-400/80" />Q1</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-200 border border-[#0D1421]" />You</span>
+          <span className="ml-auto" style={{ color: value !== null && value >= BM[metric].q1 ? "#10B981" : value !== null && value < BM[metric].q3 ? "#F87171" : "#64748B" }}>
+            {value === null ? "" : value >= BM[metric].q1 ? "▲ Top quartile (Yr 4)" : value < BM[metric].q3 ? "▼ Below Q3 (Yr 4)" : "● Mid-range (Yr 4)"}
+          </span>
+        </div>
       </div>
     );
   };
