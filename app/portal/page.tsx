@@ -3608,7 +3608,6 @@ export default function Dashboard() {
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
-                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
                           </tr>
                         </thead>
@@ -3624,7 +3623,6 @@ export default function Dashboard() {
                               <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
                               <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
-                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(d.currentValue)}</td>
                             </tr>
                           ))}
@@ -3661,7 +3659,6 @@ export default function Dashboard() {
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
-                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
                           </tr>
                         </thead>
@@ -3677,7 +3674,6 @@ export default function Dashboard() {
                               <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
                               <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
-                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#6366F1" }}>{fmt(d.currentValue)}</td>
                             </tr>
                           ))}
@@ -4490,7 +4486,6 @@ export default function Dashboard() {
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
-                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
                           </tr>
                         </thead>
@@ -4506,7 +4501,6 @@ export default function Dashboard() {
                               <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
                               <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
-                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(d.currentValue)}</td>
                             </tr>
                           ))}
@@ -4543,7 +4537,6 @@ export default function Dashboard() {
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
                             <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
-                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
                             <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
                           </tr>
                         </thead>
@@ -4559,7 +4552,6 @@ export default function Dashboard() {
                               <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
                               <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
-                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
                               <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#6366F1" }}>{fmt(d.currentValue)}</td>
                             </tr>
                           ))}
