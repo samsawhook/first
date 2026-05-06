@@ -73,13 +73,13 @@ export default function DirectHoldingsTab({
   const deathStarConfig: Record<string, number> = investor.id === "palash-jillian"
     ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, sentius: 0, galileo: 0 }
     : investor.id === "neil-wolfson"
-      ? { "co-owner-fund": 0.30, "nth-venture": 0, certd: 0, falconer: 0 }
+      ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, "co-owner-fund": 0.30 }
       : { audily: 0 };
   const deathStarTargetIds = Object.keys(deathStarConfig);
   const deathStarLabels = investor.id === "palash-jillian"
     ? "Audily / nth Venture / Pigeon Service / Falconer / Sentius / Galileo → $0"
     : investor.id === "neil-wolfson"
-      ? "-70% Co-Owner Fund · nth Venture / Pigeon Service / Falconer → $0"
+      ? "Audily / nth Venture / Pigeon Service / Falconer → $0; Co-Owner Fund −70%"
       : "Audily → $0";
   const deathStarMult = (id?: string): number => {
     if (!audilyDeathStar) return 1;

@@ -127,7 +127,7 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       // Payment: $25,000 cash + 5,000,000 Class A Common shares each in PRreact (Galileo),
       // CERTD, Sentius, and SBR2TH (20M total at $0.005 original cost = $100,000 carryover
       // basis). Total basis = $25k cash + $100k carryover = $125,000 ($0.0625/preferred).
-      { category: "Purchased Equity", issueDate: "2023-02-02", securityType: "Series A Preferred", company: "nth Venture Inc.",                            shares: 2_000_000, perShareBasis: 0.0625, costBasis: 125_000.00, estimatedValue: 200_000.00,
+      { category: "Purchased Equity", issueDate: "2023-02-02", securityType: "Series A Preferred", company: "nth Venture Inc.",     companyId: "nth-venture", shares: 2_000_000, perShareBasis: 0.0625, costBasis: 125_000.00, estimatedValue: 200_000.00,
         notes: "Acquired for $25,000 cash + 20M Class A Common shares (5M each in PRreact / CERTD / Sentius / SBR2TH at $0.005 original cost = $100k carryover basis). Combined basis $125,000." },
       // Audily SAFE → Series A: $50k → 625 preferreds at $80/share, converted Sept 6, 2024.
       { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00, interestDividend: 5_583.36 },

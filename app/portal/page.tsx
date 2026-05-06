@@ -3064,17 +3064,20 @@ export default function Dashboard() {
             const dealShares   = c.id === "nueces-brewing" ? 50_000 : 0;
             const postShares   = fundCommonPre + palashRollIn + neilRollIn + lpDRollIn + dealShares;
 
-            const isDS = audilyDeathStar && c.id === "audily";
-            const equityVal = isDS ? 0 : (pps > 0 && postShares > 0
+            // Death-star multipliers: Audily → 0, Pigeon/Sentius/Falconer → 50% writedown
+            const dsMult = audilyDeathStar
+              ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.5 : 1))
+              : 1;
+            const equityVal = (pps > 0 && postShares > 0
               ? postShares * pps
-              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0)));
-            const debtVal = isDS ? 0 : (c.debtPositions ?? [])
+              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0))) * dsMult;
+            const debtVal = (c.debtPositions ?? [])
               .filter(d => d.status !== "Repaid")
-              .reduce((s, d) => s + d.currentValue, 0);
-            const optionVal = isDS ? 0 : (c.optionPositions ?? []).reduce((s: number, o) => {
+              .reduce((s, d) => s + d.currentValue * dsMult, 0);
+            const optionVal = (c.optionPositions ?? []).reduce((s: number, o) => {
               const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
               const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
-              return s + intrinsic + timeVal;
+              return s + (intrinsic + timeVal) * dsMult;
             }, 0);
 
             return {
@@ -3094,11 +3097,15 @@ export default function Dashboard() {
           const optionsTypeBasis = companyRows.reduce((s, r) => s + r.optionVal, 0);
           let creditTypeBasis = 0, convertTypeBasis = 0;
           for (const c of allCompanies) {
-            if (audilyDeathStar && c.id === "audily") continue;
+            const dsMult = audilyDeathStar
+              ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.5 : 1))
+              : 1;
+            if (dsMult === 0) continue;
             for (const d of (c.debtPositions ?? [])) {
               if (d.status === "Repaid") continue;
-              if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += d.currentValue;
-              else convertTypeBasis += d.currentValue;
+              const v = d.currentValue * dsMult;
+              if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += v;
+              else convertTypeBasis += v;
             }
           }
           // Fund cash: existing + new from LPs - deal cash spend = existing only ($2,329.95)
@@ -3382,10 +3389,10 @@ export default function Dashboard() {
                         <button
                           onClick={() => setAudilyDeathStar(!audilyDeathStar)}
                           className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
-                          title="Death Star: zero out all Audily holdings (stress test)"
+                          title="Death Star: Audily → $0; Pigeon Service / Sentius / Falconer −50%"
                         >
                           <span aria-hidden>☠</span>
-                          <span>Audily {audilyDeathStar ? "→ $0" : "stress"}</span>
+                          <span>{audilyDeathStar ? "Stressed" : "Stress test"}</span>
                         </button>
                       </div>
                       <div className="flex justify-center mb-3">
@@ -3992,17 +3999,20 @@ export default function Dashboard() {
             const smallLpRollIn = PALASH_LP_D_SHARES[c.id] ?? 0;
             const dealShares    = c.id === "nueces-brewing" ? 50_000 : 0;
             const postShares    = fundCommonPre + neilRollIn + palashRollIn + smallLpRollIn + dealShares;
-            const isDS = audilyDeathStar && c.id === "audily";
-            const equityVal = isDS ? 0 : (pps > 0 && postShares > 0
+            // Death-star multipliers: Audily → 0, Pigeon/Sentius/Falconer → 50% writedown
+            const dsMult = audilyDeathStar
+              ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.5 : 1))
+              : 1;
+            const equityVal = (pps > 0 && postShares > 0
               ? postShares * pps
-              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0)));
-            const debtVal = isDS ? 0 : (c.debtPositions ?? [])
+              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0))) * dsMult;
+            const debtVal = (c.debtPositions ?? [])
               .filter(d => d.status !== "Repaid")
-              .reduce((s, d) => s + d.currentValue, 0);
-            const optionVal = isDS ? 0 : (c.optionPositions ?? []).reduce((s: number, o) => {
+              .reduce((s, d) => s + d.currentValue * dsMult, 0);
+            const optionVal = (c.optionPositions ?? []).reduce((s: number, o) => {
               const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
               const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
-              return s + intrinsic + timeVal;
+              return s + (intrinsic + timeVal) * dsMult;
             }, 0);
             return {
               id: c.id, name: c.name, accent: c.accentColor || "#64748B",
@@ -4017,11 +4027,15 @@ export default function Dashboard() {
           const optionsTypeBasis = companyRows.reduce((s, r) => s + r.optionVal, 0);
           let creditTypeBasis = 0, convertTypeBasis = 0;
           for (const c of allCompanies) {
-            if (audilyDeathStar && c.id === "audily") continue;
+            const dsMult = audilyDeathStar
+              ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.5 : 1))
+              : 1;
+            if (dsMult === 0) continue;
             for (const d of (c.debtPositions ?? [])) {
               if (d.status === "Repaid") continue;
-              if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += d.currentValue;
-              else convertTypeBasis += d.currentValue;
+              const v = d.currentValue * dsMult;
+              if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += v;
+              else convertTypeBasis += v;
             }
           }
           const cashTypeBasis = cashPositions.reduce((s, c) => s + c.balance, 0);
@@ -4257,10 +4271,10 @@ export default function Dashboard() {
                         <button
                           onClick={() => setAudilyDeathStar(!audilyDeathStar)}
                           className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
-                          title="Death Star: zero out all Audily holdings (stress test)"
+                          title="Death Star: Audily → $0; Pigeon Service / Sentius / Falconer −50%"
                         >
                           <span aria-hidden>☠</span>
-                          <span>Audily {audilyDeathStar ? "→ $0" : "stress"}</span>
+                          <span>{audilyDeathStar ? "Stressed" : "Stress test"}</span>
                         </button>
                       </div>
                       <div className="flex justify-center mb-3">
