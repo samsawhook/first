@@ -695,15 +695,15 @@ export default function DirectHoldingsTab({
               </div>
             </div>
 
-            {/* Allocation bars — overview style */}
-            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Capital Allocated</p>
+            {/* Portfolio value by asset type */}
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Portfolio Value by Asset Type</p>
             {[
-              { label: "Equity",       amount: commonCost,      color: "#10B981" },
-              { label: "Convertibles", amount: convertCost,     color: "#F59E0B" },
-              { label: "Credit",       amount: creditPrincipal, color: "#6366F1" },
-              { label: "LP Interests", amount: lpInterestsCost, color: "#A78BFA" },
+              { label: "Equity",       amount: commonValue + earnedEquityValue, color: "#10B981" },
+              { label: "Convertibles", amount: convertValue,                    color: "#F59E0B" },
+              { label: "Credit",       amount: creditOutstanding,               color: "#6366F1" },
+              { label: "LP Interests", amount: lpInterestsValue,                color: "#A78BFA" },
             ].filter(b => b.amount > 0).map(b => {
-              const pct = amountInvested > 0 ? b.amount / amountInvested : 0;
+              const pct = portfolioValue > 0 ? b.amount / portfolioValue : 0;
               return (
                 <div key={b.label}>
                   <div className="flex items-center justify-between mb-1">
@@ -723,8 +723,8 @@ export default function DirectHoldingsTab({
               );
             })}
             <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
-              <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total Invested</span>
-              <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(amountInvested)}</span>
+              <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total Portfolio Value</span>
+              <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(portfolioValue)}</span>
             </div>
           </div>
 

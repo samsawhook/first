@@ -3098,10 +3098,6 @@ export default function Dashboard() {
           const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;
           const palashPct       = newLpUnitsTotal > 0 ? palashLpBasis / newLpUnitsTotal : 0;
           const palashNav       = palashPct * newFundNav;
-          const palashMoic      = palashLpBasis > 0 ? palashNav / palashLpBasis : 0;
-          // DPI/TVPI from Palash's LP perspective post lock-in: no fund distributions to him yet.
-          const palashDpi       = 0;
-          const palashTvpi      = palashMoic;
 
           // ── Look-through: Palash's pro-rata share of fund ────────────────────
           const lookThroughByType = allocByType.map(a => ({ ...a, palashShare: a.amount * palashPct }));
@@ -3160,37 +3156,34 @@ export default function Dashboard() {
               </ul>
             </div>
 
-            {/* ── My Holdings KPIs (progression + LP metrics) ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+            {/* ── My Holdings KPIs (progression: basis → LP basis → NAV) ── */}
+            <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-2">
+              <div className="flex-1 min-w-0 rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(palashOriginalBasis)}</p>
                 <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">cost basis − principal repaid</p>
               </div>
-              <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
+              <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="sm:hidden flex items-center justify-center text-slate-600" aria-hidden>
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="flex-1 min-w-0 rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashPortfolioValue)} equity + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
+                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashPortfolioValue)} portfolio value (equity + LP interest + outstanding credit) + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
+              <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="sm:hidden flex items-center justify-center text-slate-600" aria-hidden>
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="flex-1 min-w-0 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(palashNav)}</p>
                 <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 leading-tight">{(palashPct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
-              </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums mt-1" style={{ color: palashMoic >= 1 ? "#10B981" : "#F87171" }}>{palashMoic.toFixed(2)}×</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">NAV ÷ LP basis</p>
-              </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑤ DPI</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{palashDpi.toFixed(2)}×</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">distributions ÷ basis</p>
-              </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑥ TVPI</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums mt-1" style={{ color: palashTvpi >= 1 ? "#10B981" : "#F87171" }}>{palashTvpi.toFixed(2)}×</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">(NAV + dist.) ÷ basis</p>
               </div>
             </div>
 
@@ -3707,9 +3700,6 @@ export default function Dashboard() {
           const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;
           const neilPct         = newLpUnitsTotal > 0 ? neilLpBasis / newLpUnitsTotal : 0;
           const neilNav         = neilPct * newFundNav;
-          const neilMoic        = neilLpBasis > 0 ? neilNav / neilLpBasis : 0;
-          const neilDpi         = 0;
-          const neilTvpi        = neilMoic;
 
           const lookThroughByType = allocByType.map(a => ({ ...a, neilShare: a.amount * neilPct }));
           const lookThroughByCompany = companyRows.map(r => ({ ...r, neilShare: r.value * neilPct }));
@@ -3765,37 +3755,34 @@ export default function Dashboard() {
               </ul>
             </div>
 
-            {/* ── My Holdings KPIs ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+            {/* ── My Holdings KPIs (progression: basis → LP basis → NAV) ── */}
+            <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-2">
+              <div className="flex-1 min-w-0 rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(neilOriginalBasis)}</p>
                 <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">cost basis − principal repaid</p>
               </div>
-              <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
+              <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="sm:hidden flex items-center justify-center text-slate-600" aria-hidden>
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="flex-1 min-w-0 rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(neilLpBasis)}</p>
                 <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(neilPortcoEquity)} portco equity + {fmt(neilLpInterestAtCost)} LP interest (at cost) + {fmt(NEIL_CASH_CONTRIBUTION)} cash</p>
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
+              <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="sm:hidden flex items-center justify-center text-slate-600" aria-hidden>
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="flex-1 min-w-0 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(neilNav)}</p>
                 <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 leading-tight">{(neilPct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
-              </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">④ LP MOIC</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums mt-1" style={{ color: neilMoic >= 1 ? "#10B981" : "#F87171" }}>{neilMoic.toFixed(2)}×</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">NAV ÷ LP basis</p>
-              </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑤ DPI</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{neilDpi.toFixed(2)}×</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">distributions ÷ basis</p>
-              </div>
-              <div className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">⑥ TVPI</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums mt-1" style={{ color: neilTvpi >= 1 ? "#10B981" : "#F87171" }}>{neilTvpi.toFixed(2)}×</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">(NAV + dist.) ÷ basis</p>
               </div>
             </div>
 
