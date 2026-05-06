@@ -2897,12 +2897,10 @@ export default function Dashboard() {
           // Cash already returned to Palash from his direct holdings (notes + interest + dividends).
           const palashHistoricalDistributions = directInvestor.positions.reduce((s, p) =>
             s + (p.repaid ?? 0) + (p.interestDividend ?? 0), 0);
-          // LP basis = portfolio value all-in. The $880.2k figure already represents the
-          // full contribution Palash is locking in (equity + active credit + cash all
-          // bundled into one nominal). The active credit still flows through to fund
-          // holdings as a debt position; the cash still flows through as new cash from
-          // LPs — they just don't get double-counted on top of the $880k LP basis.
-          const palashLpBasis = palashPortfolioValue;
+          // LP basis = portfolio value (equity + NAV-marked LP interest) + $100k cash.
+          // Active credit ($25k) flows through to fund holdings as a debt position but
+          // is not included in LP basis to avoid double-counting.
+          const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
 
           // ── Anonymous LP D in-kind roll-in (at default PPS) ──────────────────
           const lpDValue = Object.entries(PALASH_LP_D_SHARES).reduce((s, [id, sh]) =>
@@ -3128,7 +3126,7 @@ export default function Dashboard() {
           // ── LP cap-table rows ────────────────────────────────────────────────
           const lpRows = [
             { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                                                          accent: "#64748B" },
-            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `all-in (equity + ${fmt(palashActiveCreditValue)} credit + ${fmt(PALASH_CASH_CONTRIBUTION)} cash)`, accent: "#A78BFA" },
+            { id: "palash",   name: `${directInvestor.name} (you)`, units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind equity (${fmt(palashPortfolioValue)}) + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
             { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: PALASH_OTHER_LP_BASIS, basis: PALASH_OTHER_LP_BASIS,  type: "cash",                                                                       accent: "#34D399" },
             { id: "lpD",      name: "Other Founder LP",             units: lpDBasis,              basis: lpDBasis,               type: "in-kind equity roll-up",                                                     accent: "#F59E0B" },
           ];
@@ -3141,7 +3139,7 @@ export default function Dashboard() {
               <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span> all-in: portfolio equity + outstanding credit ({fmt(palashActiveCreditValue)}) + cash ({fmt(PALASH_CASH_CONTRIBUTION)})</span>
+                  <span>Roll direct portfolio equity into Co-Owner Fund LP at default PPS (<span className="text-white font-medium">{fmt(palashPortfolioValue)}</span>) + contribute <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash → LP basis locked at <span className="text-emerald-400 font-medium">{fmt(palashLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -3172,7 +3170,7 @@ export default function Dashboard() {
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">all-in (equity + {fmt(palashActiveCreditValue)} credit + {fmt(PALASH_CASH_CONTRIBUTION)} cash)</p>
+                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashPortfolioValue)} equity + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
@@ -3506,7 +3504,19 @@ export default function Dashboard() {
           // repaid less rolled-in-from-prior (avoid double-count when notes consolidate).
           const neilOriginalBasis = directInvestor.positions.reduce((s, p) =>
             s + (p.costBasis ?? 0) - (p.repaid ?? 0) - (p.rolledInFromPrior ?? 0), 0);
-          const neilLpBasis = neilPortfolioValue + neilActiveCreditValue + NEIL_CASH_CONTRIBUTION;
+          // LP basis: only portco equity (Class A Common) + $100k LP interest at cost + $100k cash.
+          // nth Venture Preferred, Audily SAFE, and active credit notes are not rolled in.
+          const neilPortcoEquity = directInvestor.positions.reduce((s, p) => {
+            if (p.securityType !== "Class A Common") return s;
+            if (!p.shares || !p.companyId) return s;
+            const pps = ppsForCompany(p.companyId);
+            if (pps > 0) return s + p.shares * pps;
+            return s + (p.estimatedValue ?? 0);
+          }, 0);
+          const neilLpInterestAtCost = directInvestor.positions
+            .filter(p => p.category === "LP Interests" && p.companyId === "co-owner-fund")
+            .reduce((s, p) => s + (p.costBasis ?? 0), 0);
+          const neilLpBasis = neilPortcoEquity + neilLpInterestAtCost + NEIL_CASH_CONTRIBUTION;
 
           // ── Palash's in-kind contribution in Neil's view (no cash from Palash) ──
           const palashInvestor = findDirectInvestor("palash-jillian");
@@ -3526,10 +3536,9 @@ export default function Dashboard() {
                 .filter(p => p.category === "Short-term Notes" && (p.estimatedValue ?? 0) > 0)
                 .reduce((s, p) => s + (p.estimatedValue ?? 0), 0)
             : 0;
-          // Palash's LP basis is the same $880.2k all-in nominal used in his own memo.
-          // The $25k credit still flows through to fund holdings as a debt position;
-          // it just isn't double-counted on top of the $880k LP basis.
-          const palashLpBasis = palashPortfolioValue;
+          // Palash's LP basis mirrors his own memo: portfolio equity + $100k cash.
+          // Active credit flows through to fund holdings as debt but is not in LP basis.
+          const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
 
           // ── Deal economics ───────────────────────────────────────────────────
           const audilyPrefCost   = 150_000;
@@ -3557,22 +3566,6 @@ export default function Dashboard() {
             notes: "Other Founder LP roll-in: outstanding short-term note.",
           };
 
-          // ── Neil's own non-Common roll-ins as new debtPositions ─────────────
-          const neilNthPrefRollIn: DebtPosition = {
-            id: "neil-nth-pref-rollin", date: "Feb 2023", instrument: "Preferred",
-            principal: 200_000, status: "Current", currentValue: 200_000,
-            notes: "Neil roll-in: nth Venture Series A Preferred (2,000,000 shares).",
-          };
-          const neilAudilySafeRollIn: DebtPosition = {
-            id: "neil-audily-safe-rollin", date: "Mar 2024", instrument: "SAFE",
-            principal: 50_000, status: "Current", currentValue: 62_500,
-            notes: "Neil roll-in: Audily SAFE → Series A (625 shares).",
-          };
-          const neilAudilyNoteRollIn: DebtPosition = {
-            id: "neil-audily-note-rollin", date: "Oct 2025", instrument: "Term Loan",
-            principal: 100_000, status: "Current", currentValue: neilActiveCreditValue,
-            notes: "Neil roll-in: outstanding 2025-10-09 short-term note (16.5% APR).",
-          };
 
           // ── Build modified portfolio (bottom-up) ─────────────────────────────
           const PALASH_SHARE_MAP: Record<string, number> = {
@@ -3594,8 +3587,6 @@ export default function Dashboard() {
                 palashAudilyPrefRollIn,
                 palashAudilySafeRollIn,
                 ...(palashActiveCreditValue > 0 ? [palashAudilyNoteRollIn] : []),
-                neilAudilySafeRollIn,
-                ...(neilActiveCreditValue > 0 ? [neilAudilyNoteRollIn] : []),
               ]};
             }
             if (c.id === "nueces-brewing") {
@@ -3632,11 +3623,10 @@ export default function Dashboard() {
           };
           const nthVentureSynthetic: CompanyLike = {
             id: "nth-venture", name: "nth Venture", accentColor: "#64748B", status: "active",
-            currentValue: 370_000, shareTransactions: [],
+            currentValue: 170_000, shareTransactions: [],
             debtPositions: [
               { id: "lpd-nth-safe", date: "Feb 2022", instrument: "SAFE", principal: 20_000, status: "Current", currentValue: 20_000, notes: "Other Founder LP roll-in: nth Venture SAFE → Series A (200,000 shares)." },
               { id: "lpd-nth-conv", date: "Jun 2023", instrument: "Convertible Note", principal: 150_000, status: "Current", currentValue: 150_000, notes: "Other Founder LP roll-in: nth Venture Convertible Notes." },
-              neilNthPrefRollIn,
             ],
           };
           const palashSentiusShares = PALASH_SHARE_MAP["sentius"] ?? 0;
@@ -3741,8 +3731,8 @@ export default function Dashboard() {
 
           const lpRows = [
             { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                                                          accent: "#64748B" },
-            { id: "neil",     name: `${directInvestor.name} (you)`, units: neilLpBasis,           basis: neilLpBasis,            type: `in-kind ${fmt(neilPortfolioValue + neilActiveCreditValue)} + ${fmt(NEIL_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
-            { id: "lpD",      name: "Other Founder LP",             units: palashLpBasis,         basis: palashLpBasis,          type: "in-kind equity + credit roll-up",                                            accent: "#F59E0B" },
+            { id: "neil",     name: `${directInvestor.name} (you)`, units: neilLpBasis,           basis: neilLpBasis,            type: `portco equity ${fmt(neilPortcoEquity)} + ${fmt(neilLpInterestAtCost)} LP interest (at cost) + ${fmt(NEIL_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
+            { id: "lpD",      name: "Other Founder LP",             units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind equity + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`,                       accent: "#F59E0B" },
             { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: NEIL_OTHER_LP_BASIS,   basis: NEIL_OTHER_LP_BASIS,    type: "cash",                                                                       accent: "#34D399" },
           ];
 
@@ -3754,11 +3744,11 @@ export default function Dashboard() {
               <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Roll all direct holdings into Co-Owner Fund LP at default PPS — portfolio value <span className="text-white font-medium">{fmt(neilPortfolioValue)}</span> + <span className="text-white font-medium">{fmt(NEIL_CASH_CONTRIBUTION)}</span> cash → LP basis (locked) <span className="text-emerald-400 font-medium">{fmt(neilLpBasis)}</span></span>
+                  <span>Roll portco equity (Class A Common, <span className="text-white font-medium">{fmt(neilPortcoEquity)}</span>) into Co-Owner Fund LP + carry LP interest at cost (<span className="text-white font-medium">{fmt(neilLpInterestAtCost)}</span>) + contribute <span className="text-white font-medium">{fmt(NEIL_CASH_CONTRIBUTION)}</span> cash → LP basis locked at <span className="text-emerald-400 font-medium">{fmt(neilLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Another founder LP rolls in their portfolio (incl. outstanding credit) at default PPS — LP basis <span className="text-white font-medium">{fmt(palashLpBasis)}</span></span>
+                  <span>Another founder LP rolls in their portfolio equity at default PPS + contributes <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash — LP basis <span className="text-white font-medium">{fmt(palashLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -3785,7 +3775,7 @@ export default function Dashboard() {
               <div className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(neilLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(neilPortfolioValue)} equity{neilActiveCreditValue > 0 ? ` + ${fmt(neilActiveCreditValue)} credit` : ""} + {fmt(NEIL_CASH_CONTRIBUTION)} cash</p>
+                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(neilPortcoEquity)} portco equity + {fmt(neilLpInterestAtCost)} LP interest (at cost) + {fmt(NEIL_CASH_CONTRIBUTION)} cash</p>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>

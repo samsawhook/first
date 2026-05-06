@@ -393,6 +393,45 @@ export default function DirectHoldingsTab({
     );
   };
 
+  const SummaryPriceCell = ({ companyId }: { companyId?: string }) => {
+    if (!companyId) return <span className="tabular-nums text-slate-400">—</span>;
+    const c = portMap[companyId];
+    if (!c) return <span className="tabular-nums text-slate-400">—</span>;
+    const hasCustom = userValuations[companyId] !== undefined;
+    const defPps = defaultPps(companyId);
+    const effPps = effectivePps(companyId);
+    if (effPps === null && defPps === null) return <span className="tabular-nums text-slate-400">—</span>;
+    return (
+      <div className="flex items-start gap-1">
+        <div className="flex flex-col gap-0.5">
+          {hasCustom && defPps !== null && (
+            <span className="text-slate-600 line-through text-[10px] tabular-nums leading-tight">${defPps.toFixed(4)}</span>
+          )}
+          <span className="tabular-nums leading-tight" style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>
+            ${(effPps ?? defPps ?? 0).toFixed(4)}
+          </span>
+        </div>
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); const iv = effectiveImplied(companyId); onOpenValuationModal(c, iv ?? defaultImplied(c)); }}
+            className="p-0.5 rounded hover:bg-white/10 transition-colors"
+            style={{ color: hasCustom ? "#34D399" : "#64748B" }}
+            title="Edit valuation"
+          >
+            <Pencil size={10} />
+          </button>
+          {hasCustom && (
+            <button onClick={(e) => { e.stopPropagation(); onResetValuation(companyId); }}
+              className="p-0.5 rounded hover:bg-rose-500/10 text-slate-600 hover:text-rose-400 transition-colors"
+              title="Reset">
+              <RotateCcw size={9} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const EarnedValCell = ({ p }: { p: DirectPosition }) => {
     const c = p.companyId ? portMap[p.companyId] : undefined;
     const v = estVal(p);
@@ -644,7 +683,7 @@ export default function DirectHoldingsTab({
                         <TD className="text-slate-200 tabular-nums font-medium">{g.totalShares ? fmtShares(g.totalShares) : "—"}</TD>
                         <TD className="text-slate-400 tabular-nums">{g.weightedBasis !== null ? `$${g.weightedBasis.toFixed(4)}` : "—"}</TD>
                         <TD className="text-slate-200 tabular-nums font-medium">{fmt(g.totalCost)}</TD>
-                        <TD className="tabular-nums text-slate-400">{g.pps !== null ? `$${g.pps.toFixed(4)}` : "—"}</TD>
+                        <TD><SummaryPriceCell companyId={g.companyId} /></TD>
                         <TD className="tabular-nums" style={{ color: g.totalDist > 0 ? "#F59E0B" : "#64748B" }}>{g.totalDist > 0 ? fmt(g.totalDist) : "—"}</TD>
                         <TD className="tabular-nums font-semibold" style={{ color: g.totalValue > 0 ? "#34D399" : "#64748B" }}>{g.totalValue > 0 ? fmt(g.totalValue) : "—"}</TD>
                         <TD className="tabular-nums font-semibold" style={{ color: g.returnPct !== null ? gainColor(g.returnPct) : g.totalValue > 0 ? "#34D399" : "#64748B" }}>
@@ -850,7 +889,7 @@ export default function DirectHoldingsTab({
                             : cashSettledPct === 100
                               ? <span className="text-emerald-400 font-semibold">100% repaid</span>
                               : cashSettledPct > 0
-                                ? <span className="text-yellow-400 font-semibold">{cashSettledPct}% repaid</span>
+                                ? <span className="text-yellow-400 font-semibold">Active</span>
                                 : <span className="text-slate-600">Outstanding</span>}
                         </TD>
                         <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
