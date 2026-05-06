@@ -71,15 +71,15 @@ export default function DirectHoldingsTab({
   // (0 = zeroed, 0.30 = 70% writedown, etc.). Companies not in the map keep
   // their full value.
   const deathStarConfig: Record<string, number> = investor.id === "palash-jillian"
-    ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, sentius: 0, galileo: 0 }
+    ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, sentius: 0, galileo: 0, sbr2th: 0.50, "merchant-boxes": 0.65 }
     : investor.id === "neil-wolfson"
-      ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, "co-owner-fund": 0.30 }
+      ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, "co-owner-fund": 0.30, sbr2th: 0.50, "merchant-boxes": 0.65 }
       : { audily: 0 };
   const deathStarTargetIds = Object.keys(deathStarConfig);
   const deathStarLabels = investor.id === "palash-jillian"
-    ? "Audily / nth Venture / Pigeon Service / Falconer / Sentius / Galileo → $0"
+    ? "Audily / nth Venture / Pigeon Service / Falconer / Sentius / Galileo → $0; SBR2TH −50%; Merchant Boxes −35%"
     : investor.id === "neil-wolfson"
-      ? "Audily / nth Venture / Pigeon Service / Falconer → $0; Co-Owner Fund −70%"
+      ? "Audily / nth Venture / Pigeon Service / Falconer → $0; Co-Owner Fund −70%; SBR2TH −50%; Merchant Boxes −35%"
       : "Audily → $0";
   const deathStarMult = (id?: string): number => {
     if (!audilyDeathStar) return 1;
