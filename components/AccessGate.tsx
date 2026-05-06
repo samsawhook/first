@@ -20,7 +20,7 @@ const SALT = "nth-venture-access-v1";
 const VALID_INVITE_HASHES = new Set<string>([
   "8eda968171f7f37dfc8723fbd347aef7d1d611bb48033434d69dcfbe59941af9", // PREVIEW2026
   "d41008601899815c6c2f30044c51d7fa72ebf2d898860919acf8ffc789fde2b4", // WOLFSON
-  "d71546d6e8c7f4016001ef3ba4ec7e75485b66ec9ee6744e7d1221a79d43f9a8", // WOLFSONUPDATED
+  "d2b2bb58b1572c23d9f5199fd67b10e273bdc5843360a851cbd4d81d0e2e8956", // WOLFSONPRIVATE
   "68330324e4dd87abd15adb09e58d4cc3484302525018b7e6da9d9795285cd962", // SAWHOOK
   "4a0ea7d2ee8f422c284905d2d64354294a802db341339f8584f9bc2fda01e03d", // ALLOCATOR
   "c66bd2086749a885a6044f8cf0a297bb1b5126d0920d55d9509414a91ebd7803", // PALASH
@@ -30,7 +30,7 @@ const VALID_INVITE_HASHES = new Set<string>([
 // Any hash not in this map gets general fund access with no Direct Holdings tab.
 const HASH_TO_INVESTOR_ID: Record<string, string> = {
   "c66bd2086749a885a6044f8cf0a297bb1b5126d0920d55d9509414a91ebd7803": "palash-jillian", // PALASH
-  "d71546d6e8c7f4016001ef3ba4ec7e75485b66ec9ee6744e7d1221a79d43f9a8": "neil-wolfson",   // WOLFSONUPDATED
+  "d2b2bb58b1572c23d9f5199fd67b10e273bdc5843360a851cbd4d81d0e2e8956": "neil-wolfson",   // WOLFSONPRIVATE
 };
 const VALID_PHONE_HASHES = new Set<string>([
   "5928b212a16ee6d43f47c8d0dbe270153c27803a4ed46a3ce01130c4c1d49cbe", // 972-415-6178
