@@ -3699,7 +3699,7 @@ export default function Dashboard() {
               <div className="flex-1 min-w-0 rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(neilLpInterestAtCost)}</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight">existing Co-Owner Fund LP interest (at cost). Direct portco equity has $0 cost basis (earned).</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight">existing Co-Owner Fund LP interest basis. Direct portco equity has $0 cost basis (spin-outs).</p>
               </div>
               <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
                 <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3724,7 +3724,7 @@ export default function Dashboard() {
                   <div className="flex justify-between gap-1 items-center">
                     <span className="flex items-center gap-1 text-slate-400 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#A78BFA" }} />
-                      <span className="truncate">LP carryover</span>
+                      <span className="truncate">Existing LP basis</span>
                     </span>
                     <span className="text-slate-300 tabular-nums shrink-0">{fmt(neilLpInterestAtCost)}</span>
                   </div>
