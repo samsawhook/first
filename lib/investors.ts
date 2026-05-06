@@ -133,11 +133,11 @@ export const DIRECT_INVESTORS: DirectInvestor[] = [
       { category: "Purchased Equity", issueDate: "2024-03-25", securityType: "SAFE → Series A", company: "Audily Inc.",        companyId: "audily",         shares: 625,       perShareBasis: 80.00, costBasis:  50_000.00, estimatedValue: 62_500.00, interestDividend: 5_583.36 },
       // Audily short-term notes — older notes that rolled forward into the 10/8/25 $100k note.
       // 2/3/25 $30k: $14,385.81 cash repaid + $15,614.19 principal rolled forward into 10/8/25.
-      { category: "Short-term Notes",  issueDate: "2025-02-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 14_385.81, rolled: true, interestDividend: 2_338.83, costBasis: 30_000, estimatedValue: 0, interestRate: 16.5,
-        notes: "Partially repaid in cash; remaining $15,614.19 principal rolled into the 10/8/25 $100k note." },
+      { category: "Short-term Notes",  issueDate: "2025-02-03", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 14_385.81, rolled: true, interestDividend: 2_788.83, costBasis: 30_000, estimatedValue: 0, interestRate: 16.5,
+        notes: "Partially repaid in cash; remaining $15,614.19 principal rolled into the 10/8/25 $100k note. Interest earned $2,788.83 = $2,338.83 cash + $450.00 capitalized (rolled into 10/8/25 principal)." },
       // 9/2/25 $30k: full principal rolled forward into 10/8/25.
-      { category: "Short-term Notes",  issueDate: "2025-09-02", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 0, rolled: true, interestDividend: 0, costBasis: 30_000, estimatedValue: 0, interestRate: 16.5,
-        notes: "Entire $30,000 principal rolled into the 10/8/25 $100k note." },
+      { category: "Short-term Notes",  issueDate: "2025-09-02", securityType: "Short-term Note", company: "Audily Inc.", companyId: "audily", principal: 30_000, repaid: 0, rolled: true, interestDividend: 495.00, costBasis: 30_000, estimatedValue: 0, interestRate: 16.5,
+        notes: "Entire $30,000 principal rolled into the 10/8/25 $100k note. Interest earned $495.00 (capitalized, rolled into 10/8/25 principal): $30,000 × 16.5% × 36/360 days (Sep 2 → Oct 8)." },
       // Audily $100k note from 10/8/25.
       // Composition: $46,559.19 rolled in from prior notes ($45,614.19 outstanding principal +
       // $945.00 capitalized accrued interest from the 2/3 and 9/2 loans) + $53,440.81 new cash
