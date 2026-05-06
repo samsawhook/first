@@ -64,6 +64,7 @@ export default function DirectHoldingsTab({
   const [openCompanies, setOpenCompanies] = useState<Set<string>>(new Set());
   const toggleCompany = (k: string) => setOpenCompanies(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
   const [showConverted, setShowConverted] = useState(false);
+  const [equityOnlyMode, setEquityOnlyMode] = useState(false);
   // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
   const PREF_CONVERSION = { companyId: "audily", extraShares: 3_250 * 1_000 } as const;
 
@@ -152,6 +153,20 @@ export default function DirectHoldingsTab({
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
   const dpi            = amountInvested > 0 ? cashReceived / amountInvested : null;
   const tvpi           = amountInvested > 0 ? (portfolioValue + cashReceived) / amountInvested : null;
+
+  // ── Equity-only view: strip out short-term notes (debt). ────────────────
+  // Investor basis = purchased equity cost + LP interests cost (no note principal).
+  // Cash received = equity distributions only (no credit principal repaid, no
+  // credit interest). Portfolio value already excludes notes.
+  const equityOnlyInvested     = equityCost + lpInterestsCost;
+  const equityOnlyCashReceived = convertInterest;
+  const equityOnlyDpi  = equityOnlyInvested > 0 ? equityOnlyCashReceived / equityOnlyInvested : null;
+  const equityOnlyTvpi = equityOnlyInvested > 0 ? (portfolioValue + equityOnlyCashReceived) / equityOnlyInvested : null;
+  const hasDebt = notesPos.length > 0;
+  const displayDpi   = equityOnlyMode ? equityOnlyDpi  : dpi;
+  const displayTvpi  = equityOnlyMode ? equityOnlyTvpi : tvpi;
+  const displayCash  = equityOnlyMode ? equityOnlyCashReceived : cashReceived;
+  const displayBasis = equityOnlyMode ? equityOnlyInvested     : principalBasis;
 
   // ── Equity section (combined common + earned) — grouped per company ───────
   // RSU value is excluded from totals (consistent with portfolioValue), but RSU rows still display.
@@ -563,30 +578,64 @@ export default function DirectHoldingsTab({
 
           {/* DPI */}
           <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
-            <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
-              {dpi !== null ? `${dpi.toFixed(2)}×` : "—"}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
+              {hasDebt && (
+                <div className="inline-flex items-center rounded-md border border-[#1E2D3D] bg-[#080E1A] p-0.5 text-[8px]">
+                  <button onClick={() => setEquityOnlyMode(false)}
+                    className={`px-1.5 py-0.5 rounded transition-colors ${!equityOnlyMode ? "bg-slate-700/60 text-slate-200 font-semibold" : "text-slate-600 hover:text-slate-400"}`}
+                    title="Include debt">All</button>
+                  <button onClick={() => setEquityOnlyMode(true)}
+                    className={`px-1.5 py-0.5 rounded transition-colors ${equityOnlyMode ? "bg-emerald-500/20 text-emerald-300 font-semibold" : "text-slate-600 hover:text-slate-400"}`}
+                    title="Exclude short-term notes (growth equity only)">Equity only</button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: displayDpi !== null && displayDpi >= BM.dpi.q1 ? "#34D399" : displayDpi !== null && displayDpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
+              {displayDpi !== null ? `${displayDpi.toFixed(2)}×` : "—"}
             </p>
-            <BenchmarkBar value={dpi} metric="dpi" />
+            <BenchmarkBar value={displayDpi} metric="dpi" />
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(cashReceived)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Interest paid</span><span className="text-amber-400">{fmt(creditInterest)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(displayCash)}</span></div>
+              {!equityOnlyMode && (
+                <>
+                  <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-slate-600">Interest paid</span><span className="text-amber-400">{fmt(creditInterest)}</span></div>
+                </>
+              )}
               <div className="flex justify-between gap-2"><span className="text-slate-600">Distributions</span><span className="text-amber-400">{fmt(convertInterest)}</span></div>
+              {equityOnlyMode && (
+                <div className="flex justify-between gap-2 pt-0.5 mt-0.5 border-t border-[#1E2D3D]/60"><span className="text-slate-600 italic">Debt excluded</span><span className="text-slate-700 italic">−{fmt(creditRepaid + creditInterest)}</span></div>
+              )}
             </div>
           </div>
 
           {/* TVPI */}
           <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
-            <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
-              {tvpi !== null ? `${tvpi.toFixed(2)}×` : "—"}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
+              {hasDebt && (
+                <div className="inline-flex items-center rounded-md border border-[#1E2D3D] bg-[#080E1A] p-0.5 text-[8px]">
+                  <button onClick={() => setEquityOnlyMode(false)}
+                    className={`px-1.5 py-0.5 rounded transition-colors ${!equityOnlyMode ? "bg-slate-700/60 text-slate-200 font-semibold" : "text-slate-600 hover:text-slate-400"}`}
+                    title="Include debt">All</button>
+                  <button onClick={() => setEquityOnlyMode(true)}
+                    className={`px-1.5 py-0.5 rounded transition-colors ${equityOnlyMode ? "bg-emerald-500/20 text-emerald-300 font-semibold" : "text-slate-600 hover:text-slate-400"}`}
+                    title="Exclude short-term notes (growth equity only)">Equity only</button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: displayTvpi !== null && displayTvpi >= BM.tvpi.q1 ? "#10B981" : displayTvpi !== null && displayTvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
+              {displayTvpi !== null ? `${displayTvpi.toFixed(2)}×` : "—"}
             </p>
-            <BenchmarkBar value={tvpi} metric="tvpi" />
+            <BenchmarkBar value={displayTvpi} metric="tvpi" />
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(cashReceived)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Investor basis</span><span className="text-slate-300">{fmt(principalBasis)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(displayCash)}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Investor basis</span><span className="text-slate-300">{fmt(displayBasis)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Total value</span><span className="text-emerald-400">{fmt(portfolioValue)}</span></div>
+              {equityOnlyMode && (
+                <div className="flex justify-between gap-2 pt-0.5 mt-0.5 border-t border-[#1E2D3D]/60"><span className="text-slate-600 italic">Debt excluded</span><span className="text-slate-700 italic">−{fmt(creditPrincipal - creditRepaid)} basis</span></div>
+              )}
             </div>
           </div>
         </div>
