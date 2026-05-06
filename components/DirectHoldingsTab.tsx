@@ -71,10 +71,10 @@ export default function DirectHoldingsTab({
   // Palash gets a wider stress (Audily + nth Venture + Pigeon Service + Falconer);
   // every other investor gets just Audily.
   const deathStarTargets = investor.id === "palash-jillian"
-    ? ["audily", "nth-venture", "certd", "falconer"] as const
+    ? ["audily", "nth-venture", "certd", "falconer", "sentius", "galileo"] as const
     : ["audily"] as const;
   const deathStarLabels = investor.id === "palash-jillian"
-    ? "Audily / nth Venture / Pigeon Service / Falconer"
+    ? "Audily / nth Venture / Pigeon Service / Falconer / Sentius / Galileo"
     : "Audily";
   const isDeathStar = (id?: string) => audilyDeathStar && id !== undefined && (deathStarTargets as readonly string[]).includes(id);
   // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
@@ -247,7 +247,9 @@ export default function DirectHoldingsTab({
   // ── Donut: by company ─────────────────────────────────────────────────────
   const byCompany: Record<string, { id?: string; name: string; value: number }> = {};
   for (const p of positions) {
-    const v = estVal(p) + (p.interestDividend ?? 0);
+    // Death-starred companies: zero them entirely in the donut, including
+    // historical interest/dividends so the slice disappears from view.
+    const v = isDeathStar(p.companyId) ? 0 : (estVal(p) + (p.interestDividend ?? 0));
     if (v <= 0) continue;
     const key = p.companyId ?? p.company;
     if (!byCompany[key]) byCompany[key] = { id: p.companyId, name: p.company, value: 0 };
