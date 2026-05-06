@@ -320,12 +320,7 @@ export default function DirectHoldingsTab({
           </div>
         </div>
         <div className="mt-2 flex items-center gap-2 text-[7px] text-slate-600 flex-wrap">
-          <span className="flex items-center gap-1"><span className="inline-block w-px h-2 bg-slate-500" />Lower quartile</span>
-          <span className="text-slate-700">·</span>
-          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 bg-slate-600/60 rounded-sm" />Mid-range</span>
-          <span className="text-slate-700">·</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-px h-2 bg-emerald-400/80" />Upper quartile</span>
-          <span className="text-slate-700">·</span>
+          <span>Lower quartile <span className="text-slate-700">|</span> Mid-range <span className="text-slate-700">|</span> Upper quartile</span>
           <span className="flex items-center gap-1"><span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-200 border border-[#0D1421]" />You</span>
           <span className="ml-auto" style={{ color: value !== null && value >= BM[metric].q1 ? "#10B981" : value !== null && value < BM[metric].q3 ? "#F87171" : "#64748B" }}>
             {value === null ? "" : value >= BM[metric].q1 ? "▲ Upper quartile (Yr 4)" : value < BM[metric].q3 ? "▼ Below lower quartile (Yr 4)" : "● Mid-range (Yr 4)"}
