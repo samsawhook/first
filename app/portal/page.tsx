@@ -3192,9 +3192,44 @@ export default function Dashboard() {
                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <div className="flex-1 min-w-0 rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
+                  <span className="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Locked</span>
+                </div>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(palashLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(palashPortfolioValue)} portfolio value (equity + LP interest + outstanding credit) + {fmt(PALASH_CASH_CONTRIBUTION)} cash</p>
+                {/* Stacked breakdown bar: original basis + unrealized gains + cash */}
+                <div className="mt-2 h-2 rounded-full overflow-hidden bg-[#1E2D3D] flex">
+                  <div className="h-full" style={{ width: `${(palashOriginalBasis / palashLpBasis) * 100}%`, background: "#94A3B8" }} title="Original basis" />
+                  <div className="h-full" style={{ width: `${(palashUnrealizedGains / palashLpBasis) * 100}%`, background: "#34D399" }} title="Gains on investments" />
+                  <div className="h-full" style={{ width: `${(PALASH_CASH_CONTRIBUTION / palashLpBasis) * 100}%`, background: "#F59E0B" }} title="Cash contribution" />
+                </div>
+                {/* Sub-component breakdown */}
+                <div className="mt-2 space-y-1 text-[9px] sm:text-[10px]">
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#94A3B8" }} />
+                      <span className="truncate">Original basis</span>
+                    </span>
+                    <span className="text-slate-300 tabular-nums shrink-0">{fmt(palashOriginalBasis)}</span>
+                  </div>
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#34D399" }} />
+                      <span className="truncate">Gains on investments</span>
+                    </span>
+                    <span className="text-emerald-300 tabular-nums shrink-0 font-semibold">{fmt(palashUnrealizedGains)}</span>
+                  </div>
+                  <p className="text-[8px] sm:text-[9px] text-emerald-400/80 italic pl-3 leading-tight">
+                    unrealized gain locked in at fair value
+                  </p>
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+                      <span className="truncate">Cash contribution</span>
+                    </span>
+                    <span className="text-slate-300 tabular-nums shrink-0">{fmt(PALASH_CASH_CONTRIBUTION)}</span>
+                  </div>
+                </div>
               </div>
               <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
                 <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3203,9 +3238,52 @@ export default function Dashboard() {
                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <div className="flex-1 min-w-0 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
+                  {palashNav > palashLpBasis && (
+                    <span className="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Step-up</span>
+                  )}
+                </div>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(palashNav)}</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 leading-tight">{(palashPct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
+                {/* Step-up visualization: LP basis + step-up = NAV */}
+                {(() => {
+                  const stepUp = palashNav - palashLpBasis;
+                  const denom  = Math.max(palashNav, palashLpBasis);
+                  const basisPct  = denom > 0 ? (palashLpBasis / denom) * 100 : 0;
+                  const stepPct   = denom > 0 ? (Math.abs(stepUp)  / denom) * 100 : 0;
+                  const stepColor = stepUp >= 0 ? "#34D399" : "#F87171";
+                  return (
+                    <>
+                      <div className="mt-2 h-2 rounded-full overflow-hidden bg-[#1E2D3D] flex">
+                        <div className="h-full" style={{ width: `${basisPct}%`, background: "#A78BFA" }} title="LP basis (locked)" />
+                        <div className="h-full" style={{ width: `${stepPct}%`, background: stepColor }} title={stepUp >= 0 ? "NAV step-up" : "NAV markdown"} />
+                      </div>
+                      <div className="mt-2 space-y-1 text-[9px] sm:text-[10px]">
+                        <div className="flex justify-between gap-1 items-center">
+                          <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#A78BFA" }} />
+                            <span className="truncate">LP basis (locked)</span>
+                          </span>
+                          <span className="text-slate-300 tabular-nums shrink-0">{fmt(palashLpBasis)}</span>
+                        </div>
+                        <div className="flex justify-between gap-1 items-center">
+                          <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: stepColor }} />
+                            <span className="truncate">{stepUp >= 0 ? "NAV step-up" : "NAV markdown"}</span>
+                          </span>
+                          <span className="tabular-nums shrink-0 font-semibold" style={{ color: stepColor }}>
+                            {stepUp >= 0 ? "+" : ""}{fmt(stepUp)}
+                          </span>
+                        </div>
+                        <p className="text-[8px] sm:text-[9px] italic pl-3 leading-tight" style={{ color: stepUp >= 0 ? "#34D399cc" : "#F87171cc" }}>
+                          {palashLpBasis > 0
+                            ? `${stepUp >= 0 ? "+" : ""}${((stepUp / palashLpBasis) * 100).toFixed(1)}% on lock-in basis · ${(palashPct * 100).toFixed(2)}% of fund NAV ${fmt(newFundNav)}`
+                            : `${(palashPct * 100).toFixed(2)}% of fund NAV ${fmt(newFundNav)}`}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
