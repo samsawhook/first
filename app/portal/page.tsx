@@ -2863,17 +2863,13 @@ export default function Dashboard() {
             return implied / c.totalShares;
           };
 
-          // ── Palash's portfolio value (= DirectHoldingsTab portfolioValue, $880.2K) ──
-          // Class A Common (purchased + earned): use shares × default PPS where the company
-          // is in the fund portfolio; otherwise fall back to the position's estimatedValue.
-          // Convertibles + preferred: estimatedValue. RSUs excluded. Outstanding notes are
-          // tracked separately as palashActiveCreditValue (Credit allocation, not Equity).
-          // LP Interests in Co-Owner Fund LP are marked-to-NAV with the user's share-price
-          // edits applied (so editing PPS in My Holdings flows through here too).
+          // ── Palash's portfolio value (≈ $905.2K, rolled into the fund) ──────
+          // Includes Class A Common at default PPS, convertibles + preferred at
+          // estimatedValue, LP Interest mark-to-NAV, and outstanding short-term
+          // note working principal. RSUs excluded.
           const dynamicFundNavWithEdits = computeFundNav(userValuations);
           const palashPortfolioValue = directInvestor.positions.reduce((s, p) => {
             if (p.securityType === "RSU") return s;
-            if (p.category === "Short-term Notes") return s;
             if (p.shares && p.companyId && p.securityType === "Class A Common") {
               const pps = ppsForCompany(p.companyId);
               if (pps > 0) return s + p.shares * pps;
@@ -3545,7 +3541,6 @@ export default function Dashboard() {
           const palashPortfolioValue = palashInvestor
             ? palashInvestor.positions.reduce((s, p) => {
                 if (p.securityType === "RSU") return s;
-                if (p.category === "Short-term Notes") return s;
                 if (p.shares && p.companyId && p.securityType === "Class A Common") {
                   const pps = ppsForCompany(p.companyId);
                   if (pps > 0) return s + p.shares * pps;
