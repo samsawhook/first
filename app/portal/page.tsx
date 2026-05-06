@@ -118,7 +118,8 @@ const PALASH_OTHER_LP_BASIS    = 250_000;   // Cash raised elsewhere (one other 
 
 // ── Neil Deal Memo additions (neil-memo tab only) ────────────────────────────
 const NEIL_CASH_CONTRIBUTION = 100_000;     // Cash Neil adds alongside his in-kind roll-in
-const NEIL_OTHER_LP_BASIS    = 250_000;     // Cash raised elsewhere (one other new LP)
+const NEIL_SMALL_LP_CASH     = 50_000;      // Cash from the small in-kind founder LP
+const NEIL_OTHER_LP_BASIS    = 150_000;     // Cash raised elsewhere (one other new cash LP)
 // Palash rolls in his Class A Common (purchased + earned)
 const PALASH_ROLLUP_SHARES: Record<string, number> = {
   audily:           72_850 + 4_606_158,    // purchased + earned
@@ -3510,75 +3511,33 @@ export default function Dashboard() {
             .reduce((s, p) => s + (p.costBasis ?? 0), 0);
           const neilLpBasis = neilPortcoEquity + neilLpInterestAtCost + NEIL_CASH_CONTRIBUTION;
 
-          // ── Palash's in-kind contribution in Neil's view (no cash from Palash) ──
-          const palashInvestor = findDirectInvestor("palash-jillian");
-          const palashPortfolioValue = palashInvestor
-            ? palashInvestor.positions.reduce((s, p) => {
-                if (p.securityType === "RSU") return s;
-                if (p.category === "Short-term Notes") return s;
-                if (p.shares && p.companyId && p.securityType === "Class A Common") {
-                  const pps = ppsForCompany(p.companyId);
-                  if (pps > 0) return s + p.shares * pps;
-                }
-                return s + (p.estimatedValue ?? 0);
-              }, 0)
-            : 0;
-          const palashActiveCreditValue = palashInvestor
-            ? palashInvestor.positions
-                .filter(p => p.category === "Short-term Notes" && (p.estimatedValue ?? 0) > 0)
-                .reduce((s, p) => s + (p.estimatedValue ?? 0), 0)
-            : 0;
-          // Palash's LP basis mirrors his own memo: portfolio equity + $100k cash.
-          // Active credit flows through to fund holdings as debt but is not in LP basis.
-          const palashLpBasis = palashPortfolioValue + PALASH_CASH_CONTRIBUTION;
+          // ── Other Founder LP (anonymized small in-kind roll-in) ──────────────
+          // Same anonymous "LP D" person from Palash's memo, with a small slice of
+          // founder Class A Common (4 portfolio companies) plus $50k cash. Neil
+          // never sees Palash's full portfolio in this scenario.
+          const smallLpInKindValue = Object.entries(PALASH_LP_D_SHARES).reduce((s, [id, sh]) =>
+            s + sh * ppsForCompany(id), 0);
+          const smallLpInKindBasis = Math.round(smallLpInKindValue);
+          const smallLpBasis       = smallLpInKindBasis + NEIL_SMALL_LP_CASH;
 
           // ── Deal economics ───────────────────────────────────────────────────
           const audilyPrefCost   = 150_000;
           const nuecesEquityCost = 320_000;
           const nuecesNote       = 120_000;
           const nuecesCash       = nuecesEquityCost - nuecesNote;
-          const dealCashTotal    = audilyPrefCost + nuecesCash;          // $350k
-          const newCashFromLPs   = NEIL_CASH_CONTRIBUTION + NEIL_OTHER_LP_BASIS; // $350k
-          const cashGapVsDeal    = dealCashTotal - newCashFromLPs;       // 0
-
-          // ── Other Founder LP's in-kind roll-in (anonymized) ─────────────────
-          const palashAudilyPrefRollIn: DebtPosition = {
-            id: "lpd-audily-pref-rollin", date: "May 2026", instrument: "Preferred",
-            principal: 200_000, status: "Current", currentValue: 200_000,
-            notes: "Other Founder LP roll-in: Audily Series A Preferred (2,000 shares).",
-          };
-          const palashAudilySafeRollIn: DebtPosition = {
-            id: "lpd-audily-safe-rollin", date: "Mar 2024", instrument: "SAFE",
-            principal: 100_000, status: "Current", currentValue: 125_000,
-            notes: "Other Founder LP roll-in: SAFE → Series A (1,250 shares).",
-          };
-          const palashAudilyNoteRollIn: DebtPosition = {
-            id: "lpd-audily-note-rollin", date: "Feb 2026", instrument: "Term Loan",
-            principal: 25_000, status: "Current", currentValue: palashActiveCreditValue,
-            notes: "Other Founder LP roll-in: outstanding short-term note.",
-          };
-
+          const dealCashTotal    = audilyPrefCost + nuecesCash;                                    // $350k
+          const newCashFromLPs   = NEIL_CASH_CONTRIBUTION + NEIL_SMALL_LP_CASH + NEIL_OTHER_LP_BASIS; // $300k
+          const cashGapVsDeal    = dealCashTotal - newCashFromLPs;                                  // $50k
 
           // ── Build modified portfolio (bottom-up) ─────────────────────────────
-          const PALASH_SHARE_MAP: Record<string, number> = {
-            audily:           72_850 + 4_606_158,
-            sbr2th:        2_500_000 + 250_000 + 3_108_640,
-            certd:         2_500_000 + 250_000 + 3_079_061,
-            sentius:       2_500_000 + 250_000,
-            galileo:       2_500_000 + 250_000,
-            "merchant-boxes": 4_593_450,
-            falconer:        4_532_840,
-          };
-
+          // Other Founder LP rolls in only the LP D shares (Class A Common across
+          // 4 portfolio companies); no Audily Preferred / SAFE / notes.
           const portfolioNeil = withAudilyAccrued(basePortfolio).map(c => {
             let modified: typeof c = c;
             if (c.id === "audily") {
               modified = { ...modified, debtPositions: [
                 ...(modified.debtPositions ?? []),
                 PROPOSAL_AUDILY_PREFERRED,
-                palashAudilyPrefRollIn,
-                palashAudilySafeRollIn,
-                ...(palashActiveCreditValue > 0 ? [palashAudilyNoteRollIn] : []),
               ]};
             }
             if (c.id === "nueces-brewing") {
@@ -3592,16 +3551,16 @@ export default function Dashboard() {
                 ],
               };
             }
-            const neilCommonAdd   = NEIL_ROLLUP_SHARES[c.id] ?? 0;
-            const palashCommonAdd = PALASH_SHARE_MAP[c.id] ?? 0;
-            if (neilCommonAdd > 0 || palashCommonAdd > 0) {
+            const neilCommonAdd     = NEIL_ROLLUP_SHARES[c.id] ?? 0;
+            const smallLpCommonAdd  = PALASH_LP_D_SHARES[c.id] ?? 0;
+            if (neilCommonAdd > 0 || smallLpCommonAdd > 0) {
               const pps = ppsForCompany(c.id);
               const additions: ShareTransaction[] = [];
               if (neilCommonAdd > 0) {
                 additions.push({ date: "May 2026", type: "Common", shares: neilCommonAdd, amount: Math.round(neilCommonAdd * pps), notes: "Neil in-kind roll-in." });
               }
-              if (palashCommonAdd > 0) {
-                additions.push({ date: "May 2026", type: "Common", shares: palashCommonAdd, amount: Math.round(palashCommonAdd * pps), notes: "Other Founder LP in-kind roll-in." });
+              if (smallLpCommonAdd > 0) {
+                additions.push({ date: "May 2026", type: "Common", shares: smallLpCommonAdd, amount: Math.round(smallLpCommonAdd * pps), notes: "Other Founder LP in-kind roll-in." });
               }
               modified = { ...modified, shareTransactions: [...(modified.shareTransactions ?? []), ...additions] };
             }
@@ -3613,29 +3572,10 @@ export default function Dashboard() {
             currentValue?: number; totalShares?: number; customPricePerShare?: number; impliedValuation?: number;
             shareTransactions?: ShareTransaction[]; debtPositions?: DebtPosition[]; optionPositions?: typeof basePortfolio[number]["optionPositions"];
           };
-          const nthVentureSynthetic: CompanyLike = {
-            id: "nth-venture", name: "nth Venture", accentColor: "#64748B", status: "active",
-            currentValue: 170_000, shareTransactions: [],
-            debtPositions: [
-              { id: "lpd-nth-safe", date: "Feb 2022", instrument: "SAFE", principal: 20_000, status: "Current", currentValue: 20_000, notes: "Other Founder LP roll-in: nth Venture SAFE → Series A (200,000 shares)." },
-              { id: "lpd-nth-conv", date: "Jun 2023", instrument: "Convertible Note", principal: 150_000, status: "Current", currentValue: 150_000, notes: "Other Founder LP roll-in: nth Venture Convertible Notes." },
-            ],
-          };
-          const palashSentiusShares = PALASH_SHARE_MAP["sentius"] ?? 0;
-          const sentiusSynthetic: CompanyLike = {
-            id: "sentius", name: "Sentius Development", accentColor: "#06B6D4", status: "active",
-            currentValue: 27_500,
-            shareTransactions: palashSentiusShares > 0
-              ? [{ date: "May 2026", type: "Common", shares: palashSentiusShares, amount: 27_500, notes: "Other Founder LP in-kind roll-in." }]
-              : [],
-            debtPositions: [],
-          };
 
           const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
           const allCompanies: CompanyLike[] = [
             ...portfolioNeil.filter(c => c.status === "active"),
-            sentiusSynthetic,
-            nthVentureSynthetic,
           ];
 
           const companyRows = allCompanies.map(c => {
@@ -3646,13 +3586,13 @@ export default function Dashboard() {
             const fundCommonPre = commonAll
               .filter(t => !t.notes?.startsWith("Other Founder LP") && !t.notes?.startsWith("Neil") && !t.notes?.startsWith("Nueces Brewing 50%"))
               .reduce((s, t) => s + (t.shares ?? 0), 0);
-            const neilRollIn   = NEIL_ROLLUP_SHARES[c.id] ?? 0;
-            const palashRollIn = PALASH_SHARE_MAP[c.id] ?? 0;
-            const dealShares   = c.id === "nueces-brewing" ? 50_000 : 0;
-            const postShares   = fundCommonPre + neilRollIn + palashRollIn + dealShares;
+            const neilRollIn    = NEIL_ROLLUP_SHARES[c.id] ?? 0;
+            const smallLpRollIn = PALASH_LP_D_SHARES[c.id] ?? 0;
+            const dealShares    = c.id === "nueces-brewing" ? 50_000 : 0;
+            const postShares    = fundCommonPre + neilRollIn + smallLpRollIn + dealShares;
             const equityVal = pps > 0 && postShares > 0
               ? postShares * pps
-              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0));
+              : (c.currentValue ?? 0);
             const debtVal = (c.debtPositions ?? [])
               .filter(d => d.status !== "Repaid")
               .reduce((s, d) => s + d.currentValue, 0);
@@ -3663,10 +3603,10 @@ export default function Dashboard() {
             }, 0);
             return {
               id: c.id, name: c.name, accent: c.accentColor || "#64748B",
-              pps, fundCommonPre, neilRollIn, palashRollIn, dealShares, postShares,
+              pps, fundCommonPre, neilRollIn, smallLpRollIn, dealShares, postShares,
               equityVal, debtVal, optionVal,
               value: equityVal + debtVal + optionVal,
-              isNew: c.id === "nueces-brewing" || c.id === "nth-venture",
+              isNew: c.id === "nueces-brewing",
             };
           }).filter(r => r.value > 0).sort((a, b) => b.value - a.value);
 
@@ -3695,7 +3635,7 @@ export default function Dashboard() {
           const newFundLeverage = BASE_FUND_LEVERAGE + nuecesNote;
           const newFundNav      = grossAssets - newFundLeverage;
 
-          const newLpBasis      = neilLpBasis + palashLpBasis + NEIL_OTHER_LP_BASIS;
+          const newLpBasis      = neilLpBasis + smallLpBasis + NEIL_OTHER_LP_BASIS;
           const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;
           const neilPct         = newLpUnitsTotal > 0 ? neilLpBasis / newLpUnitsTotal : 0;
           const neilNav         = neilPct * newFundNav;
@@ -3721,7 +3661,7 @@ export default function Dashboard() {
           const lpRows = [
             { id: "existing", name: "Existing Co-Owner Fund LPs",  units: BASE_LP_TOTAL_UNITS,    basis: BASE_LP_TOTAL_UNITS,    type: "—",                                                                          accent: "#64748B" },
             { id: "neil",     name: `${directInvestor.name} (you)`, units: neilLpBasis,           basis: neilLpBasis,            type: `portco equity ${fmt(neilPortcoEquity)} + ${fmt(neilLpInterestAtCost)} LP interest (at cost) + ${fmt(NEIL_CASH_CONTRIBUTION)} cash`, accent: "#A78BFA" },
-            { id: "lpD",      name: "Other Founder LP",             units: palashLpBasis,         basis: palashLpBasis,          type: `in-kind equity + ${fmt(PALASH_CASH_CONTRIBUTION)} cash`,                       accent: "#F59E0B" },
+            { id: "smallLp",  name: "Other Founder LP",             units: smallLpBasis,          basis: smallLpBasis,           type: `small in-kind roll-in (${fmt(smallLpInKindBasis)}) + ${fmt(NEIL_SMALL_LP_CASH)} cash`, accent: "#F59E0B" },
             { id: "cashLP",   name: "Cash LP (raised elsewhere)",   units: NEIL_OTHER_LP_BASIS,   basis: NEIL_OTHER_LP_BASIS,    type: "cash",                                                                       accent: "#34D399" },
           ];
 
@@ -3737,7 +3677,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>Another founder LP rolls in their portfolio equity at default PPS + contributes <span className="text-white font-medium">{fmt(PALASH_CASH_CONTRIBUTION)}</span> cash — LP basis <span className="text-white font-medium">{fmt(palashLpBasis)}</span></span>
+                  <span>Another founder LP rolls in a small Class A Common slice (<span className="text-white font-medium">{fmt(smallLpInKindBasis)}</span> across 4 portfolio cos at default PPS) + contributes <span className="text-white font-medium">{fmt(NEIL_SMALL_LP_CASH)}</span> cash — LP basis <span className="text-white font-medium">{fmt(smallLpBasis)}</span></span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
@@ -3749,7 +3689,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-purple-400">•</span>
-                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> ({fmt(NEIL_CASH_CONTRIBUTION)} from you + {fmt(NEIL_OTHER_LP_BASIS)} from cash LP) · Deal cash gap: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 && "— fully funded"}</span>
+                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> ({fmt(NEIL_CASH_CONTRIBUTION)} you + {fmt(NEIL_SMALL_LP_CASH)} other founder + {fmt(NEIL_OTHER_LP_BASIS)} cash LP) · Deal cash gap: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 ? "— fully funded" : "— remaining gap to fund elsewhere"}</span>
                 </li>
               </ul>
             </div>
@@ -4062,7 +4002,7 @@ export default function Dashboard() {
                         </td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.fundCommonPre > 0 ? row.fundCommonPre.toLocaleString() : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.neilRollIn > 0 ? "#A78BFA" : "#475569" }}>{row.neilRollIn > 0 ? `+${row.neilRollIn.toLocaleString()}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.palashRollIn > 0 ? "#F59E0B" : "#475569" }}>{row.palashRollIn > 0 ? `+${row.palashRollIn.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.smallLpRollIn > 0 ? "#F59E0B" : "#475569" }}>{row.smallLpRollIn > 0 ? `+${row.smallLpRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
@@ -4075,7 +4015,7 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#A78BFA" }}>+{companyRows.reduce((s, r) => s + r.neilRollIn, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{companyRows.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{companyRows.reduce((s, r) => s + r.smallLpRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityTypeBasis)}</td>
