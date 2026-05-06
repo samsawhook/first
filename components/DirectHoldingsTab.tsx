@@ -283,10 +283,10 @@ export default function DirectHoldingsTab({
                   {/* Q1 tick */}
                   <div className="absolute bg-emerald-400/80"
                     style={{ left: `calc(${pos(q1)}% - 0.5px)`, top: -3, bottom: -3, width: 1 }} />
-                  {/* User's value */}
-                  {value !== null && (
+                  {/* User's value (only on the reference year 4 row) */}
+                  {isCurrent && value !== null && (
                     <div className="absolute top-1/2 rounded-full border border-[#0D1421] z-10"
-                      style={{ left: `${pos(value)}%`, transform: "translate(-50%, -50%)", background: dotColor, width: isCurrent ? 8 : 6, height: isCurrent ? 8 : 6 }} />
+                      style={{ left: `${pos(value)}%`, transform: "translate(-50%, -50%)", background: dotColor, width: 8, height: 8 }} />
                   )}
                 </div>
               </div>
