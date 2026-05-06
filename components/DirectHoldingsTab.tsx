@@ -236,34 +236,56 @@ export default function DirectHoldingsTab({
     return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
   });
 
-  // ── Benchmarks: Cambridge Associates VC, ~year-4 fund ────────────────────
+  // ── Benchmarks: Cambridge Associates US Growth Equity, by fund age ──────
+  // Pooled Q1 (top quartile) and Q3 (bottom quartile) DPI / TVPI by fund year.
+  // Year 4 is the highlighted reference vintage; years 3–7 shown for context.
+  const BM_YEARS = [
+    { year: 3, dpi: { q1: 0.12, q3: 0.00 }, tvpi: { q1: 1.40, q3: 0.92 } },
+    { year: 4, dpi: { q1: 0.18, q3: 0.01 }, tvpi: { q1: 1.45, q3: 0.90 } },
+    { year: 5, dpi: { q1: 0.35, q3: 0.05 }, tvpi: { q1: 1.65, q3: 1.00 } },
+    { year: 6, dpi: { q1: 0.55, q3: 0.15 }, tvpi: { q1: 1.85, q3: 1.10 } },
+    { year: 7, dpi: { q1: 0.80, q3: 0.30 }, tvpi: { q1: 2.05, q3: 1.20 } },
+  ] as const;
+  const BM_REFERENCE_YEAR = 4;
   const BM = {
-    dpi:  { q1: 0.18, q3: 0.01 },  // growth equity top/bottom quartile DPI at yr 4
-    tvpi: { q1: 1.45, q3: 0.90 },  // growth equity top/bottom quartile TVPI at yr 4
+    dpi:  BM_YEARS.find(b => b.year === BM_REFERENCE_YEAR)!.dpi,
+    tvpi: BM_YEARS.find(b => b.year === BM_REFERENCE_YEAR)!.tvpi,
   } as const;
 
-  const BenchmarkBar = ({ value, q1, q3 }: { value: number | null; q1: number; q3: number }) => {
-    const pct = value !== null ? Math.max(0, Math.min(1, (value - q3) / (q1 - q3))) : null;
-    const aboveQ1 = value !== null && value >= q1;
-    const belowQ3 = value !== null && value < q3;
-    const dotColor = aboveQ1 ? "#10B981" : belowQ3 ? "#F87171" : "#e2e8f0";
+  const BenchmarkBar = ({ value, metric }: { value: number | null; metric: "dpi" | "tvpi" }) => {
     return (
       <div className="mt-2">
-        <div className="flex items-center justify-between mb-1" style={{ fontSize: 8, color: "#475569" }}>
-          <span>Q3 {q3.toFixed(2)}×</span>
-          <span className="text-[7px] text-slate-700">GE yr-4</span>
-          <span>Q1 {q1.toFixed(2)}×</span>
+        <p className="text-[8px] text-slate-500 leading-tight mb-1.5">
+          Growth Equity Benchmark <span className="text-slate-700">· Cambridge Associates</span>
+        </p>
+        <div className="space-y-1">
+          {BM_YEARS.map(b => {
+            const { q1, q3 } = b[metric];
+            const pct = value !== null ? Math.max(0, Math.min(1, (value - q3) / (q1 - q3))) : null;
+            const aboveQ1 = value !== null && value >= q1;
+            const belowQ3 = value !== null && value < q3;
+            const dotColor = aboveQ1 ? "#10B981" : belowQ3 ? "#F87171" : "#e2e8f0";
+            const isCurrent = b.year === BM_REFERENCE_YEAR;
+            return (
+              <div key={b.year} className="flex items-center gap-1.5">
+                <span className={`text-[8px] tabular-nums shrink-0 ${isCurrent ? "text-slate-300 font-semibold" : "text-slate-600"}`} style={{ width: 22 }}>
+                  Yr {b.year}
+                </span>
+                <span className="text-[7px] text-slate-700 tabular-nums shrink-0 text-right" style={{ width: 22 }}>{q3.toFixed(2)}</span>
+                <div className={`relative flex-1 rounded-full overflow-visible ${isCurrent ? "h-1.5" : "h-1"}`} style={{ background: "#1E2D3D" }}>
+                  <div className="absolute inset-0 rounded-full opacity-30" style={{ background: "linear-gradient(to right, #F87171, #10B981)" }} />
+                  {pct !== null && (
+                    <div className="absolute top-1/2 rounded-full border border-[#0D1421]"
+                      style={{ left: `${pct * 100}%`, transform: "translate(-50%, -50%)", background: dotColor, width: isCurrent ? 8 : 6, height: isCurrent ? 8 : 6 }} />
+                  )}
+                </div>
+                <span className="text-[7px] text-slate-700 tabular-nums shrink-0" style={{ width: 22 }}>{q1.toFixed(2)}</span>
+              </div>
+            );
+          })}
         </div>
-        <div className="relative h-1 rounded-full overflow-visible" style={{ background: "#1E2D3D" }}>
-          <div className="absolute inset-0 rounded-full opacity-30"
-            style={{ background: "linear-gradient(to right, #F87171, #10B981)" }} />
-          {pct !== null && (
-            <div className="absolute top-1/2 w-2 h-2 rounded-full border border-[#0D1421]"
-              style={{ left: `${pct * 100}%`, transform: "translate(-50%, -50%)", background: dotColor }} />
-          )}
-        </div>
-        <p className="mt-1" style={{ fontSize: 8, color: aboveQ1 ? "#10B981" : belowQ3 ? "#F87171" : "#64748B" }}>
-          {value === null ? "" : aboveQ1 ? "▲ Top quartile" : belowQ3 ? "▼ Below Q3" : "● Mid-range"}
+        <p className="mt-1.5" style={{ fontSize: 8, color: value !== null && value >= BM[metric].q1 ? "#10B981" : value !== null && value < BM[metric].q3 ? "#F87171" : "#64748B" }}>
+          {value === null ? "" : value >= BM[metric].q1 ? "▲ Top quartile (Yr 4)" : value < BM[metric].q3 ? "▼ Below Q3 (Yr 4)" : "● Mid-range (Yr 4)"}
         </p>
       </div>
     );
@@ -516,7 +538,7 @@ export default function DirectHoldingsTab({
             <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: dpi !== null && dpi >= BM.dpi.q1 ? "#34D399" : dpi !== null && dpi >= BM.dpi.q3 ? "#e2e8f0" : "#94A3B8" }}>
               {dpi !== null ? `${dpi.toFixed(2)}×` : "—"}
             </p>
-            <BenchmarkBar value={dpi} q1={BM.dpi.q1} q3={BM.dpi.q3} />
+            <BenchmarkBar value={dpi} metric="dpi" />
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
               <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(cashReceived)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Principal returned</span><span className="text-emerald-400">{fmt(creditRepaid)}</span></div>
@@ -531,7 +553,7 @@ export default function DirectHoldingsTab({
             <p className="text-sm sm:text-base font-bold mt-1 tabular-nums" style={{ color: tvpi !== null && tvpi >= BM.tvpi.q1 ? "#10B981" : tvpi !== null && tvpi >= BM.tvpi.q3 ? "#e2e8f0" : "#F87171" }}>
               {tvpi !== null ? `${tvpi.toFixed(2)}×` : "—"}
             </p>
-            <BenchmarkBar value={tvpi} q1={BM.tvpi.q1} q3={BM.tvpi.q3} />
+            <BenchmarkBar value={tvpi} metric="tvpi" />
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
               <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(cashReceived)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Investor basis</span><span className="text-slate-300">{fmt(principalBasis)}</span></div>
