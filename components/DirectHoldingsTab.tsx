@@ -65,6 +65,7 @@ export default function DirectHoldingsTab({
   const toggleCompany = (k: string) => setOpenCompanies(p => { const s = new Set(p); s.has(k) ? s.delete(k) : s.add(k); return s; });
   const [showConverted, setShowConverted] = useState(false);
   const [equityOnlyMode, setEquityOnlyMode] = useState(false);
+  const [audilyDeathStar, setAudilyDeathStar] = useState(false);
   // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
   const PREF_CONVERSION = { companyId: "audily", extraShares: 3_250 * 1_000 } as const;
 
@@ -99,6 +100,7 @@ export default function DirectHoldingsTab({
   );
 
   const estVal = (p: DirectPosition): number => {
+    if (audilyDeathStar && p.companyId === "audily") return 0;
     if (p.shares && p.companyId && isCommonOrRSU(p.securityType)) {
       const pps = effectivePps(p.companyId);
       if (pps !== null) return p.shares * pps;
@@ -143,7 +145,7 @@ export default function DirectHoldingsTab({
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
 
-  const creditOutstanding = sum(notesPos, p => p.estimatedValue);
+  const creditOutstanding = sum(notesPos, p => audilyDeathStar && p.companyId === "audily" ? 0 : p.estimatedValue);
   const amountInvested = equityCost + creditPrincipal + lpInterestsCost;
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
@@ -729,30 +731,45 @@ export default function DirectHoldingsTab({
           </div>
 
           {/* RIGHT: donut + legend */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 px-4 sm:px-5 py-4 sm:py-5 flex-1">
-            <div className="shrink-0 flex justify-center">
-              <svg width={160} height={160} viewBox="0 0 160 160">
-                {arcs.map((a, i) => <path key={i} d={a.path} fill={accentFor(a.id)} fillOpacity={0.85} />)}
-                <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(portfolioValue)}</text>
-                <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">est. portfolio</text>
-              </svg>
-            </div>
-            <div className="flex flex-col gap-2 content-center justify-center min-w-0 flex-1">
-              {donutItems.map((d, i) => (
-                <div key={i} className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accentFor(d.id) }} />
-                  {d.id && portMap[d.id] ? (
-                    <button className="text-xs text-slate-400 hover:text-white transition-colors text-left truncate flex-1"
-                      onClick={() => onSelectCompany(d.id!)}>
-                      {d.name.replace(" Inc.", "").replace(" Recruiting", "")}
-                    </button>
-                  ) : (
-                    <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
-                  )}
-                  <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.value)}</span>
-                  <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{((d.value / donutTotal) * 100).toFixed(1)}%</span>
-                </div>
-              ))}
+          <div className="flex flex-col px-4 sm:px-5 py-4 sm:py-5 flex-1">
+            {positions.some(p => p.companyId === "audily") && (
+              <div className="flex items-center justify-between mb-3 gap-2">
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">By Company</p>
+                <button
+                  onClick={() => setAudilyDeathStar(!audilyDeathStar)}
+                  className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
+                  title="Death Star: zero out all Audily holdings (stress test)"
+                >
+                  <span aria-hidden>☠</span>
+                  <span>Audily {audilyDeathStar ? "→ $0" : "stress"}</span>
+                </button>
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 flex-1">
+              <div className="shrink-0 flex justify-center">
+                <svg width={160} height={160} viewBox="0 0 160 160">
+                  {arcs.map((a, i) => <path key={i} d={a.path} fill={accentFor(a.id)} fillOpacity={0.85} />)}
+                  <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(portfolioValue)}</text>
+                  <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">est. portfolio</text>
+                </svg>
+              </div>
+              <div className="flex flex-col gap-2 content-center justify-center min-w-0 flex-1">
+                {donutItems.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accentFor(d.id) }} />
+                    {d.id && portMap[d.id] ? (
+                      <button className="text-xs text-slate-400 hover:text-white transition-colors text-left truncate flex-1"
+                        onClick={() => onSelectCompany(d.id!)}>
+                        {d.name.replace(" Inc.", "").replace(" Recruiting", "")}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                    )}
+                    <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.value)}</span>
+                    <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{((d.value / donutTotal) * 100).toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
