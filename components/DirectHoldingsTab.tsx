@@ -889,7 +889,9 @@ export default function DirectHoldingsTab({
                             : cashSettledPct === 100
                               ? <span className="text-emerald-400 font-semibold">100% repaid</span>
                               : cashSettledPct > 0
-                                ? <span className="text-yellow-400 font-semibold">Active</span>
+                                ? rolledIn > 0
+                                  ? <span className="text-yellow-400 font-semibold">Active</span>
+                                  : <span className="text-yellow-400 font-semibold">{cashSettledPct}% repaid</span>
                                 : <span className="text-slate-600">Outstanding</span>}
                         </TD>
                         <TD className="tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{p.interestDividend ? fmt(p.interestDividend) : "—"}</TD>
