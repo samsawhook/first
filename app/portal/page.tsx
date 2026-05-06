@@ -2859,7 +2859,10 @@ export default function Dashboard() {
           const ppsForCompany = (id: string): number => {
             const c = basePortfolio.find(p => p.id === id);
             if (!c || !c.totalShares) return 0;
-            const implied = c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation;
+            const userVal = userValuations[id];
+            const implied = userVal !== undefined
+              ? userVal
+              : (c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation);
             return implied / c.totalShares;
           };
 
@@ -3043,9 +3046,11 @@ export default function Dashboard() {
           ];
 
           const companyRows = allCompanies.map(c => {
-            const pps = c.totalShares
-              ? (c.customPricePerShare ? c.customPricePerShare * c.totalShares : (c.impliedValuation ?? 0)) / c.totalShares
-              : 0;
+            const userVal = userValuations[c.id];
+            const impliedVal = userVal !== undefined
+              ? userVal
+              : (c.customPricePerShare && c.totalShares ? c.customPricePerShare * c.totalShares : (c.impliedValuation ?? 0));
+            const pps = c.totalShares ? impliedVal / c.totalShares : 0;
 
             // Pre-deal Common shares (excluding rollups + deal additions; checks transaction notes)
             const commonAll = (c.shareTransactions ?? []).filter(t => t.type === "Common");
@@ -3478,32 +3483,12 @@ export default function Dashboard() {
               );
             })()}
 
-            {/* ── 3 LP Contribution cards ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-              {lpRows.filter(l => l.id !== "existing").map(lp => {
-                const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
-                return (
-                  <div key={lp.id} className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: lp.accent }} />
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 truncate">{lp.name}</p>
-                    </div>
-                    <p className="text-sm sm:text-base font-bold tabular-nums" style={{ color: lp.accent }}>{fmt(lp.basis)}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">LP basis · {lp.type}</p>
-                    <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60">
-                      <p className="text-[10px] text-slate-500 tabular-nums">{lp.units.toLocaleString()} units</p>
-                      <p className="text-[10px] text-slate-600 tabular-nums">{(pct * 100).toFixed(2)}% of post-roll-up fund</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* ── Resulting Fund Portfolio table ── */}
+            {/* ── Portfolio Combination Summary ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
               <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
-                <p className="text-xs sm:text-sm font-semibold text-slate-200">Resulting Fund Portfolio</p>
+                <p className="text-xs sm:text-sm font-semibold text-slate-200">Portfolio Combination Summary</p>
+                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">post-deal · share prices editable</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -3516,6 +3501,7 @@ export default function Dashboard() {
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Small LP</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Equity Value</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Debt/Pref</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Options</th>
@@ -3523,7 +3509,10 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0D1421]">
-                    {companyRows.map(row => (
+                    {companyRows.map(row => {
+                      const baseCo = portfolio.find(p => p.id === row.id);
+                      const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
+                      return (
                       <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
@@ -3538,12 +3527,31 @@ export default function Dashboard() {
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn > 0 ? "#FB923C" : "#475569" }}>{row.lpDRollIn > 0 ? `+${row.lpDRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums">
+                          {row.pps > 0 ? (
+                            baseCo ? (
+                              <button
+                                onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
+                                className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group"
+                                title="Edit share price"
+                              >
+                                <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
+                                <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
+                              </button>
+                            ) : (
+                              <span className="text-slate-500">${row.pps.toFixed(4)}</span>
+                            )
+                          ) : (
+                            <span className="text-slate-700">—</span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.debtVal > 0 ? "#F59E0B" : "#475569" }}>{row.debtVal > 0 ? fmt(row.debtVal) : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.optionVal > 0 ? "#F43F5E" : "#475569" }}>{row.optionVal > 0 ? fmt(row.optionVal) : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{fmt(row.value)}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
@@ -3552,60 +3560,11 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3"></td>
                       <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityTypeBasis)}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>{fmt(creditTypeBasis + convertTypeBasis)}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(grossAssets - cashTypeBasis)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* ── LP Cap Table ── */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#8B5CF6" }} />
-                <p className="text-xs sm:text-sm font-semibold text-slate-200">LP Cap Table — Post Roll-up</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
-                    <tr>
-                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP</th>
-                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Type</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP Basis</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Units</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">% of Fund</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#0D1421]">
-                    {lpRows.map(lp => {
-                      const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
-                      const isPalash = lp.id === "palash";
-                      return (
-                        <tr key={lp.id} className={`hover:bg-[#111D2E]/40 transition-colors ${isPalash ? "bg-purple-500/5" : ""}`}>
-                          <td className="py-2.5 px-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: lp.accent }} />
-                              <span className="font-medium text-slate-200">{lp.name}</span>
-                              {isPalash && <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#4C1D95", color: "#C4B5FD" }}>YOU</span>}
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-400 text-[11px]">{lp.type}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-medium">{fmt(lp.basis)}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{lp.units.toLocaleString()}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: isPalash ? "#A78BFA" : "#94A3B8" }}>
-                            {(pct * 100).toFixed(2)}%
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
-                      <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider" colSpan={2}>Total</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{fmt(newLpUnitsTotal)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{newLpUnitsTotal.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">100.00%</td>
                     </tr>
                   </tbody>
                 </table>
@@ -3620,7 +3579,10 @@ export default function Dashboard() {
           const ppsForCompany = (id: string): number => {
             const c = basePortfolio.find(p => p.id === id);
             if (!c || !c.totalShares) return 0;
-            const implied = c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation;
+            const userVal = userValuations[id];
+            const implied = userVal !== undefined
+              ? userVal
+              : (c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation);
             return implied / c.totalShares;
           };
 
@@ -3795,9 +3757,11 @@ export default function Dashboard() {
           ];
 
           const companyRows = allCompanies.map(c => {
-            const pps = c.totalShares
-              ? (c.customPricePerShare ? c.customPricePerShare * c.totalShares : (c.impliedValuation ?? 0)) / c.totalShares
-              : 0;
+            const userVal = userValuations[c.id];
+            const impliedVal = userVal !== undefined
+              ? userVal
+              : (c.customPricePerShare && c.totalShares ? c.customPricePerShare * c.totalShares : (c.impliedValuation ?? 0));
+            const pps = c.totalShares ? impliedVal / c.totalShares : 0;
             const commonAll = (c.shareTransactions ?? []).filter(t => t.type === "Common");
             const fundCommonPre = commonAll
               .filter(t => !t.notes?.startsWith("Other Founder LP") && !t.notes?.startsWith("Small Founder LP") && !t.notes?.startsWith("Neil") && !t.notes?.startsWith("Nueces Brewing 50%"))
@@ -4166,32 +4130,12 @@ export default function Dashboard() {
               );
             })()}
 
-            {/* ── 3 LP Contribution cards ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-              {lpRows.filter(l => l.id !== "existing").map(lp => {
-                const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
-                return (
-                  <div key={lp.id} className="rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: lp.accent }} />
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 truncate">{lp.name}</p>
-                    </div>
-                    <p className="text-sm sm:text-base font-bold tabular-nums" style={{ color: lp.accent }}>{fmt(lp.basis)}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">LP basis · {lp.type}</p>
-                    <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60">
-                      <p className="text-[10px] text-slate-500 tabular-nums">{lp.units.toLocaleString()} units</p>
-                      <p className="text-[10px] text-slate-600 tabular-nums">{(pct * 100).toFixed(2)}% of post-roll-up fund</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* ── Resulting Fund Portfolio table ── */}
+            {/* ── Portfolio Combination Summary ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
               <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
-                <p className="text-xs sm:text-sm font-semibold text-slate-200">Resulting Fund Portfolio</p>
+                <p className="text-xs sm:text-sm font-semibold text-slate-200">Portfolio Combination Summary</p>
+                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">post-deal · share prices editable</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -4204,6 +4148,7 @@ export default function Dashboard() {
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Small LP</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Equity Value</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Debt/Pref</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Options</th>
@@ -4211,7 +4156,10 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0D1421]">
-                    {companyRows.map(row => (
+                    {companyRows.map(row => {
+                      const baseCo = portfolio.find(p => p.id === row.id);
+                      const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
+                      return (
                       <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
@@ -4226,12 +4174,31 @@ export default function Dashboard() {
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.smallLpRollIn > 0 ? "#FB923C" : "#475569" }}>{row.smallLpRollIn > 0 ? `+${row.smallLpRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums">
+                          {row.pps > 0 ? (
+                            baseCo ? (
+                              <button
+                                onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
+                                className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group"
+                                title="Edit share price"
+                              >
+                                <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
+                                <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
+                              </button>
+                            ) : (
+                              <span className="text-slate-500">${row.pps.toFixed(4)}</span>
+                            )
+                          ) : (
+                            <span className="text-slate-700">—</span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.debtVal > 0 ? "#F59E0B" : "#475569" }}>{row.debtVal > 0 ? fmt(row.debtVal) : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.optionVal > 0 ? "#F43F5E" : "#475569" }}>{row.optionVal > 0 ? fmt(row.optionVal) : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{fmt(row.value)}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
@@ -4240,60 +4207,11 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.smallLpRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3"></td>
                       <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityTypeBasis)}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>{fmt(creditTypeBasis + convertTypeBasis)}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(grossAssets - cashTypeBasis)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* ── LP Cap Table ── */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#8B5CF6" }} />
-                <p className="text-xs sm:text-sm font-semibold text-slate-200">LP Cap Table — Post Roll-up</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
-                    <tr>
-                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP</th>
-                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Type</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP Basis</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Units</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">% of Fund</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#0D1421]">
-                    {lpRows.map(lp => {
-                      const pct = newLpUnitsTotal > 0 ? lp.units / newLpUnitsTotal : 0;
-                      const isNeilRow = lp.id === "neil";
-                      return (
-                        <tr key={lp.id} className={`hover:bg-[#111D2E]/40 transition-colors ${isNeilRow ? "bg-purple-500/5" : ""}`}>
-                          <td className="py-2.5 px-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: lp.accent }} />
-                              <span className="font-medium text-slate-200">{lp.name}</span>
-                              {isNeilRow && <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#4C1D95", color: "#C4B5FD" }}>YOU</span>}
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-400 text-[11px]">{lp.type}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-medium">{fmt(lp.basis)}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{lp.units.toLocaleString()}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: isNeilRow ? "#A78BFA" : "#94A3B8" }}>
-                            {(pct * 100).toFixed(2)}%
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
-                      <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider" colSpan={2}>Total</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{fmt(newLpUnitsTotal)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{newLpUnitsTotal.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">100.00%</td>
                     </tr>
                   </tbody>
                 </table>
