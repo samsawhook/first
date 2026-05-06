@@ -587,7 +587,7 @@ export default function DirectHoldingsTab({
                     title="Include debt">All</button>
                   <button onClick={() => setEquityOnlyMode(true)}
                     className={`px-1.5 py-0.5 rounded transition-colors ${equityOnlyMode ? "bg-emerald-500/20 text-emerald-300 font-semibold" : "text-slate-600 hover:text-slate-400"}`}
-                    title="Exclude short-term notes (growth equity only)">Equity only</button>
+                    title="Exclude short-term notes (ex-debt: equity + convertibles + LP interests)">Ex-debt</button>
                 </div>
               )}
             </div>
@@ -621,7 +621,7 @@ export default function DirectHoldingsTab({
                     title="Include debt">All</button>
                   <button onClick={() => setEquityOnlyMode(true)}
                     className={`px-1.5 py-0.5 rounded transition-colors ${equityOnlyMode ? "bg-emerald-500/20 text-emerald-300 font-semibold" : "text-slate-600 hover:text-slate-400"}`}
-                    title="Exclude short-term notes (growth equity only)">Equity only</button>
+                    title="Exclude short-term notes (ex-debt: equity + convertibles + LP interests)">Ex-debt</button>
                 </div>
               )}
             </div>
