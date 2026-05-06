@@ -3483,12 +3483,264 @@ export default function Dashboard() {
               );
             })()}
 
+            {/* ══ Portfolio at a Glance (post-deal, mirrors Overview) ═══════════ */}
+            {(() => {
+              const equityRows = companyRows.filter(r => r.equityVal > 0);
+              const allDebtPositions = allCompanies.flatMap(c =>
+                (c.debtPositions ?? [])
+                  .filter(d => d.status !== "Repaid")
+                  .map(d => ({ ...d, companyId: c.id, companyName: c.name, companyAccent: c.accentColor || "#64748B" }))
+              );
+              const convertibleRows = allDebtPositions.filter(d => !ALLOC_CREDIT_INSTR.includes(d.instrument));
+              const creditRows      = allDebtPositions.filter(d =>  ALLOC_CREDIT_INSTR.includes(d.instrument));
+              const allOptionPositions = allCompanies.flatMap(c =>
+                (c.optionPositions ?? []).map(o => ({ ...o, companyId: c.id, companyName: c.name, companyAccent: c.accentColor || "#64748B", pps: companyRows.find(r => r.id === c.id)?.pps ?? 0 }))
+              );
+              return (
+              <div className="space-y-3">
+                {/* ── Equity ── */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                    <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
+                      <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Equity</span>
+                    </div>
+                    <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                      <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{equityRows.length}</p>
+                      </div>
+                      <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Est. Value</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#10B981" }}>{fmt(equityTypeBasis)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                        <tr>
+                          <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Shares</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Est. Value</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">% FD</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Voting %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#0D1421]">
+                        {equityRows.map(row => {
+                          const baseCo  = portfolio.find(p => p.id === row.id);
+                          const c       = allCompanies.find(c => c.id === row.id);
+                          const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
+                          const pctFD   = c?.totalShares && row.postShares > 0 ? (row.postShares / c.totalShares) * 100 : null;
+                          const pctVoting = baseCo?.commonSharesOutstanding && row.postShares > 0
+                            ? (row.postShares / baseCo.commonSharesOutstanding) * 100
+                            : (typeof baseCo?.votingOwnership === "number" ? baseCo.votingOwnership : null);
+                          return (
+                            <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: row.accent }} />
+                                  <span className="font-medium text-slate-200">{row.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                  {row.isNew && <span className="text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#064E3B", color: "#34D399" }}>NEW</span>}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums">
+                                {baseCo && row.pps > 0 ? (
+                                  <button onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
+                                    className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group" title="Edit share price">
+                                    <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
+                                    <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
+                                  </button>
+                                ) : (
+                                  <span className="text-slate-500">{row.pps > 0 ? `$${row.pps.toFixed(4)}` : "—"}</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{pctFD !== null ? `${pctFD.toFixed(1)}%` : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{pctVoting !== null ? `${pctVoting.toFixed(1)}%` : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ── Convertibles & Preferred ── */}
+                {convertibleRows.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Convertibles &amp; Preferred</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{convertibleRows.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Current Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#F59E0B" }}>{fmt(convertTypeBasis)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {convertibleRows.map(d => (
+                            <tr key={d.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.companyAccent }} />
+                                  <span className="font-medium text-slate-200">{d.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
+                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(d.currentValue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Credit ── */}
+                {creditRows.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#6366F1" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Credit</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{creditRows.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Current Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#6366F1" }}>{fmt(creditTypeBasis)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {creditRows.map(d => (
+                            <tr key={d.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.companyAccent }} />
+                                  <span className="font-medium text-slate-200">{d.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
+                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#6366F1" }}>{fmt(d.currentValue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Options ── */}
+                {allOptionPositions.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#F43F5E" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Options</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{allOptionPositions.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Total Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Shares</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Strike</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Intrinsic</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Time Value</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {allOptionPositions.map(o => {
+                            const intrinsic = o.shares * Math.max(o.pps - o.strikePrice, 0);
+                            const timeVal   = o.shares * o.pps * ((optionVariances[o.id] ?? 0) / 100);
+                            return (
+                              <tr key={o.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: o.companyAccent }} />
+                                    <span className="font-medium text-slate-200">{o.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{o.shares.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">${o.strikePrice.toFixed(4)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{fmt(intrinsic)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(timeVal)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F43F5E" }}>{fmt(intrinsic + timeVal)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+              );
+            })()}
+
             {/* ── Portfolio Combination Summary ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
               <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#8B5CF6" }} />
                 <p className="text-xs sm:text-sm font-semibold text-slate-200">Portfolio Combination Summary</p>
-                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">post-deal · share prices editable</p>
+                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">how shares were added together: pre-deal + LP roll-ins + deal additions</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -3501,18 +3753,10 @@ export default function Dashboard() {
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Small LP</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Equity Value</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Debt/Pref</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Options</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Company Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0D1421]">
-                    {companyRows.map(row => {
-                      const baseCo = portfolio.find(p => p.id === row.id);
-                      const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
-                      return (
+                    {companyRows.map(row => (
                       <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
@@ -3527,31 +3771,8 @@ export default function Dashboard() {
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn > 0 ? "#FB923C" : "#475569" }}>{row.lpDRollIn > 0 ? `+${row.lpDRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">
-                          {row.pps > 0 ? (
-                            baseCo ? (
-                              <button
-                                onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
-                                className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group"
-                                title="Edit share price"
-                              >
-                                <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
-                                <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
-                              </button>
-                            ) : (
-                              <span className="text-slate-500">${row.pps.toFixed(4)}</span>
-                            )
-                          ) : (
-                            <span className="text-slate-700">—</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.debtVal > 0 ? "#F59E0B" : "#475569" }}>{row.debtVal > 0 ? fmt(row.debtVal) : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.optionVal > 0 ? "#F43F5E" : "#475569" }}>{row.optionVal > 0 ? fmt(row.optionVal) : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{fmt(row.value)}</td>
                       </tr>
-                      );
-                    })}
+                    ))}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
@@ -3560,11 +3781,6 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3"></td>
-                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityTypeBasis)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>{fmt(creditTypeBasis + convertTypeBasis)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(grossAssets - cashTypeBasis)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -4130,12 +4346,264 @@ export default function Dashboard() {
               );
             })()}
 
+            {/* ══ Portfolio at a Glance (post-deal, mirrors Overview) ═══════════ */}
+            {(() => {
+              const equityRows = companyRows.filter(r => r.equityVal > 0);
+              const allDebtPositions = allCompanies.flatMap(c =>
+                (c.debtPositions ?? [])
+                  .filter(d => d.status !== "Repaid")
+                  .map(d => ({ ...d, companyId: c.id, companyName: c.name, companyAccent: c.accentColor || "#64748B" }))
+              );
+              const convertibleRows = allDebtPositions.filter(d => !ALLOC_CREDIT_INSTR.includes(d.instrument));
+              const creditRows      = allDebtPositions.filter(d =>  ALLOC_CREDIT_INSTR.includes(d.instrument));
+              const allOptionPositions = allCompanies.flatMap(c =>
+                (c.optionPositions ?? []).map(o => ({ ...o, companyId: c.id, companyName: c.name, companyAccent: c.accentColor || "#64748B", pps: companyRows.find(r => r.id === c.id)?.pps ?? 0 }))
+              );
+              return (
+              <div className="space-y-3">
+                {/* ── Equity ── */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                    <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
+                      <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Equity</span>
+                    </div>
+                    <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                      <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{equityRows.length}</p>
+                      </div>
+                      <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Est. Value</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#10B981" }}>{fmt(equityTypeBasis)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                        <tr>
+                          <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Shares</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Est. Value</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">% FD</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Voting %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#0D1421]">
+                        {equityRows.map(row => {
+                          const baseCo  = portfolio.find(p => p.id === row.id);
+                          const c       = allCompanies.find(c => c.id === row.id);
+                          const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
+                          const pctFD   = c?.totalShares && row.postShares > 0 ? (row.postShares / c.totalShares) * 100 : null;
+                          const pctVoting = baseCo?.commonSharesOutstanding && row.postShares > 0
+                            ? (row.postShares / baseCo.commonSharesOutstanding) * 100
+                            : (typeof baseCo?.votingOwnership === "number" ? baseCo.votingOwnership : null);
+                          return (
+                            <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: row.accent }} />
+                                  <span className="font-medium text-slate-200">{row.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                  {row.isNew && <span className="text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#064E3B", color: "#34D399" }}>NEW</span>}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums">
+                                {baseCo && row.pps > 0 ? (
+                                  <button onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
+                                    className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group" title="Edit share price">
+                                    <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
+                                    <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
+                                  </button>
+                                ) : (
+                                  <span className="text-slate-500">{row.pps > 0 ? `$${row.pps.toFixed(4)}` : "—"}</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{pctFD !== null ? `${pctFD.toFixed(1)}%` : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{pctVoting !== null ? `${pctVoting.toFixed(1)}%` : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ── Convertibles & Preferred ── */}
+                {convertibleRows.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Convertibles &amp; Preferred</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{convertibleRows.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Current Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#F59E0B" }}>{fmt(convertTypeBasis)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {convertibleRows.map(d => (
+                            <tr key={d.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.companyAccent }} />
+                                  <span className="font-medium text-slate-200">{d.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
+                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(d.currentValue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Credit ── */}
+                {creditRows.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#6366F1" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Credit</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{creditRows.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Current Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#6366F1" }}>{fmt(creditTypeBasis)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Status</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {creditRows.map(d => (
+                            <tr key={d.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.companyAccent }} />
+                                  <span className="font-medium text-slate-200">{d.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
+                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">{d.status}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#6366F1" }}>{fmt(d.currentValue)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Options ── */}
+                {allOptionPositions.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#F43F5E" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Options</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{allOptionPositions.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Total Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Shares</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Strike</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Intrinsic</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Time Value</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {allOptionPositions.map(o => {
+                            const intrinsic = o.shares * Math.max(o.pps - o.strikePrice, 0);
+                            const timeVal   = o.shares * o.pps * ((optionVariances[o.id] ?? 0) / 100);
+                            return (
+                              <tr key={o.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: o.companyAccent }} />
+                                    <span className="font-medium text-slate-200">{o.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{o.shares.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">${o.strikePrice.toFixed(4)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{fmt(intrinsic)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(timeVal)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F43F5E" }}>{fmt(intrinsic + timeVal)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+              );
+            })()}
+
             {/* ── Portfolio Combination Summary ── */}
             <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
               <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#8B5CF6" }} />
                 <p className="text-xs sm:text-sm font-semibold text-slate-200">Portfolio Combination Summary</p>
-                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">post-deal · share prices editable</p>
+                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">how shares were added together: pre-deal + LP roll-ins + deal additions</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -4148,18 +4616,10 @@ export default function Dashboard() {
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Small LP</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Equity Value</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Debt/Pref</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Options</th>
-                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Company Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#0D1421]">
-                    {companyRows.map(row => {
-                      const baseCo = portfolio.find(p => p.id === row.id);
-                      const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
-                      return (
+                    {companyRows.map(row => (
                       <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
@@ -4174,31 +4634,8 @@ export default function Dashboard() {
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.smallLpRollIn > 0 ? "#FB923C" : "#475569" }}>{row.smallLpRollIn > 0 ? `+${row.smallLpRollIn.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums">
-                          {row.pps > 0 ? (
-                            baseCo ? (
-                              <button
-                                onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
-                                className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group"
-                                title="Edit share price"
-                              >
-                                <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
-                                <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
-                              </button>
-                            ) : (
-                              <span className="text-slate-500">${row.pps.toFixed(4)}</span>
-                            )
-                          ) : (
-                            <span className="text-slate-700">—</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal) : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.debtVal > 0 ? "#F59E0B" : "#475569" }}>{row.debtVal > 0 ? fmt(row.debtVal) : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.optionVal > 0 ? "#F43F5E" : "#475569" }}>{row.optionVal > 0 ? fmt(row.optionVal) : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: row.accent }}>{fmt(row.value)}</td>
                       </tr>
-                      );
-                    })}
+                    ))}
                     <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
                       <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
@@ -4207,11 +4644,6 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.smallLpRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
-                      <td className="py-2 px-3"></td>
-                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(equityTypeBasis)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>{fmt(creditTypeBasis + convertTypeBasis)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis)}</td>
-                      <td className="py-2 px-3 text-right tabular-nums text-emerald-400 font-semibold">{fmt(grossAssets - cashTypeBasis)}</td>
                     </tr>
                   </tbody>
                 </table>
