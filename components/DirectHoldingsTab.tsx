@@ -66,6 +66,17 @@ export default function DirectHoldingsTab({
   const [showConverted, setShowConverted] = useState(false);
   const [equityOnlyMode, setEquityOnlyMode] = useState(false);
   const [audilyDeathStar, setAudilyDeathStar] = useState(false);
+
+  // Death-star scope: which company IDs get zeroed out when the toggle is on.
+  // Palash gets a wider stress (Audily + nth Venture + Pigeon Service + Falconer);
+  // every other investor gets just Audily.
+  const deathStarTargets = investor.id === "palash-jillian"
+    ? ["audily", "nth-venture", "certd", "falconer"] as const
+    : ["audily"] as const;
+  const deathStarLabels = investor.id === "palash-jillian"
+    ? "Audily / nth Venture / Pigeon Service / Falconer"
+    : "Audily";
+  const isDeathStar = (id?: string) => audilyDeathStar && id !== undefined && (deathStarTargets as readonly string[]).includes(id);
   // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
   const PREF_CONVERSION = { companyId: "audily", extraShares: 3_250 * 1_000 } as const;
 
@@ -100,7 +111,7 @@ export default function DirectHoldingsTab({
   );
 
   const estVal = (p: DirectPosition): number => {
-    if (audilyDeathStar && p.companyId === "audily") return 0;
+    if (isDeathStar(p.companyId)) return 0;
     if (p.shares && p.companyId && isCommonOrRSU(p.securityType)) {
       const pps = effectivePps(p.companyId);
       if (pps !== null) return p.shares * pps;
@@ -145,7 +156,7 @@ export default function DirectHoldingsTab({
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
 
-  const creditOutstanding = sum(notesPos, p => audilyDeathStar && p.companyId === "audily" ? 0 : p.estimatedValue);
+  const creditOutstanding = sum(notesPos, p => isDeathStar(p.companyId) ? 0 : p.estimatedValue);
   const amountInvested = equityCost + creditPrincipal + lpInterestsCost;
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
@@ -732,16 +743,16 @@ export default function DirectHoldingsTab({
 
           {/* RIGHT: donut + legend */}
           <div className="flex flex-col px-4 sm:px-5 py-4 sm:py-5 flex-1">
-            {positions.some(p => p.companyId === "audily") && (
+            {positions.some(p => (deathStarTargets as readonly string[]).includes(p.companyId ?? "")) && (
               <div className="flex items-center justify-between mb-3 gap-2">
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">By Company</p>
                 <button
                   onClick={() => setAudilyDeathStar(!audilyDeathStar)}
                   className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
-                  title="Death Star: zero out all Audily holdings (stress test)"
+                  title={`Death Star: zero out ${deathStarLabels} holdings (stress test)`}
                 >
                   <span aria-hidden>☠</span>
-                  <span>Audily {audilyDeathStar ? "→ $0" : "stress"}</span>
+                  <span>{deathStarTargets.length > 1 ? "Stress" : "Audily"} {audilyDeathStar ? "→ $0" : "test"}</span>
                 </button>
               </div>
             )}
