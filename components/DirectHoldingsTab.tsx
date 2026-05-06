@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
-import { ChevronDown, Pencil, RotateCcw } from "lucide-react";
+import { ChevronDown, Info, Pencil, RotateCcw } from "lucide-react";
 import type { PortfolioCompany } from "@/lib/types";
 import type { DirectInvestor, DirectPosition } from "@/lib/investors";
 import { computeFundNav, LP_TOTAL_UNITS } from "@/lib/data";
@@ -579,7 +579,18 @@ export default function DirectHoldingsTab({
           {/* DPI */}
           <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
+              <div className="flex items-center gap-1 relative group">
+                <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">DPI</p>
+                <Info size={10} className="text-slate-600 group-hover:text-slate-400 cursor-help transition-colors" />
+                <div className="hidden group-hover:block absolute left-0 top-full mt-1 z-20 w-60 max-w-[90vw] p-2.5 rounded-md bg-[#080E1A] border border-[#1E2D3D] text-[10px] text-slate-300 leading-snug shadow-xl normal-case tracking-normal font-normal">
+                  <p className="font-semibold text-slate-200 mb-1">DPI · Distributed to Paid-In</p>
+                  <p>Cumulative cash returned ÷ total invested capital. Counts <em>realized</em> return only — distributions, principal repaid, and interest paid.</p>
+                  <p className="mt-1.5 text-slate-500"><span className="text-slate-400">&lt; 1×</span> less cash back than invested · <span className="text-slate-400">= 1×</span> break-even · <span className="text-slate-400">&gt; 1×</span> cash profit realized</p>
+                  {hasDebt && (
+                    <p className="mt-1.5 pt-1.5 border-t border-[#1E2D3D] text-slate-500">Toggle <span className="text-slate-300">Ex-debt</span> to view DPI from equity + convertibles + LP interests only (excludes short-term notes).</p>
+                  )}
+                </div>
+              </div>
               {hasDebt && (
                 <div className="inline-flex items-center rounded-md border border-[#1E2D3D] bg-[#080E1A] p-0.5 text-[8px]">
                   <button onClick={() => setEquityOnlyMode(false)}
@@ -613,7 +624,18 @@ export default function DirectHoldingsTab({
           {/* TVPI */}
           <div className="px-3 sm:px-4 py-3 sm:py-3.5 flex flex-col">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
+              <div className="flex items-center gap-1 relative group">
+                <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">TVPI</p>
+                <Info size={10} className="text-slate-600 group-hover:text-slate-400 cursor-help transition-colors" />
+                <div className="hidden group-hover:block absolute left-0 top-full mt-1 z-20 w-60 max-w-[90vw] p-2.5 rounded-md bg-[#080E1A] border border-[#1E2D3D] text-[10px] text-slate-300 leading-snug shadow-xl normal-case tracking-normal font-normal">
+                  <p className="font-semibold text-slate-200 mb-1">TVPI · Total Value to Paid-In</p>
+                  <p>(Current portfolio value + cumulative distributions) ÷ total invested capital. Captures both <em>realized</em> and <em>unrealized</em> return.</p>
+                  <p className="mt-1.5 text-slate-500">TVPI = DPI + RVPI (residual value). Includes still-outstanding short-term note principal as portfolio value.</p>
+                  {hasDebt && (
+                    <p className="mt-1.5 pt-1.5 border-t border-[#1E2D3D] text-slate-500">Toggle <span className="text-slate-300">Ex-debt</span> to drop short-term notes from both numerator and denominator.</p>
+                  )}
+                </div>
+              </div>
               {hasDebt && (
                 <div className="inline-flex items-center rounded-md border border-[#1E2D3D] bg-[#080E1A] p-0.5 text-[8px]">
                   <button onClick={() => setEquityOnlyMode(false)}
