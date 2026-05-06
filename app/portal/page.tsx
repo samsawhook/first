@@ -299,6 +299,7 @@ export default function Dashboard() {
   const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("fund");
   const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
   const [dealMemoLpView, setDealMemoLpView] = useState<"fund-total" | "my-share">("my-share");
+  const [audilyDeathStar, setAudilyDeathStar] = useState(false);
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -3063,13 +3064,14 @@ export default function Dashboard() {
             const dealShares   = c.id === "nueces-brewing" ? 50_000 : 0;
             const postShares   = fundCommonPre + palashRollIn + neilRollIn + lpDRollIn + dealShares;
 
-            const equityVal = pps > 0 && postShares > 0
+            const isDS = audilyDeathStar && c.id === "audily";
+            const equityVal = isDS ? 0 : (pps > 0 && postShares > 0
               ? postShares * pps
-              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0));
-            const debtVal = (c.debtPositions ?? [])
+              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0)));
+            const debtVal = isDS ? 0 : (c.debtPositions ?? [])
               .filter(d => d.status !== "Repaid")
               .reduce((s, d) => s + d.currentValue, 0);
-            const optionVal = (c.optionPositions ?? []).reduce((s: number, o) => {
+            const optionVal = isDS ? 0 : (c.optionPositions ?? []).reduce((s: number, o) => {
               const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
               const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
               return s + intrinsic + timeVal;
@@ -3092,6 +3094,7 @@ export default function Dashboard() {
           const optionsTypeBasis = companyRows.reduce((s, r) => s + r.optionVal, 0);
           let creditTypeBasis = 0, convertTypeBasis = 0;
           for (const c of allCompanies) {
+            if (audilyDeathStar && c.id === "audily") continue;
             for (const d of (c.debtPositions ?? [])) {
               if (d.status === "Repaid") continue;
               if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += d.currentValue;
@@ -3374,7 +3377,17 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
                     {/* By Company donut */}
                     <div className="p-5">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">By Company</p>
+                        <button
+                          onClick={() => setAudilyDeathStar(!audilyDeathStar)}
+                          className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
+                          title="Death Star: zero out all Audily holdings (stress test)"
+                        >
+                          <span aria-hidden>☠</span>
+                          <span>Audily {audilyDeathStar ? "→ $0" : "stress"}</span>
+                        </button>
+                      </div>
                       <div className="flex justify-center mb-3">
                         <svg width="140" height="140" viewBox="0 0 160 160" className="shrink-0">
                           {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
@@ -3467,14 +3480,6 @@ export default function Dashboard() {
                               </div>
                             );
                           })}
-                          {/* Bottom-up NAV breakdown */}
-                          <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[8px] tabular-nums">
-                            <p className="text-[8px] text-slate-600 uppercase tracking-widest font-medium mb-1">My NAV (bottom-up)</p>
-                            <div className="flex justify-between gap-1"><span className="text-slate-500">Holdings slice ({(palashPct * 100).toFixed(2)}% × portfolio)</span><span className="text-slate-300">{fmtS(palashCompanySlice)}</span></div>
-                            <div className="flex justify-between gap-1"><span className="text-slate-500">Cash slice</span><span className="text-slate-300">{fmtS(palashCashSlice)}</span></div>
-                            <div className="flex justify-between gap-1"><span className="text-slate-500">− Leverage slice</span><span className="text-rose-400">−{fmtS(palashLeverageSlice)}</span></div>
-                            <div className="flex justify-between gap-1 pt-0.5 border-t border-[#1E2D3D]/60"><span className="text-slate-400 font-semibold">My NAV</span><span className="text-emerald-300 font-semibold">{fmtS(palashNav)}</span></div>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -3987,13 +3992,14 @@ export default function Dashboard() {
             const smallLpRollIn = PALASH_LP_D_SHARES[c.id] ?? 0;
             const dealShares    = c.id === "nueces-brewing" ? 50_000 : 0;
             const postShares    = fundCommonPre + neilRollIn + palashRollIn + smallLpRollIn + dealShares;
-            const equityVal = pps > 0 && postShares > 0
+            const isDS = audilyDeathStar && c.id === "audily";
+            const equityVal = isDS ? 0 : (pps > 0 && postShares > 0
               ? postShares * pps
-              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0));
-            const debtVal = (c.debtPositions ?? [])
+              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0)));
+            const debtVal = isDS ? 0 : (c.debtPositions ?? [])
               .filter(d => d.status !== "Repaid")
               .reduce((s, d) => s + d.currentValue, 0);
-            const optionVal = (c.optionPositions ?? []).reduce((s: number, o) => {
+            const optionVal = isDS ? 0 : (c.optionPositions ?? []).reduce((s: number, o) => {
               const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
               const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
               return s + intrinsic + timeVal;
@@ -4011,6 +4017,7 @@ export default function Dashboard() {
           const optionsTypeBasis = companyRows.reduce((s, r) => s + r.optionVal, 0);
           let creditTypeBasis = 0, convertTypeBasis = 0;
           for (const c of allCompanies) {
+            if (audilyDeathStar && c.id === "audily") continue;
             for (const d of (c.debtPositions ?? [])) {
               if (d.status === "Repaid") continue;
               if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += d.currentValue;
@@ -4245,7 +4252,17 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
                     {/* By Company donut */}
                     <div className="p-5">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">By Company</p>
+                        <button
+                          onClick={() => setAudilyDeathStar(!audilyDeathStar)}
+                          className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
+                          title="Death Star: zero out all Audily holdings (stress test)"
+                        >
+                          <span aria-hidden>☠</span>
+                          <span>Audily {audilyDeathStar ? "→ $0" : "stress"}</span>
+                        </button>
+                      </div>
                       <div className="flex justify-center mb-3">
                         <svg width="140" height="140" viewBox="0 0 160 160" className="shrink-0">
                           {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
