@@ -67,16 +67,26 @@ export default function DirectHoldingsTab({
   const [equityOnlyMode, setEquityOnlyMode] = useState(false);
   const [audilyDeathStar, setAudilyDeathStar] = useState(false);
 
-  // Death-star scope: which company IDs get zeroed out when the toggle is on.
-  // Palash gets a wider stress (Audily + nth Venture + Pigeon Service + Falconer);
-  // every other investor gets just Audily.
-  const deathStarTargets = investor.id === "palash-jillian"
-    ? ["audily", "nth-venture", "certd", "falconer", "sentius", "galileo"] as const
-    : ["audily"] as const;
+  // Death-star scope per investor. Map of companyId → surviving fraction
+  // (0 = zeroed, 0.30 = 70% writedown, etc.). Companies not in the map keep
+  // their full value.
+  const deathStarConfig: Record<string, number> = investor.id === "palash-jillian"
+    ? { audily: 0, "nth-venture": 0, certd: 0, falconer: 0, sentius: 0, galileo: 0 }
+    : investor.id === "neil-wolfson"
+      ? { "co-owner-fund": 0.30, "nth-venture": 0, certd: 0, falconer: 0 }
+      : { audily: 0 };
+  const deathStarTargetIds = Object.keys(deathStarConfig);
   const deathStarLabels = investor.id === "palash-jillian"
-    ? "Audily / nth Venture / Pigeon Service / Falconer / Sentius / Galileo"
-    : "Audily";
-  const isDeathStar = (id?: string) => audilyDeathStar && id !== undefined && (deathStarTargets as readonly string[]).includes(id);
+    ? "Audily / nth Venture / Pigeon Service / Falconer / Sentius / Galileo → $0"
+    : investor.id === "neil-wolfson"
+      ? "-70% Co-Owner Fund · nth Venture / Pigeon Service / Falconer → $0"
+      : "Audily → $0";
+  const deathStarMult = (id?: string): number => {
+    if (!audilyDeathStar) return 1;
+    if (id === undefined || !(id in deathStarConfig)) return 1;
+    return deathStarConfig[id];
+  };
+  const isDeathStar = (id?: string) => deathStarMult(id) < 1;
   // 3,250 preferred shares (1,250 SAFE→Series A + 2,000 Series A Pref) convert 1:1,000
   const PREF_CONVERSION = { companyId: "audily", extraShares: 3_250 * 1_000 } as const;
 
@@ -111,17 +121,17 @@ export default function DirectHoldingsTab({
   );
 
   const estVal = (p: DirectPosition): number => {
-    if (isDeathStar(p.companyId)) return 0;
+    const mult = deathStarMult(p.companyId);
     if (p.shares && p.companyId && isCommonOrRSU(p.securityType)) {
       const pps = effectivePps(p.companyId);
-      if (pps !== null) return p.shares * pps;
+      if (pps !== null) return p.shares * pps * mult;
     }
     // LP Interest in Co-Owner Fund LP — value = LP basis (units at $1 par)
     // × current NAV/unit, recomputed whenever underlying share prices change.
     if (p.category === "LP Interests" && p.companyId === "co-owner-fund" && LP_TOTAL_UNITS > 0) {
-      return Math.round((dynamicFundNav / LP_TOTAL_UNITS) * p.costBasis);
+      return Math.round((dynamicFundNav / LP_TOTAL_UNITS) * p.costBasis * mult);
     }
-    return p.estimatedValue;
+    return p.estimatedValue * mult;
   };
 
   const { positions } = investor;
@@ -156,7 +166,7 @@ export default function DirectHoldingsTab({
   const equityCost     = commonCost + convertCost;
   const equityValue    = commonValue + convertValue;
 
-  const creditOutstanding = sum(notesPos, p => isDeathStar(p.companyId) ? 0 : p.estimatedValue);
+  const creditOutstanding = sum(notesPos, p => p.estimatedValue * deathStarMult(p.companyId));
   const amountInvested = equityCost + creditPrincipal + lpInterestsCost;
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
@@ -247,9 +257,11 @@ export default function DirectHoldingsTab({
   // ── Donut: by company ─────────────────────────────────────────────────────
   const byCompany: Record<string, { id?: string; name: string; value: number }> = {};
   for (const p of positions) {
-    // Death-starred companies: zero them entirely in the donut, including
-    // historical interest/dividends so the slice disappears from view.
-    const v = isDeathStar(p.companyId) ? 0 : (estVal(p) + (p.interestDividend ?? 0));
+    // Death-star multiplier applies to estVal (already inside) and historical
+    // interest/dividends, so e.g. zeroed companies disappear and partial
+    // writedowns shrink in the donut.
+    const mult = deathStarMult(p.companyId);
+    const v = estVal(p) + (p.interestDividend ?? 0) * mult;
     if (v <= 0) continue;
     const key = p.companyId ?? p.company;
     if (!byCompany[key]) byCompany[key] = { id: p.companyId, name: p.company, value: 0 };
@@ -745,16 +757,16 @@ export default function DirectHoldingsTab({
 
           {/* RIGHT: donut + legend */}
           <div className="flex flex-col px-4 sm:px-5 py-4 sm:py-5 flex-1">
-            {positions.some(p => (deathStarTargets as readonly string[]).includes(p.companyId ?? "")) && (
+            {positions.some(p => deathStarTargetIds.includes(p.companyId ?? "")) && (
               <div className="flex items-center justify-between mb-3 gap-2">
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">By Company</p>
                 <button
                   onClick={() => setAudilyDeathStar(!audilyDeathStar)}
                   className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
-                  title={`Death Star: zero out ${deathStarLabels} holdings (stress test)`}
+                  title={`Death Star: ${deathStarLabels}`}
                 >
                   <span aria-hidden>☠</span>
-                  <span>{deathStarTargets.length > 1 ? "Stress" : "Audily"} {audilyDeathStar ? "→ $0" : "test"}</span>
+                  <span>{audilyDeathStar ? "Stressed" : "Stress test"}</span>
                 </button>
               </div>
             )}
