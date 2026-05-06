@@ -3494,10 +3494,8 @@ export default function Dashboard() {
             .reduce((s, p) => s + (p.estimatedValue ?? 0), 0);
 
           // ── Neil's KPI inputs ────────────────────────────────────────────────
-          // Original basis matches My Holdings principalBasis: cost basis less principal
-          // repaid less rolled-in-from-prior (avoid double-count when notes consolidate).
-          const neilOriginalBasis = directInvestor.positions.reduce((s, p) =>
-            s + (p.costBasis ?? 0) - (p.repaid ?? 0) - (p.rolledInFromPrior ?? 0), 0);
+          // Step ① Original Basis = existing Co-Owner Fund LP interest at cost.
+          // (Direct portco equity is earned at $0 cost, so it doesn't add to basis.)
           // LP basis: only portco equity (Class A Common) + $100k LP interest at cost + $100k cash.
           // nth Venture Preferred, Audily SAFE, and active credit notes are not rolled in.
           const neilPortcoEquity = directInvestor.positions.reduce((s, p) => {
@@ -3760,8 +3758,8 @@ export default function Dashboard() {
             <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-2">
               <div className="flex-1 min-w-0 rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Original Basis</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(neilOriginalBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1">cost basis − principal repaid</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(neilLpInterestAtCost)}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight">existing Co-Owner Fund LP interest (at cost). Direct portco equity has $0 cost basis (earned).</p>
               </div>
               <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
                 <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3770,9 +3768,44 @@ export default function Dashboard() {
                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <div className="flex-1 min-w-0 rounded-xl border border-purple-500/40 bg-purple-500/10 p-3 sm:p-4">
-                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-purple-300">② LP Basis (Lock-in)</p>
+                  <span className="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Locked</span>
+                </div>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-purple-200 mt-1">{fmt(neilLpBasis)}</p>
-                <p className="text-[9px] sm:text-[10px] text-purple-400/70 mt-1 leading-tight">{fmt(neilPortcoEquity)} portco equity + {fmt(neilLpInterestAtCost)} LP interest (at cost) + {fmt(NEIL_CASH_CONTRIBUTION)} cash</p>
+                {/* Stacked breakdown bar */}
+                <div className="mt-2 h-2 rounded-full overflow-hidden bg-[#1E2D3D] flex">
+                  <div className="h-full" style={{ width: `${(neilLpInterestAtCost / neilLpBasis) * 100}%`, background: "#A78BFA" }} title="LP interest carryover" />
+                  <div className="h-full" style={{ width: `${(neilPortcoEquity / neilLpBasis) * 100}%`, background: "#34D399" }} title="Portco equity roll-in" />
+                  <div className="h-full" style={{ width: `${(NEIL_CASH_CONTRIBUTION / neilLpBasis) * 100}%`, background: "#F59E0B" }} title="Cash contribution" />
+                </div>
+                {/* Sub-component breakdown */}
+                <div className="mt-2 space-y-1 text-[9px] sm:text-[10px]">
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#A78BFA" }} />
+                      <span className="truncate">LP carryover</span>
+                    </span>
+                    <span className="text-slate-300 tabular-nums shrink-0">{fmt(neilLpInterestAtCost)}</span>
+                  </div>
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#34D399" }} />
+                      <span className="truncate">Portco equity roll-in</span>
+                    </span>
+                    <span className="text-emerald-300 tabular-nums shrink-0 font-semibold">{fmt(neilPortcoEquity)}</span>
+                  </div>
+                  <p className="text-[8px] sm:text-[9px] text-emerald-400/80 italic pl-3 leading-tight">
+                    $0 cost basis → lock-in at fair value (entire {fmt(neilPortcoEquity)} converts to LP basis)
+                  </p>
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+                      <span className="truncate">Cash contribution</span>
+                    </span>
+                    <span className="text-slate-300 tabular-nums shrink-0">{fmt(NEIL_CASH_CONTRIBUTION)}</span>
+                  </div>
+                </div>
               </div>
               <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
                 <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
