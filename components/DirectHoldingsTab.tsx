@@ -148,7 +148,11 @@ export default function DirectHoldingsTab({
   const amountRepaid   = creditRepaid;
   const principalBasis = amountInvested - amountRepaid;
   const cashReceived   = amountRepaid + creditInterest + convertInterest;
-  const portfolioValue = equityValue + earnedEquityValue + lpInterestsValue;    // RSUs excluded; notes fully repaid
+  // Equity-only portfolio value: equity + earned equity + LP interests, no debt.
+  const equityPortfolioValue = equityValue + earnedEquityValue + lpInterestsValue;
+  // Full portfolio value also includes still-outstanding short-term note
+  // principal (the company still owes it). Used in All-mode TVPI numerator.
+  const portfolioValue = equityPortfolioValue + creditOutstanding;
   const totalReturn    = portfolioValue + creditInterest + convertInterest + amountRepaid;
   const totalMoic      = amountInvested > 0 ? totalReturn / amountInvested : null;
   const dpi            = amountInvested > 0 ? cashReceived / amountInvested : null;
@@ -157,16 +161,17 @@ export default function DirectHoldingsTab({
   // ── Equity-only view: strip out short-term notes (debt). ────────────────
   // Investor basis = purchased equity cost + LP interests cost (no note principal).
   // Cash received = equity distributions only (no credit principal repaid, no
-  // credit interest). Portfolio value already excludes notes.
+  // credit interest). Portfolio value drops the outstanding-note working principal.
   const equityOnlyInvested     = equityCost + lpInterestsCost;
   const equityOnlyCashReceived = convertInterest;
   const equityOnlyDpi  = equityOnlyInvested > 0 ? equityOnlyCashReceived / equityOnlyInvested : null;
-  const equityOnlyTvpi = equityOnlyInvested > 0 ? (portfolioValue + equityOnlyCashReceived) / equityOnlyInvested : null;
+  const equityOnlyTvpi = equityOnlyInvested > 0 ? (equityPortfolioValue + equityOnlyCashReceived) / equityOnlyInvested : null;
   const hasDebt = notesPos.length > 0;
   const displayDpi   = equityOnlyMode ? equityOnlyDpi  : dpi;
   const displayTvpi  = equityOnlyMode ? equityOnlyTvpi : tvpi;
   const displayCash  = equityOnlyMode ? equityOnlyCashReceived : cashReceived;
   const displayBasis = equityOnlyMode ? equityOnlyInvested     : principalBasis;
+  const displayValue = equityOnlyMode ? equityPortfolioValue   : portfolioValue;
 
   // ── Equity section (combined common + earned) — grouped per company ───────
   // RSU value is excluded from totals (consistent with portfolioValue), but RSU rows still display.
@@ -627,9 +632,9 @@ export default function DirectHoldingsTab({
             <div className="mt-2 pt-2 border-t border-[#1E2D3D]/60 space-y-0.5 text-[9px] tabular-nums">
               <div className="flex justify-between gap-2"><span className="text-slate-600">Cash returned</span><span style={{ color: "#34D399" }}>{fmt(displayCash)}</span></div>
               <div className="flex justify-between gap-2"><span className="text-slate-600">Investor basis</span><span className="text-slate-300">{fmt(displayBasis)}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-slate-600">Total value</span><span className="text-emerald-400">{fmt(portfolioValue)}</span></div>
-              {equityOnlyMode && (
-                <div className="flex justify-between gap-2 pt-0.5 mt-0.5 border-t border-[#1E2D3D]/60"><span className="text-slate-600 italic">Debt excluded</span><span className="text-slate-700 italic">−{fmt(creditPrincipal - creditRepaid)} basis</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-600">Total value</span><span className="text-emerald-400">{fmt(displayValue)}</span></div>
+              {equityOnlyMode && creditOutstanding > 0 && (
+                <div className="flex justify-between gap-2 pt-0.5 mt-0.5 border-t border-[#1E2D3D]/60"><span className="text-slate-600 italic">Debt excluded</span><span className="text-slate-700 italic">−{fmt(creditOutstanding)} value</span></div>
               )}
             </div>
           </div>
