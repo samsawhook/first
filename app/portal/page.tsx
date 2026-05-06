@@ -297,6 +297,7 @@ export default function Dashboard() {
   const [lpCurrentUnits, setLpCurrentUnits]           = useState<string>("100000");
   const [lpViewMode, setLpViewMode]                   = useState<"fund" | "current">("fund");
   const [lpHypotheticalUnits, setLpHypotheticalUnits] = useState<string>("");
+  const [dealMemoLpView, setDealMemoLpView] = useState<"fund-total" | "my-share">("my-share");
   const [optionVariances, setOptionVariances] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const c of portfolio) for (const o of (c.optionPositions ?? [])) defaults[o.id] = o.defaultVariancePct ?? 0;
@@ -3786,142 +3787,192 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ── Fund Holdings Breakdown ── */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D] divide-x sm:divide-x divide-[#1E2D3D]">
-                <div className="px-3 sm:px-4 py-3 sm:py-3.5 border-b sm:border-b-0 border-[#1E2D3D]">
-                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund NAV</p>
-                  <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(newFundNav)}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5 leading-tight">assets {fmt(grossAssets)} · lev. -{fmt(newFundLeverage)}</p>
-                </div>
-                <div className="px-3 sm:px-4 py-3 sm:py-3.5 border-b sm:border-b-0 border-[#1E2D3D]">
-                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">LP Basis Total</p>
-                  <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(BASE_LP_TOTAL_UNITS + newLpBasis)}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5 leading-tight">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()} units · $1/unit par</p>
-                </div>
-                <div className="px-3 sm:px-4 py-3 sm:py-3.5">
-                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Fund MOIC</p>
-                  <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{(newFundNav / (BASE_LP_TOTAL_UNITS + newLpBasis)).toFixed(2)}×</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">NAV ÷ LP basis</p>
-                </div>
-                <div className="px-3 sm:px-4 py-3 sm:py-3.5">
-                  <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
-                  <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{companyRows.length}</p>
-                  <p className="text-[9px] text-slate-600 mt-0.5">active positions</p>
-                </div>
-              </div>
+            {/* ── Fund Overview-style card (post-deal) with LP View toggle ── */}
+            {(() => {
+              const isMy = dealMemoLpView === "my-share";
+              const mult = isMy ? neilPct : 1;
+              const totalPositions = allCompanies.reduce((s, c) => {
+                const commonCount = (c.shareTransactions ?? []).some(t => t.type === "Common") ? 1 : 0;
+                const debtCount   = (c.debtPositions ?? []).filter(d => d.status !== "Repaid").length;
+                const optCount    = (c.optionPositions ?? []).length;
+                return s + commonCount + debtCount + optCount;
+              }, 0);
+              const fundCols = [
+                { label: "Assets",   val: grossAssets,         color: "#10B981" },
+                { label: "Leverage", val: newFundLeverage,     color: "#F87171" },
+                { label: "NAV",      val: newFundNav,          color: "#38BDF8" },
+                { label: "LP Basis", val: newLpUnitsTotal,     color: "#8B5CF6" },
+              ];
+              const maxVal = Math.max(...fundCols.map(c => c.val), 1);
+              const W3 = 280, H3 = 120, PAD3 = { t: 16, r: 6, b: 24, l: 6 };
+              const cW3 = W3 - PAD3.l - PAD3.r, cH3 = H3 - PAD3.t - PAD3.b;
+              const n3 = fundCols.length, gap3 = 10;
+              const bW3 = (cW3 - gap3 * (n3 - 1)) / n3;
+              const fmtS = (v: number) => v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${Math.round(v)}`;
+              const myRows = isMy ? [
+                { label: "My Basis", val: neilLpBasis, color: "#A78BFA" },
+                { label: "My NAV",   val: neilNav,     color: "#34D399" },
+              ] : [];
+              return (
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  {/* Metrics strip */}
+                  <div className={`grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D] ${isMy ? "bg-[#080E1A]" : ""}`}>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio NAV Est.</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt((isMy ? neilNav : newFundNav))}</p>
+                      <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossAssets * mult)}</p>
+                      <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(newFundLeverage * mult)}</p>
+                      {isMy && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(newFundNav)}</p>}
+                    </div>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isMy ? "My LP Basis" : "LP Basis"}</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(isMy ? neilLpBasis : newLpUnitsTotal)}</p>
+                      {isMy && (
+                        <>
+                          <p className="text-base font-bold tabular-nums mt-0.5" style={{ color: "#34D399" }}>{(neilPct * 100).toFixed(2)}%</p>
+                          <p className="text-[9px] tabular-nums mt-0.5" style={{ color: "#6EE7B7" }}>{neilLpBasis.toLocaleString()} / {newLpUnitsTotal.toLocaleString()}</p>
+                        </>
+                      )}
+                      {!isMy && (
+                        <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{newLpUnitsTotal.toLocaleString()} units · $1/unit</p>
+                      )}
+                    </div>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">MOIC</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: newFundNav >= newLpUnitsTotal ? "#10B981" : "#F87171" }}>
+                        {newLpUnitsTotal > 0 ? `${(newFundNav / newLpUnitsTotal).toFixed(2)}×` : "—"}
+                      </p>
+                      <p className="text-[9px] text-slate-600 mt-0.5">NAV ÷ LP basis</p>
+                    </div>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{companyRows.length} <span className="text-xs font-normal text-slate-500">co's</span></p>
+                      <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{totalPositions} positions</p>
+                    </div>
+                  </div>
 
-              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
-                <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">Allocation by Security Type</p>
-                  {allocByType.map(a => {
-                    const pct = allocTotalByType > 0 ? a.amount / allocTotalByType : 0;
-                    return (
-                      <div key={a.label}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: a.color }} />
-                            <span className="text-xs text-slate-300 font-medium">{a.label}</span>
+                  {/* LP View toggle */}
+                  <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-3 bg-[#080E1A]">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium shrink-0">LP View</p>
+                      <div className="flex items-center gap-1">
+                        {([["fund-total","Fund Total"],["my-share","My Share"]] as const).map(([mode, label]) => (
+                          <button key={mode} onClick={() => setDealMemoLpView(mode)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                              dealMemoLpView === mode
+                                ? mode === "fund-total" ? "bg-slate-700 text-slate-200" : "bg-emerald-600/30 text-emerald-400 ring-1 ring-emerald-500/40"
+                                : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
+                            }`}>{label}</button>
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-slate-600 hidden md:inline">post-deal · {newLpUnitsTotal.toLocaleString()} units outstanding · $1.00/unit</span>
+                    </div>
+                  </div>
+
+                  {/* Three-chart grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+                    {/* By Company donut */}
+                    <div className="p-5">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
+                      <div className="flex justify-center mb-3">
+                        <svg width="140" height="140" viewBox="0 0 160 160" className="shrink-0">
+                          {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
+                          <text x="80" y="76" textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: "#e2e8f0" }}>{fmt(donutTotal * mult)}</text>
+                          <text x="80" y="91" textAnchor="middle" style={{ fontSize: 9, fill: "#64748b" }}>{isMy ? "my share" : "total value"}</text>
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {donutItems.map(d => (
+                          <div key={d.id} className="grid items-center gap-x-2" style={{ gridTemplateColumns: "8px 1fr 32px 44px" }}>
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.accent }} />
+                            <span className="text-[11px] text-slate-400 truncate">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}{d.isNew && <span className="ml-1 text-[8px] text-emerald-400">NEW</span>}</span>
+                            <span className="text-[10px] text-slate-600 tabular-nums text-right">{donutTotal > 0 ? `${((d.value / donutTotal) * 100).toFixed(1)}%` : "—"}</span>
+                            <span className="text-[11px] text-slate-500 tabular-nums text-right">{fmt(d.value * mult)}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs tabular-nums text-slate-400">{fmt(a.amount)}</span>
-                            <span className="text-[10px] tabular-nums text-slate-600 w-10 text-right">{(pct * 100).toFixed(0)}%</span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden mb-3">
-                          <div className="h-full rounded-full" style={{ width: `${(pct * 100).toFixed(1)}%`, background: a.color, opacity: 0.8 }} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Assets by type */}
+                    <div className="p-5">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Assets</p>
+                      <div className="space-y-3">
+                        {allocByType.map(t => {
+                          const pct = allocTotalByType > 0 ? t.amount / allocTotalByType : 0;
+                          return (
+                            <div key={t.label}>
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color }} />
+                                  <span className="text-xs text-slate-300 font-medium">{t.label}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs tabular-nums text-slate-400">{fmt(t.amount * mult)}</span>
+                                  <span className="text-[10px] tabular-nums text-slate-600 w-8 text-right">{(pct * 100).toFixed(0)}%</span>
+                                </div>
+                              </div>
+                              <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all" style={{ width: `${(pct * 100).toFixed(1)}%`, background: t.color, opacity: 0.8 }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
+                          <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total{isMy ? " (My Share)" : ""}</span>
+                          <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotalByType * mult)}</span>
                         </div>
                       </div>
-                    );
-                  })}
-                  <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
-                    <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total</span>
-                    <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotalByType)}</span>
-                  </div>
-                </div>
+                    </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 px-4 sm:px-5 py-4 sm:py-5 flex-1">
-                  <div className="shrink-0 flex justify-center">
-                    <svg width={140} height={140} viewBox="0 0 160 160" className="sm:w-40 sm:h-40">
-                      {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
-                      <text x={80} y={76} textAnchor="middle" fill="#e2e8f0" fontSize={13} fontWeight="700" fontFamily="inherit">{fmt(donutTotal)}</text>
-                      <text x={80} y={91} textAnchor="middle" fill="#64748b" fontSize={9} fontFamily="inherit">gross</text>
-                    </svg>
-                  </div>
-                  <div className="flex flex-col gap-2 content-center justify-center min-w-0 flex-1">
-                    {donutItems.map((d, i) => (
-                      <div key={i} className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.accent }} />
-                        <span className="text-xs text-slate-400 truncate flex-1">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}{d.isNew && <span className="ml-1 text-[8px] text-emerald-400">NEW</span>}</span>
-                        <span className="text-xs font-semibold tabular-nums text-slate-200 shrink-0">{fmt(d.value)}</span>
-                        <span className="text-[10px] text-slate-600 shrink-0 w-10 text-right">{donutTotal > 0 ? ((d.value / donutTotal) * 100).toFixed(1) : "0.0"}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Look-through Asset Allocation (Neil's pro-rata view) ── */}
-            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
-              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#A78BFA" }} />
-                <p className="text-xs sm:text-sm font-semibold text-slate-200">My Look-through ({(neilPct * 100).toFixed(2)}% of fund)</p>
-              </div>
-              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#1E2D3D]">
-                <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Security Type</p>
-                  {lookThroughByType.map(a => {
-                    const pct = allocTotalByType > 0 ? a.amount / allocTotalByType : 0;
-                    return (
-                      <div key={a.label}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: a.color }} />
-                            <span className="text-xs text-slate-300 font-medium">{a.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs tabular-nums text-purple-300">{fmt(a.neilShare)}</span>
-                            <span className="text-[10px] tabular-nums text-slate-600 w-10 text-right">{(pct * 100).toFixed(0)}%</span>
-                          </div>
+                    {/* Fund Structure */}
+                    <div className="p-5">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Fund Structure</p>
+                      <svg width="100%" viewBox={`0 0 ${W3} ${H3}`} preserveAspectRatio="xMidYMid meet">
+                        {fundCols.map((c, i) => {
+                          const x  = PAD3.l + i * (bW3 + gap3);
+                          const bh = (c.val / maxVal) * cH3;
+                          const y  = PAD3.t + cH3 - bh;
+                          return (
+                            <g key={c.label}>
+                              <rect x={x} y={y} width={bW3} height={bh} fill={c.color} opacity="0.75" rx="2" />
+                              <text x={x + bW3 / 2} y={y - 3} textAnchor="middle" style={{ fontSize: 7, fill: c.color, fontWeight: 600 }}>{fmtS(c.val)}</text>
+                              <text x={x + bW3 / 2} y={H3 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{c.label}</text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      {myRows.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-[#1E2D3D] space-y-3">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium mb-2">My Share</p>
+                          {myRows.map(row => {
+                            const pct = Math.min(row.val / maxVal, 1);
+                            return (
+                              <div key={row.label}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[9px] text-slate-500">{row.label}</span>
+                                  <span className="text-[9px] tabular-nums font-semibold" style={{ color: row.color }}>{fmtS(row.val)}</span>
+                                </div>
+                                <div className="relative">
+                                  <svg width="100%" viewBox="0 0 280 14" preserveAspectRatio="none">
+                                    <rect x="0" y="5" width="280" height="2" fill="#1E2D3D" rx="1" />
+                                    <rect x="0" y="5" width={280 * pct} height="2" fill={row.color} opacity="0.7" rx="1" />
+                                    <line x1="0" y1="3" x2="0" y2="9" stroke="#1E2D3D" strokeWidth="1.5" />
+                                    <line x1="280" y1="3" x2="280" y2="9" stroke="#1E2D3D" strokeWidth="1.5" />
+                                    <circle cx={280 * pct} cy="6" r="4" fill={row.color} />
+                                    <circle cx={280 * pct} cy="6" r="2" fill="#0D1421" />
+                                    <text x="280" y="14" textAnchor="end" style={{ fontSize: 6, fill: "#475569" }}>{fmtS(maxVal)}</text>
+                                  </svg>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden mb-3">
-                          <div className="h-full rounded-full" style={{ width: `${(pct * 100).toFixed(1)}%`, background: a.color, opacity: 0.8 }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
-                    <span className="text-[10px] text-slate-600 uppercase tracking-wider">My Total</span>
-                    <span className="text-xs font-semibold text-purple-300 tabular-nums">{fmt(lookThroughByType.reduce((s, a) => s + a.neilShare, 0))}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex-1 px-4 sm:px-5 py-4 sm:py-5">
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-medium mb-3">By Company</p>
-                  {lookThroughByCompany.map(c => {
-                    const pct = donutTotal > 0 ? c.value / donutTotal : 0;
-                    return (
-                      <div key={c.id}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c.accent }} />
-                            <span className="text-xs text-slate-300 font-medium truncate">{c.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs tabular-nums text-purple-300">{fmt(c.neilShare)}</span>
-                            <span className="text-[10px] tabular-nums text-slate-600 w-10 text-right">{(pct * 100).toFixed(0)}%</span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden mb-2">
-                          <div className="h-full rounded-full" style={{ width: `${(pct * 100).toFixed(1)}%`, background: c.accent, opacity: 0.8 }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* ── 3 LP Contribution cards ── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
