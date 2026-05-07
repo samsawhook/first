@@ -318,8 +318,23 @@ function RevenueChart() {
 }
 
 // ── Team ──────────────────────────────────────────────────────────────────────
-const teamMembers = [
-  { name: "Sam Sawhook", role: "Co-Founder & CEO", initials: "SS", color: "#c45a2d", bio: "29-year-old startup operator. Co-founded nth Venture in 2021, launched several employee-owned companies. Former GAO financial auditor (SEC, DoD, Treasury). Army veteran, Operation Atlantic Resolve convoy commander. Currently pursuing Master of Accountancy." },
+type TeamMember = { name: string; role: string; initials: string; color: string; bio: string };
+
+const CO_FOUNDERS: TeamMember[] = [
+  { name: "Sam Johnston", role: "Co-Founder & CEO", initials: "SJ", color: "#c45a2d", bio: "Army veteran (Operation Atlantic Resolve convoy commander) and startup operator. Co-founded nth Venture in 2021 and launched six employee-owned portfolio companies. Former U.S. GAO financial auditor — the supreme audit authority in the United States — with engagements at the SEC, DoD, and Treasury. Forbes Business Council member. Currently pursuing a Master of Accountancy." },
+  { name: "Michael Shamoun", role: "Co-Founder & CTO", initials: "MS", color: "#2a5a8a", bio: "Electrical engineering and computer architecture background (UT Dallas B.S., UT Austin M.S.). Former software engineer at General Motors and IBM before co-founding nth Venture. Leads all technology infrastructure across the platform and portfolio companies." },
+  { name: "Nathan Deily", role: "Co-Founder & Chief People Officer", initials: "ND", color: "#1a5a3a", bio: "Senior talent and organizational leadership roles at Microsoft, Honeywell, Raytheon, and LivePerson before co-founding nth Venture. M.S. in Labor Relations from Michigan State, Executive MBA from ASU W.P. Carey. Host of the Breakthrough Hiring Show podcast." },
+  { name: "Jillian Palash", role: "Co-Founder & Chief of Staff", initials: "JP", color: "#5a3a6a", bio: "Nearly 15 years in Fortune 50 corporate communications and public relations at top-ranked agencies and in-house roles. Joined nth Venture as a founding team member and serves on the leadership team at Falconer." },
+];
+
+const PORTCO_CEOS: TeamMember[] = [
+  { name: "David Markowitz", role: "CEO, Audily", initials: "DM", color: "#7a3a1a", bio: "Award-winning audio producer and podcast executive. Former Podcast Manager at Netflix. Leads Audily's roster of branded audio content, original productions, and acquisitions — including the Rococo Punch and Pop Ups Studio networks, covered by Bloomberg and The Hollywood Reporter." },
+  { name: "Doug Epperly", role: "President, Merchant Boxes", initials: "DE", color: "#2a5a2a", bio: "Over two decades in global supply chain and fulfillment. Founder of E3 Enterprises. Expanded Merchant Boxes into a custom packaging platform serving hundreds of e-commerce and retail brands." },
+  { name: "John Light", role: "President, SBR2TH", initials: "JL", color: "#1a3a5a", bio: "20+ years in specialized technical recruiting across contingent, retained, and RPO models. Built SBR2TH's proprietary Retingent and Pipelining hiring vehicles and its AI-driven talent platform (sbr2th.ai). Focused on Data Science, ML, and senior engineering placement." },
+  { name: "Grant Typrin", role: "President, Certd & Pigeon Service", initials: "GT", color: "#4a4a1a", bio: "UT Austin McCombs graduate. Led operations at Certd, nth Venture's training certification marketplace, before expanding to oversee corporate finance and operations across multiple portfolio companies." },
+];
+
+const ADVISORS: TeamMember[] = [
   { name: "Neil Wolfson", role: "Vice Chairman", initials: "NW", color: "#1a5a3a", bio: "Former President & CIO of Wilmington Trust Investment Management ($40B+ AUM). National Partner in Charge of KPMG's Investment Consulting Practice ($100B+ in assets)." },
   { name: "Jay Heller", role: "Advisory Board", initials: "JH", color: "#2a4a7a", bio: "Senior member of Nasdaq's Capital Markets Team. Over 25 years in financial markets. Led execution of 2,300+ IPOs including Rivian, Airbnb, Coinbase, and Lyft." },
   { name: "Sandy Leeds", role: "Advisory Board", initials: "SL", color: "#5a3a6a", bio: "Finance faculty at University of Arizona. 23 years at UT Austin McCombs. JD from UVA, MBA from UT Austin, CFA charterholder. Co-author of Investment Analysis & Portfolio Management. Former portfolio manager ($1.6B AUM)." },
@@ -327,7 +342,9 @@ const teamMembers = [
   { name: "Ted Ladd", role: "Advisory Board", initials: "TL", color: "#6a4a2a", bio: "Professor of Entrepreneurship at Hult International Business School. Harvard instructor. 15 teaching awards. PhD from Case, MBA from Wharton, MA from Johns Hopkins, BA triple major from Cornell. Latest startup acquired by Google for smartwatch software." },
 ];
 
-function TeamCard({ member, index }: { member: typeof teamMembers[0]; index: number }) {
+const teamMembers = [...CO_FOUNDERS, ...PORTCO_CEOS, ...ADVISORS];
+
+function TeamCard({ member, index }: { member: TeamMember; index: number }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <FadeIn delay={index * 0.07}>
@@ -364,7 +381,7 @@ const ADVANTAGES = [
     headline: "Employee ownership is positive-sum.",
     stat: "Equity to every operator, from day one",
     statSub: "nth Venture standard · All portfolio companies · 2021–present",
-    body: "We don't theorize about employee ownership — we practice it. Every company we've built grants meaningful equity to its frontline operators from launch. A former valet now runs an audio production company he owns. An employee who lost everything rebuilt his life and moved his family onto acreage — because he owns the company. Our portfolio companies absorbed two failing businesses, protected their investors, and generated $336K in earnings for four principals who own those companies. KKR's Ownership Works coalition validates the playbook at scale — $1.7B distributed to frontline workers across 90+ companies — but we've lived it from the start.",
+    body: "We don't theorize about employee ownership — we practice it. Every company we've built grants meaningful equity to its frontline operators from launch. Our portfolio companies absorbed two failing businesses, protected their investors, and generated $336K in earnings for four principals who own those companies. KKR's Ownership Works coalition validates the playbook at scale — $1.7B distributed to frontline workers across 90+ companies — but we've lived it from the start.",
   },
   {
     num: "02",
@@ -950,10 +967,9 @@ export default function NthVentureIntro() {
               <div>
                 <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#c45a2d", marginBottom: 10, letterSpacing: 1 }}>2021 — The venture studio</p>
                 <p style={{ fontSize: "clamp(14px, 2vw, 16px)", lineHeight: 1.75, color: "#555", fontWeight: 300 }}>
-                  nth Venture started with a single thesis: talented people accomplish more when they own what they build.
-                  We launched our first companies from scratch — a $10,000 check and the belief that founder economics
-                  should extend to every employee, not just the people at the top.
-                  No performance fees. Just operators who owned meaningful stakes in the companies they ran.
+                  Built from a $10,000 check. We launched our first companies from scratch — granting meaningful equity
+                  to every operator from day one, not just the people at the top. No fund, no management fees,
+                  no outside capital. Just the thesis in practice.
                 </p>
               </div>
             </SlideIn>
@@ -976,8 +992,7 @@ export default function NthVentureIntro() {
                   We formalized our track record into the Co-Owner Fund LP — a Texas limited partnership
                   seeded with ~$1M in equity transferred by the founder for $1. The fund brings in aligned
                   outside capital to accelerate a strategy already generating results: acquiring small businesses
-                  at single-digit multiples, with employee ownership baked in from day one, and a principal whose
-                  audit training comes from the supreme audit authority in the United States.
+                  at single-digit multiples, with employee ownership baked in from day one.
                 </p>
               </div>
             </SlideIn>
@@ -991,12 +1006,30 @@ export default function NthVentureIntro() {
           <FadeIn>
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Leadership</p>
             <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>Built by operators, not administrators</h2>
-            <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 40, fontWeight: 300 }}>
-              Our leadership team combines institutional investment management, startup operational experience, and financial audit discipline. Staff and advisors invest on the same terms as LPs.
+            <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
+              Four co-founders with backgrounds in audit, engineering, talent, and communications. Six portfolio company CEOs and presidents with deep domain expertise in their industries. An advisory board with institutional-grade capital markets and finance experience. All invest on the same terms as LPs.
             </p>
           </FadeIn>
+
+          <FadeIn delay={0.05}>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: 2, color: "#888", textTransform: "uppercase", marginBottom: 16 }}>Co-Founders</p>
+          </FadeIn>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 12, marginBottom: 40 }}>
+            {CO_FOUNDERS.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
+          </div>
+
+          <FadeIn delay={0.05}>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: 2, color: "#888", textTransform: "uppercase", marginBottom: 16 }}>Portfolio Company Management</p>
+          </FadeIn>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 12, marginBottom: 40 }}>
+            {PORTCO_CEOS.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
+          </div>
+
+          <FadeIn delay={0.05}>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: 2, color: "#888", textTransform: "uppercase", marginBottom: 16 }}>Advisory Board</p>
+          </FadeIn>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: 12 }}>
-            {teamMembers.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
+            {ADVISORS.map((m, i) => <TeamCard key={i} member={m} index={i} />)}
           </div>
         </div>
       </section>
