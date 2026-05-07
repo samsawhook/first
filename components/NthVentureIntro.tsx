@@ -321,7 +321,8 @@ function RevenueChart() {
 type TeamMember = { name: string; role: string; initials: string; color: string; bio: string };
 
 const CO_FOUNDERS: TeamMember[] = [
-  { name: "Sam Johnston", role: "Co-Founder & CEO", initials: "SJ", color: "#c45a2d", bio: "Army veteran (Operation Atlantic Resolve convoy commander) and startup operator. Co-founded nth Venture in 2021 and launched six employee-owned portfolio companies. Former U.S. GAO financial auditor — the supreme audit authority in the United States — with engagements at the SEC, DoD, and Treasury. Forbes Business Council member. Currently pursuing a Master of Accountancy." },
+  { name: "Sam Sawhook", role: "Co-Founder & CEO", initials: "SS", color: "#c45a2d", bio: "Army veteran (Operation Atlantic Resolve convoy commander) and startup operator. Co-founded nth Venture in 2021 and launched six employee-owned portfolio companies. Former U.S. GAO financial auditor — the supreme audit authority in the United States — with engagements at the SEC, DoD, and Treasury. Currently pursuing a Master of Accountancy." },
+  { name: "Sam Johnston", role: "Co-Founder & CMO", initials: "SJ", color: "#8a4a1a", bio: "Forbes Business Council member with a background spanning International Economics, Applied Psychology, and Marketing (Texas McCombs, Stanford, University of Wales Trinity Saint David). Leads brand strategy, investor communications, and new business launches across the nth Venture portfolio." },
   { name: "Michael Shamoun", role: "Co-Founder & CTO", initials: "MS", color: "#2a5a8a", bio: "Electrical engineering and computer architecture background (UT Dallas B.S., UT Austin M.S.). Former software engineer at General Motors and IBM before co-founding nth Venture. Leads all technology infrastructure across the platform and portfolio companies." },
   { name: "Nathan Deily", role: "Co-Founder & Chief People Officer", initials: "ND", color: "#1a5a3a", bio: "Senior talent and organizational leadership roles at Microsoft, Honeywell, Raytheon, and LivePerson before co-founding nth Venture. M.S. in Labor Relations from Michigan State, Executive MBA from ASU W.P. Carey. Host of the Breakthrough Hiring Show podcast." },
   { name: "Jillian Palash", role: "Co-Founder & Chief of Staff", initials: "JP", color: "#5a3a6a", bio: "Nearly 15 years in Fortune 50 corporate communications and public relations at top-ranked agencies and in-house roles. Joined nth Venture as a founding team member and serves on the leadership team at Falconer." },
@@ -1007,7 +1008,7 @@ export default function NthVentureIntro() {
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: 2, color: "#c45a2d", textTransform: "uppercase", marginBottom: 12 }}>Leadership</p>
             <h2 style={{ fontSize: "clamp(24px, 4vw, 42px)", fontWeight: 300, letterSpacing: -1, margin: "0 0 16px" }}>Built by operators, not administrators</h2>
             <p style={{ fontSize: "clamp(15px, 2vw, 17px)", lineHeight: 1.75, color: "#555", maxWidth: 640, marginBottom: 48, fontWeight: 300 }}>
-              Four co-founders with backgrounds in audit, engineering, talent, and communications. Six portfolio company CEOs and presidents with deep domain expertise in their industries. An advisory board with institutional-grade capital markets and finance experience. All invest on the same terms as LPs.
+              Five co-founders with backgrounds in audit, marketing, engineering, talent, and communications. Six portfolio company CEOs and presidents with deep domain expertise in their industries. An advisory board with institutional-grade capital markets and finance experience. All invest on the same terms as LPs.
             </p>
           </FadeIn>
 
