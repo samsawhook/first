@@ -117,7 +117,7 @@ type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "s
 const PALASH_CASH_CONTRIBUTION = 100_000;   // Cash Palash adds alongside his in-kind roll-in
 const NEIL_CASH_CONTRIBUTION   = 100_000;   // Cash Neil adds alongside his in-kind roll-in
 const DEAL_CASH_LP_BASIS       = 150_000;   // Cash raised elsewhere (one other new cash LP)
-const SOMMERELI_CASH_CONTRIBUTION = 100_000; // Sommereli's new cash LP contribution → Audily preferred
+const SOMMERELI_CASH_CONTRIBUTION = 200_000; // Sommereli's new cash LP contribution → Audily preferred + Nueces cash
 // Legacy aliases (kept to avoid wider rename churn).
 const PALASH_OTHER_LP_BASIS    = DEAL_CASH_LP_BASIS;
 const NEIL_OTHER_LP_BASIS      = DEAL_CASH_LP_BASIS;
@@ -4738,14 +4738,18 @@ export default function Dashboard() {
           const sommereli_lp_basis = SOMMERELI_CASH_CONTRIBUTION;
 
           // ── Deal economics ────────────────────────────────────────────────────
-          const audilyPrefCost = SOMMERELI_CASH_CONTRIBUTION; // $100k → Audily preferred
-          const newCashFromLPs = SOMMERELI_CASH_CONTRIBUTION; // only Sommereli contributes cash
-          const cashGapVsDeal  = audilyPrefCost - newCashFromLPs; // 0
+          const audilyPrefCost   = 100_000;                          // $100k → Audily preferred
+          const nuecesEquityCost = 320_000;                          // 50% of Nueces Brewing
+          const nuecesNote       = 220_000;                          // seller note
+          const nuecesCash       = nuecesEquityCost - nuecesNote;    // $100k cash for Nueces
+          const dealCashTotal    = audilyPrefCost + nuecesCash;      // $200k total cash
+          const newCashFromLPs   = SOMMERELI_CASH_CONTRIBUTION;      // $200k from Sommereli
+          const cashGapVsDeal    = dealCashTotal - newCashFromLPs;   // 0
 
           // ── Debt positions being rolled into Audily ───────────────────────────
           const sommereli_audily_pref: DebtPosition = {
             id: "sommereli-audily-pref", date: "May 2026", instrument: "Preferred",
-            principal: 100_000, status: "Current", currentValue: 100_000,
+            principal: audilyPrefCost, status: "Current", currentValue: audilyPrefCost,
             notes: "New LP: $100k Audily Series A Preferred purchase.",
           };
           const wolfsonAudilyNoteRollIn: DebtPosition = {
@@ -4782,6 +4786,18 @@ export default function Dashboard() {
                 palashAudilySafeRollIn,
                 ...(palashActiveCreditValue > 0 ? [palashAudilyNoteRollIn] : []),
               ]};
+            }
+            if (c.id === "nueces-brewing") {
+              modified = {
+                ...modified,
+                invested: nuecesEquityCost, currentValue: nuecesEquityCost,
+                ownership: 50, votingOwnership: 50,
+                impliedValuation: 640_000, customPricePerShare: 6.40, totalShares: 100_000,
+                shareTransactions: [
+                  ...(modified.shareTransactions ?? []),
+                  { date: "May 2026", type: "Common" as const, shares: 50_000, amount: nuecesEquityCost, notes: "Nueces Brewing 50% acquisition." },
+                ],
+              };
             }
             const palashCommon  = PALASH_ROLLUP_SHARES[c.id] ?? 0;
             const wolfsonCommon = NEIL_ROLLUP_SHARES[c.id]   ?? 0;
@@ -4835,12 +4851,13 @@ export default function Dashboard() {
             const pps = c.totalShares ? impliedVal / c.totalShares : 0;
             const commonAll = (c.shareTransactions ?? []).filter(t => t.type === "Common");
             const fundCommonPre = commonAll
-              .filter(t => !t.notes?.startsWith("Founder LP") && !t.notes?.startsWith("Co-Founder LP") && !t.notes?.startsWith("LP D"))
+              .filter(t => !t.notes?.startsWith("Founder LP") && !t.notes?.startsWith("Co-Founder LP") && !t.notes?.startsWith("LP D") && !t.notes?.startsWith("Nueces Brewing"))
               .reduce((s, t) => s + (t.shares ?? 0), 0);
             const palashRollIn  = PALASH_ROLLUP_SHARES[c.id] ?? 0;
             const wolfsonRollIn = NEIL_ROLLUP_SHARES[c.id]   ?? 0;
             const lpDRollIn     = PALASH_LP_D_SHARES[c.id]   ?? 0;
-            const postShares    = fundCommonPre + palashRollIn + wolfsonRollIn + lpDRollIn;
+            const dealShares    = c.id === "nueces-brewing" ? 50_000 : 0;
+            const postShares    = fundCommonPre + palashRollIn + wolfsonRollIn + lpDRollIn + dealShares;
             const dsMult = audilyDeathStar
               ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.65 : 1))
               : 1;
@@ -4857,10 +4874,10 @@ export default function Dashboard() {
             }, 0);
             return {
               id: c.id, name: c.name, accent: c.accentColor || "#64748B",
-              pps, fundCommonPre, palashRollIn, wolfsonRollIn, lpDRollIn, postShares,
+              pps, fundCommonPre, palashRollIn, wolfsonRollIn, lpDRollIn, dealShares, postShares,
               equityVal, debtVal, optionVal,
               value: equityVal + debtVal + optionVal,
-              isNew: c.id === "nth-venture",
+              isNew: c.id === "nueces-brewing" || c.id === "nth-venture",
             };
           }).filter(r => r.value > 0).sort((a, b) => b.value - a.value);
 
@@ -4890,9 +4907,8 @@ export default function Dashboard() {
           ].filter(a => a.amount > 0);
           const allocTotalByType = allocByType.reduce((s, a) => s + a.amount, 0);
 
-          // No Nueces seller note → leverage stays at base
-          const grossAssets    = companyRows.reduce((s, r) => s + r.value, 0) + cashTypeBasis;
-          const newFundLeverage = BASE_FUND_LEVERAGE;
+          const grossAssets     = companyRows.reduce((s, r) => s + r.value, 0) + cashTypeBasis;
+          const newFundLeverage = BASE_FUND_LEVERAGE + nuecesNote;
           const newFundNav      = grossAssets - newFundLeverage;
 
           const newLpBasis      = palashLpBasis + wolfsonLpBasis + lpDBasis + sommereli_lp_basis;
@@ -4920,7 +4936,7 @@ export default function Dashboard() {
 
           const lpRows = [
             { id: "existing",  name: "Existing Co-Owner Fund LPs", units: BASE_LP_TOTAL_UNITS, basis: BASE_LP_TOTAL_UNITS, type: "—",                                                                                   accent: "#64748B" },
-            { id: "sommereli", name: "New LP (you)",                units: sommereli_lp_basis,  basis: sommereli_lp_basis,  type: `${fmt(SOMMERELI_CASH_CONTRIBUTION)} cash → Audily Series A Preferred`,               accent: "#34D399" },
+            { id: "sommereli", name: "New LP (you)",                units: sommereli_lp_basis,  basis: sommereli_lp_basis,  type: `${fmt(SOMMERELI_CASH_CONTRIBUTION)} cash → ${fmt(audilyPrefCost)} Audily preferred + ${fmt(nuecesCash)} Nueces cash`,  accent: "#34D399" },
             { id: "palash",    name: "Founder LP",                  units: palashLpBasis,        basis: palashLpBasis,        type: `in-kind portfolio (${fmt(palashPortfolioValue)}, no cash)`,                         accent: "#F59E0B" },
             { id: "wolfson",   name: "Co-Founder LP",               units: wolfsonLpBasis,       basis: wolfsonLpBasis,       type: `portco equity (${fmt(wolfsonPortcoEquity)}) + Audily debt (${fmt(wolfsonAudilyDebtValue)})`, accent: "#A78BFA" },
             { id: "lpd",       name: "LP D",                        units: lpDBasis,              basis: lpDBasis,              type: `equity roll-in (${fmt(lpDBasis)}, no cash)`,                                       accent: "#FB923C" },
@@ -4934,7 +4950,11 @@ export default function Dashboard() {
               <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-emerald-400">•</span>
-                  <span>You contribute <span className="text-white font-medium">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</span> cash → Audily Series A Preferred — LP basis <span className="text-emerald-400 font-medium">{fmt(sommereli_lp_basis)}</span>, ownership <span className="text-emerald-400 font-medium">{(sommereli_pct * 100).toFixed(2)}%</span> of the combined fund</span>
+                  <span>You contribute <span className="text-white font-medium">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</span> cash — <span className="text-white font-medium">{fmt(audilyPrefCost)}</span> → Audily Series A Preferred + <span className="text-white font-medium">{fmt(nuecesCash)}</span> cash toward Nueces — LP basis <span className="text-emerald-400 font-medium">{fmt(sommereli_lp_basis)}</span>, ownership <span className="text-emerald-400 font-medium">{(sommereli_pct * 100).toFixed(2)}%</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">•</span>
+                  <span>Fund acquires <span className="text-white font-medium">50% of <a href="https://nuecesbrewing.com" target="_blank" rel="noopener noreferrer" className="underline decoration-emerald-500/50 hover:decoration-emerald-400 transition-colors">Nueces Brewing</a></span> for <span className="text-white font-medium">{fmt(nuecesEquityCost)}</span> (<span className="text-white font-medium">{fmt(nuecesNote)}</span> seller note + <span className="text-white font-medium">{fmt(nuecesCash)}</span> cash)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-emerald-400">•</span>
@@ -4950,7 +4970,7 @@ export default function Dashboard() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-emerald-400">•</span>
-                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> (you only) · Deal cash gap: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 ? "— fully funded" : "— remaining gap"}</span>
+                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> (you only) · Deal cash required: <span className="text-white font-medium">{fmt(dealCashTotal)}</span> · Gap: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{cashGapVsDeal === 0 ? "fully funded" : fmt(cashGapVsDeal)}</span></span>
                 </li>
               </ul>
             </div>
@@ -4960,7 +4980,7 @@ export default function Dashboard() {
               <div className="flex-1 min-w-0 rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
                 <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Your Investment</p>
                 <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</p>
-                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight">cash → Audily Series A Preferred. No prior basis in the fund.</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight">{fmt(audilyPrefCost)} Audily preferred + {fmt(nuecesCash)} Nueces cash. No prior basis in the fund.</p>
               </div>
               <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
                 <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -4983,7 +5003,7 @@ export default function Dashboard() {
                     <span className="text-slate-300 tabular-nums shrink-0">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</span>
                   </div>
                   <p className="text-[8px] sm:text-[9px] text-emerald-400/80 italic pl-3 leading-tight">
-                    deployed into Audily Series A Preferred at closing
+                    {fmt(audilyPrefCost)} Audily preferred + {fmt(nuecesCash)} Nueces cash at closing
                   </p>
                 </div>
               </div>
@@ -5500,6 +5520,7 @@ export default function Dashboard() {
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Founder LP</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Co-Founder LP</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ LP D</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Deal</th>
                       <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
                     </tr>
                   </thead>
@@ -5516,7 +5537,8 @@ export default function Dashboard() {
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.fundCommonPre > 0 ? row.fundCommonPre.toLocaleString() : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.palashRollIn  > 0 ? "#F59E0B" : "#475569" }}>{row.palashRollIn  > 0 ? `+${row.palashRollIn.toLocaleString()}`  : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.wolfsonRollIn > 0 ? "#A78BFA" : "#475569" }}>{row.wolfsonRollIn > 0 ? `+${row.wolfsonRollIn.toLocaleString()}` : "—"}</td>
-                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn     > 0 ? "#FB923C" : "#475569" }}>{row.lpDRollIn     > 0 ? `+${row.lpDRollIn.toLocaleString()}`     : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn  > 0 ? "#FB923C" : "#475569" }}>{row.lpDRollIn  > 0 ? `+${row.lpDRollIn.toLocaleString()}`  : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.dealShares > 0 ? "#34D399" : "#475569" }}>{row.dealShares > 0 ? `+${row.dealShares.toLocaleString()}` : "—"}</td>
                         <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
                       </tr>
                     ))}
@@ -5526,6 +5548,7 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{companyRows.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#A78BFA" }}>+{companyRows.reduce((s, r) => s + r.wolfsonRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
                     </tr>
                   </tbody>
