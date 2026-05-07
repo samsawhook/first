@@ -109,7 +109,7 @@ const SCENARIOB_FALCONER_SHARES  = 4_735_803;
 const SCENARIOB_SBR2TH_SHARES    = 3_247_832;
 const SCENARIOB_MB_SHARES        = 4_804_351;
 
-type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct" | "palash-memo" | "neil-memo";
+type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "secondary" | "investor" | "fees" | "direct" | "palash-memo" | "neil-memo" | "sommereli-memo";
 
 // ── Shared LP roll-up deal economics (used by both Palash & Neil memos) ─────
 // The deal participants are the same in both memos; only the "(you)" labeling
@@ -117,6 +117,7 @@ type Tab = "overview" | "proposal" | "scenario" | "scenario-b" | "pipeline" | "s
 const PALASH_CASH_CONTRIBUTION = 100_000;   // Cash Palash adds alongside his in-kind roll-in
 const NEIL_CASH_CONTRIBUTION   = 100_000;   // Cash Neil adds alongside his in-kind roll-in
 const DEAL_CASH_LP_BASIS       = 150_000;   // Cash raised elsewhere (one other new cash LP)
+const SOMMERELI_CASH_CONTRIBUTION = 100_000; // Sommereli's new cash LP contribution → Audily preferred
 // Legacy aliases (kept to avoid wider rename churn).
 const PALASH_OTHER_LP_BASIS    = DEAL_CASH_LP_BASIS;
 const NEIL_OTHER_LP_BASIS      = DEAL_CASH_LP_BASIS;
@@ -376,20 +377,26 @@ export default function Dashboard() {
   };
 
   const directInvestor = directInvestorId ? findDirectInvestor(directInvestorId) : undefined;
-  const isPalash = directInvestor?.id === "palash-jillian";
-  const isNeil   = directInvestor?.id === "neil-wolfson";
-  // Hide the regular Deal Memo (proposal) tab when Palash or Neil is signed in — they
-  // get a dedicated "My Deal Memo" tab instead.
-  const tabs = directInvestor
+  const isPalash    = directInvestor?.id === "palash-jillian";
+  const isNeil      = directInvestor?.id === "neil-wolfson";
+  const isSommereli = directInvestorId === "sommereli";
+  // Hide the regular Deal Memo (proposal) tab when a named investor is signed in —
+  // they each get a dedicated "My Deal Memo" tab instead. Sommereli has no My Holdings.
+  const tabs = (directInvestor || isSommereli)
     ? [
-        ...((isPalash || isNeil) ? BASE_TABS.filter(t => t.id !== "proposal") : BASE_TABS),
+        ...((isPalash || isNeil || isSommereli) ? BASE_TABS.filter(t => t.id !== "proposal") : BASE_TABS),
         ...(isPalash
           ? [{ id: "palash-memo" as Tab, label: "My Deal Memo", icon: <FileText size={15} /> }]
           : []),
         ...(isNeil
           ? [{ id: "neil-memo" as Tab, label: "My Deal Memo", icon: <FileText size={15} /> }]
           : []),
-        { id: "direct" as Tab, label: "My Holdings", icon: <User size={15} /> },
+        ...(isSommereli
+          ? [{ id: "sommereli-memo" as Tab, label: "My Deal Memo", icon: <FileText size={15} /> }]
+          : []),
+        ...(!isSommereli && directInvestor
+          ? [{ id: "direct" as Tab, label: "My Holdings", icon: <User size={15} /> }]
+          : []),
       ]
     : BASE_TABS;
 
@@ -448,19 +455,19 @@ export default function Dashboard() {
                   className="flex items-center gap-2 bg-[#111D2E] border border-[#1E2D3D] rounded-lg px-2.5 py-1.5 hover:bg-[#1A2940] transition-colors"
                 >
                   <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: directInvestor ? "#3B0764" : "#1E3A5F" }}>
-                    <span className="text-[9px] font-bold" style={{ color: directInvestor ? "#C4B5FD" : "#60A5FA" }}>
+                    style={{ background: directInvestor ? "#3B0764" : isSommereli ? "#064E3B" : "#1E3A5F" }}>
+                    <span className="text-[9px] font-bold" style={{ color: directInvestor ? "#C4B5FD" : isSommereli ? "#34D399" : "#60A5FA" }}>
                       {directInvestor
                         ? directInvestor.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)
-                        : "CF"}
+                        : isSommereli ? "LP" : "CF"}
                     </span>
                   </div>
                   <div className="hidden sm:block leading-tight text-left">
                     <p className="text-xs font-medium text-slate-200">
-                      {directInvestor ? directInvestor.name : "Co-Owner Fund LP"}
+                      {directInvestor ? directInvestor.name : isSommereli ? "New LP" : "Co-Owner Fund LP"}
                     </p>
                     <p className="text-[9px] text-slate-500">
-                      {directInvestor ? "Investor" : "Fund View"}
+                      {directInvestor ? "Investor" : isSommereli ? "Deal Memo" : "Fund View"}
                     </p>
                   </div>
                   <ChevronDown size={10} className="text-slate-500 hidden sm:block" />
@@ -472,12 +479,12 @@ export default function Dashboard() {
                     <div className="absolute right-0 top-full mt-1.5 w-56 bg-[#0D1421] border border-[#1E2D3D] rounded-xl shadow-2xl z-50 overflow-hidden">
                       <div className="px-4 py-3 border-b border-[#1E2D3D]">
                         <p className="text-xs font-semibold text-slate-200">
-                          {directInvestor ? directInvestor.name : "Co-Owner Fund LP"}
+                          {directInvestor ? directInvestor.name : isSommereli ? "New LP" : "Co-Owner Fund LP"}
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">
                           {directInvestor
                             ? `Investor since ${directInvestor.investorSince}`
-                            : "Fund View"}
+                            : isSommereli ? "Deal Memo" : "Fund View"}
                         </p>
                       </div>
                       <button
@@ -4666,6 +4673,859 @@ export default function Dashboard() {
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{companyRows.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.smallLpRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#34D399" }}>+{companyRows.reduce((s, r) => s + r.dealShares, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
+        {!activeCompany && activeTab === "sommereli-memo" && directInvestorId === "sommereli" && (() => {
+          // ── Helpers ──────────────────────────────────────────────────────────────
+          const ppsForCompany = (id: string): number => {
+            const c = basePortfolio.find(p => p.id === id);
+            if (!c || !c.totalShares) return 0;
+            const userVal = userValuations[id];
+            const implied = userVal !== undefined
+              ? userVal
+              : (c.customPricePerShare ? c.customPricePerShare * c.totalShares : c.impliedValuation);
+            return implied / c.totalShares;
+          };
+
+          // ── Wolfson's roll-in ─────────────────────────────────────────────────
+          const wolfsonInvestor = findDirectInvestor("neil-wolfson");
+          const wolfsonPortcoEquity = Object.entries(NEIL_ROLLUP_SHARES).reduce((s, [id, sh]) =>
+            s + sh * ppsForCompany(id), 0);
+          const wolfsonAudilyDebtValue = wolfsonInvestor
+            ? wolfsonInvestor.positions
+                .filter(p => p.category === "Short-term Notes" && (p.estimatedValue ?? 0) > 0)
+                .reduce((s, p) => s + (p.estimatedValue ?? 0), 0)
+            : 95_639;
+          const wolfsonLpBasis = wolfsonPortcoEquity + wolfsonAudilyDebtValue;
+
+          // ── Palash's roll-in (all portfolio, no cash) ─────────────────────────
+          const palashInvestor = findDirectInvestor("palash-jillian");
+          const dynamicFundNav = computeFundNav(userValuations);
+          const palashPortfolioValue = palashInvestor
+            ? palashInvestor.positions.reduce((s, p) => {
+                if (p.securityType === "RSU") return s;
+                if (p.shares && p.companyId && p.securityType === "Class A Common") {
+                  const pps = ppsForCompany(p.companyId);
+                  if (pps > 0) return s + p.shares * pps;
+                }
+                if (p.category === "LP Interests" && p.companyId === "co-owner-fund" && BASE_LP_TOTAL_UNITS > 0) {
+                  return s + Math.round((dynamicFundNav / BASE_LP_TOTAL_UNITS) * p.costBasis);
+                }
+                return s + (p.estimatedValue ?? 0);
+              }, 0)
+            : 0;
+          const palashActiveCreditValue = palashInvestor
+            ? palashInvestor.positions
+                .filter(p => p.category === "Short-term Notes" && (p.estimatedValue ?? 0) > 0)
+                .reduce((s, p) => s + (p.estimatedValue ?? 0), 0)
+            : 0;
+          const palashLpBasis = palashPortfolioValue; // no cash from Palash in this deal
+
+          // ── LP D roll-in ──────────────────────────────────────────────────────
+          const lpDValue = Object.entries(PALASH_LP_D_SHARES).reduce((s, [id, sh]) =>
+            s + sh * ppsForCompany(id), 0);
+          const lpDBasis = Math.round(lpDValue);
+
+          // ── Sommereli (you): $100k cash → Audily preferred ───────────────────
+          const sommereli_lp_basis = SOMMERELI_CASH_CONTRIBUTION;
+
+          // ── Deal economics ────────────────────────────────────────────────────
+          const audilyPrefCost = SOMMERELI_CASH_CONTRIBUTION; // $100k → Audily preferred
+          const newCashFromLPs = SOMMERELI_CASH_CONTRIBUTION; // only Sommereli contributes cash
+          const cashGapVsDeal  = audilyPrefCost - newCashFromLPs; // 0
+
+          // ── Debt positions being rolled into Audily ───────────────────────────
+          const sommereli_audily_pref: DebtPosition = {
+            id: "sommereli-audily-pref", date: "May 2026", instrument: "Preferred",
+            principal: 100_000, status: "Current", currentValue: 100_000,
+            notes: "New LP: $100k Audily Series A Preferred purchase.",
+          };
+          const wolfsonAudilyNoteRollIn: DebtPosition = {
+            id: "wolfson-audily-note-rollin-s", date: "Oct 2025", instrument: "Term Loan",
+            principal: Math.round(wolfsonAudilyDebtValue), status: "Current",
+            currentValue: wolfsonAudilyDebtValue,
+            notes: "Co-Founder LP roll-in: outstanding Audily short-term note.",
+          };
+          const palashAudilyPrefRollIn: DebtPosition = {
+            id: "palash-audily-pref-rollin-s", date: "May 2026", instrument: "Preferred",
+            principal: 200_000, status: "Current", currentValue: 200_000,
+            notes: "Founder LP roll-in: Audily Series A Preferred (2,000 shares).",
+          };
+          const palashAudilySafeRollIn: DebtPosition = {
+            id: "palash-audily-safe-rollin-s", date: "Mar 2024", instrument: "SAFE",
+            principal: 100_000, status: "Current", currentValue: 125_000,
+            notes: "Founder LP roll-in: SAFE → Series A (1,250 shares).",
+          };
+          const palashAudilyNoteRollIn: DebtPosition = {
+            id: "palash-audily-note-rollin-s", date: "Feb 2026", instrument: "Term Loan",
+            principal: 25_000, status: "Current", currentValue: palashActiveCreditValue,
+            notes: "Founder LP roll-in: outstanding Audily short-term note.",
+          };
+
+          // ── Build portfolio (no Nueces deal) ──────────────────────────────────
+          const portfolioSommereli = withAudilyAccrued(basePortfolio).map(c => {
+            let modified: typeof c = c;
+            if (c.id === "audily") {
+              modified = { ...modified, debtPositions: [
+                ...(modified.debtPositions ?? []),
+                sommereli_audily_pref,
+                wolfsonAudilyNoteRollIn,
+                palashAudilyPrefRollIn,
+                palashAudilySafeRollIn,
+                ...(palashActiveCreditValue > 0 ? [palashAudilyNoteRollIn] : []),
+              ]};
+            }
+            const palashCommon  = PALASH_ROLLUP_SHARES[c.id] ?? 0;
+            const wolfsonCommon = NEIL_ROLLUP_SHARES[c.id]   ?? 0;
+            const lpDCommon     = PALASH_LP_D_SHARES[c.id]   ?? 0;
+            if (palashCommon > 0 || wolfsonCommon > 0 || lpDCommon > 0) {
+              const pps = ppsForCompany(c.id);
+              const additions: ShareTransaction[] = [];
+              if (palashCommon  > 0) additions.push({ date: "May 2026", type: "Common", shares: palashCommon,  amount: Math.round(palashCommon  * pps), notes: "Founder LP in-kind roll-in." });
+              if (wolfsonCommon > 0) additions.push({ date: "May 2026", type: "Common", shares: wolfsonCommon, amount: Math.round(wolfsonCommon * pps), notes: "Co-Founder LP in-kind roll-in." });
+              if (lpDCommon     > 0) additions.push({ date: "May 2026", type: "Common", shares: lpDCommon,     amount: Math.round(lpDCommon     * pps), notes: "LP D in-kind roll-in." });
+              modified = { ...modified, shareTransactions: [...(modified.shareTransactions ?? []), ...additions] };
+            }
+            return modified;
+          });
+
+          type CompanyLike = {
+            id: string; name: string; accentColor?: string; status: string;
+            currentValue?: number; totalShares?: number; customPricePerShare?: number; impliedValuation?: number;
+            shareTransactions?: ShareTransaction[]; debtPositions?: DebtPosition[]; optionPositions?: typeof basePortfolio[number]["optionPositions"];
+          };
+          const palashSentiusShares = PALASH_ROLLUP_SHARES["sentius"] ?? 0;
+          const sentiusSynthetic: CompanyLike = {
+            id: "sentius", name: "Sentius Development", accentColor: "#06B6D4", status: "active",
+            currentValue: 27_500,
+            shareTransactions: palashSentiusShares > 0
+              ? [{ date: "May 2026", type: "Common", shares: palashSentiusShares, amount: 27_500, notes: "Founder LP in-kind roll-in." }]
+              : [],
+            debtPositions: [],
+          };
+          const nthVentureSynthetic: CompanyLike = {
+            id: "nth-venture", name: "nth Venture", accentColor: "#64748B", status: "active",
+            currentValue: 170_000, shareTransactions: [],
+            debtPositions: [
+              { id: "s-nth-safe", date: "Feb 2022", instrument: "SAFE", principal: 20_000, status: "Current", currentValue: 20_000, notes: "Founder LP roll-in: nth Venture SAFE → Series A (200,000 shares)." },
+              { id: "s-nth-conv", date: "Jun 2023", instrument: "Convertible Note", principal: 150_000, status: "Current", currentValue: 150_000, notes: "Founder LP roll-in: nth Venture Convertible Notes." },
+            ],
+          };
+
+          const ALLOC_CREDIT_INSTR = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
+          const allCompanies: CompanyLike[] = [
+            ...portfolioSommereli.filter(c => c.status === "active"),
+            sentiusSynthetic,
+            nthVentureSynthetic,
+          ];
+
+          const companyRows = allCompanies.map(c => {
+            const userVal = userValuations[c.id];
+            const impliedVal = userVal !== undefined
+              ? userVal
+              : (c.customPricePerShare && c.totalShares ? c.customPricePerShare * c.totalShares : (c.impliedValuation ?? 0));
+            const pps = c.totalShares ? impliedVal / c.totalShares : 0;
+            const commonAll = (c.shareTransactions ?? []).filter(t => t.type === "Common");
+            const fundCommonPre = commonAll
+              .filter(t => !t.notes?.startsWith("Founder LP") && !t.notes?.startsWith("Co-Founder LP") && !t.notes?.startsWith("LP D"))
+              .reduce((s, t) => s + (t.shares ?? 0), 0);
+            const palashRollIn  = PALASH_ROLLUP_SHARES[c.id] ?? 0;
+            const wolfsonRollIn = NEIL_ROLLUP_SHARES[c.id]   ?? 0;
+            const lpDRollIn     = PALASH_LP_D_SHARES[c.id]   ?? 0;
+            const postShares    = fundCommonPre + palashRollIn + wolfsonRollIn + lpDRollIn;
+            const dsMult = audilyDeathStar
+              ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.65 : 1))
+              : 1;
+            const equityVal = (pps > 0 && postShares > 0
+              ? postShares * pps
+              : (c.id === "nth-venture" ? 0 : (c.currentValue ?? 0))) * dsMult;
+            const debtVal = (c.debtPositions ?? [])
+              .filter(d => d.status !== "Repaid")
+              .reduce((s, d) => s + d.currentValue * dsMult, 0);
+            const optionVal = (c.optionPositions ?? []).reduce((s: number, o) => {
+              const intrinsic = o.shares * Math.max(pps - o.strikePrice, 0);
+              const timeVal   = o.shares * pps * ((optionVariances[o.id] ?? 0) / 100);
+              return s + (intrinsic + timeVal) * dsMult;
+            }, 0);
+            return {
+              id: c.id, name: c.name, accent: c.accentColor || "#64748B",
+              pps, fundCommonPre, palashRollIn, wolfsonRollIn, lpDRollIn, postShares,
+              equityVal, debtVal, optionVal,
+              value: equityVal + debtVal + optionVal,
+              isNew: c.id === "nth-venture",
+            };
+          }).filter(r => r.value > 0).sort((a, b) => b.value - a.value);
+
+          const equityTypeBasis  = companyRows.reduce((s, r) => s + r.equityVal, 0);
+          const optionsTypeBasis = companyRows.reduce((s, r) => s + r.optionVal, 0);
+          let creditTypeBasis = 0, convertTypeBasis = 0;
+          for (const c of allCompanies) {
+            const dsMult = audilyDeathStar
+              ? (c.id === "audily" ? 0 : (c.id === "certd" || c.id === "sentius" || c.id === "falconer" ? 0.65 : 1))
+              : 1;
+            if (dsMult === 0) continue;
+            for (const d of (c.debtPositions ?? [])) {
+              if (d.status === "Repaid") continue;
+              const v = d.currentValue * dsMult;
+              if (ALLOC_CREDIT_INSTR.includes(d.instrument)) creditTypeBasis += v;
+              else convertTypeBasis += v;
+            }
+          }
+          const cashTypeBasis = cashPositions.reduce((s, c) => s + c.balance, 0);
+
+          const allocByType = [
+            { label: "Equity",       amount: equityTypeBasis,  color: "#10B981" },
+            { label: "Convertibles", amount: convertTypeBasis, color: "#F59E0B" },
+            { label: "Credit",       amount: creditTypeBasis,  color: "#6366F1" },
+            { label: "Options",      amount: optionsTypeBasis, color: "#F43F5E" },
+            { label: "Cash",         amount: cashTypeBasis,    color: "#60A5FA" },
+          ].filter(a => a.amount > 0);
+          const allocTotalByType = allocByType.reduce((s, a) => s + a.amount, 0);
+
+          // No Nueces seller note → leverage stays at base
+          const grossAssets    = companyRows.reduce((s, r) => s + r.value, 0) + cashTypeBasis;
+          const newFundLeverage = BASE_FUND_LEVERAGE;
+          const newFundNav      = grossAssets - newFundLeverage;
+
+          const newLpBasis      = palashLpBasis + wolfsonLpBasis + lpDBasis + sommereli_lp_basis;
+          const newLpUnitsTotal = BASE_LP_TOTAL_UNITS + newLpBasis;
+          const sommereli_pct   = newLpUnitsTotal > 0 ? sommereli_lp_basis / newLpUnitsTotal : 0;
+          const sommereli_nav   = sommereli_pct * newFundNav;
+
+          const lookThroughByType    = allocByType.map(a => ({ ...a, myShare: a.amount * sommereli_pct }));
+          const lookThroughByCompany = companyRows.map(r => ({ ...r, myShare: r.value * sommereli_pct }));
+
+          const donutItems = companyRows;
+          const donutTotal = donutItems.reduce((s, d) => s + d.value, 0);
+          const cx = 80, cy = 80, R = 62, r = 40;
+          let ang = -Math.PI / 2;
+          const arcs = donutItems.map(d => {
+            const sweep = donutTotal > 0 ? (d.value / donutTotal) * 2 * Math.PI : 0;
+            const x1 = cx + R * Math.cos(ang),          y1 = cy + R * Math.sin(ang);
+            ang += sweep;
+            const x2 = cx + R * Math.cos(ang),          y2 = cy + R * Math.sin(ang);
+            const ix1 = cx + r * Math.cos(ang - sweep),  iy1 = cy + r * Math.sin(ang - sweep);
+            const ix2 = cx + r * Math.cos(ang),          iy2 = cy + r * Math.sin(ang);
+            const large = sweep > Math.PI ? 1 : 0;
+            return { ...d, path: `M${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} L${ix2},${iy2} A${r},${r},0,${large},0,${ix1},${iy1} Z` };
+          });
+
+          const lpRows = [
+            { id: "existing",  name: "Existing Co-Owner Fund LPs", units: BASE_LP_TOTAL_UNITS, basis: BASE_LP_TOTAL_UNITS, type: "—",                                                                                   accent: "#64748B" },
+            { id: "sommereli", name: "New LP (you)",                units: sommereli_lp_basis,  basis: sommereli_lp_basis,  type: `${fmt(SOMMERELI_CASH_CONTRIBUTION)} cash → Audily Series A Preferred`,               accent: "#34D399" },
+            { id: "palash",    name: "Founder LP",                  units: palashLpBasis,        basis: palashLpBasis,        type: `in-kind portfolio (${fmt(palashPortfolioValue)}, no cash)`,                         accent: "#F59E0B" },
+            { id: "wolfson",   name: "Co-Founder LP",               units: wolfsonLpBasis,       basis: wolfsonLpBasis,       type: `portco equity (${fmt(wolfsonPortcoEquity)}) + Audily debt (${fmt(wolfsonAudilyDebtValue)})`, accent: "#A78BFA" },
+            { id: "lpd",       name: "LP D",                        units: lpDBasis,              basis: lpDBasis,              type: `equity roll-in (${fmt(lpDBasis)}, no cash)`,                                       accent: "#FB923C" },
+          ];
+
+          return (
+          <div className="space-y-4 sm:space-y-6">
+            {/* ── Header summary ── */}
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-4 sm:px-6 sm:py-5">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-2 sm:mb-3">My Deal Memo — LP Roll-up Scenario</p>
+              <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-sm text-slate-300 leading-snug">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">•</span>
+                  <span>You contribute <span className="text-white font-medium">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</span> cash → Audily Series A Preferred — LP basis <span className="text-emerald-400 font-medium">{fmt(sommereli_lp_basis)}</span>, ownership <span className="text-emerald-400 font-medium">{(sommereli_pct * 100).toFixed(2)}%</span> of the combined fund</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">•</span>
+                  <span>Founder LP rolls in <span className="text-white font-medium">{fmt(palashPortfolioValue)}</span> full direct portfolio (equity, LP interest, outstanding credit, no cash) — LP basis <span className="text-white font-medium">{fmt(palashLpBasis)}</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">•</span>
+                  <span>Co-Founder LP rolls in portco equity (<span className="text-white font-medium">{fmt(wolfsonPortcoEquity)}</span> Class A Common, $0 cost basis) + outstanding Audily debt (<span className="text-white font-medium">{fmt(wolfsonAudilyDebtValue)}</span>) — LP basis <span className="text-white font-medium">{fmt(wolfsonLpBasis)}</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">•</span>
+                  <span>LP D rolls in a Class A Common portfolio across 4 portfolio cos (<span className="text-white font-medium">{fmt(lpDBasis)}</span>, no cash) — LP basis <span className="text-white font-medium">{fmt(lpDBasis)}</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">•</span>
+                  <span>New LP basis: <span className="text-emerald-400 font-medium">{fmt(newLpBasis)}</span> · New cash in: <span className="text-emerald-400 font-medium">{fmt(newCashFromLPs)}</span> (you only) · Deal cash gap: <span style={{ color: cashGapVsDeal === 0 ? "#34D399" : "#F59E0B" }} className="font-medium">{fmt(cashGapVsDeal)}</span> {cashGapVsDeal === 0 ? "— fully funded" : "— remaining gap"}</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* ── KPIs (① ② ③) ── */}
+            <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-2">
+              <div className="flex-1 min-w-0 rounded-xl border border-[#1E2D3D] bg-[#0D1421] p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-500">① Your Investment</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-slate-300 mt-1">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 mt-1 leading-tight">cash → Audily Series A Preferred. No prior basis in the fund.</p>
+              </div>
+              <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="sm:hidden flex items-center justify-center text-slate-600" aria-hidden>
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="flex-1 min-w-0 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-300">② LP Basis</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-200 mt-1">{fmt(sommereli_lp_basis)}</p>
+                <div className="mt-2 h-2 rounded-full overflow-hidden bg-[#1E2D3D] flex">
+                  <div className="h-full w-full" style={{ background: "#34D399" }} title="Cash contribution" />
+                </div>
+                <div className="mt-2 space-y-1 text-[9px] sm:text-[10px]">
+                  <div className="flex justify-between gap-1 items-center">
+                    <span className="flex items-center gap-1 text-slate-400 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#34D399" }} />
+                      <span className="truncate">Cash contribution</span>
+                    </span>
+                    <span className="text-slate-300 tabular-nums shrink-0">{fmt(SOMMERELI_CASH_CONTRIBUTION)}</span>
+                  </div>
+                  <p className="text-[8px] sm:text-[9px] text-emerald-400/80 italic pl-3 leading-tight">
+                    deployed into Audily Series A Preferred at closing
+                  </p>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center justify-center text-slate-600 shrink-0 px-1" aria-hidden>
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 7h14m0 0L10 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="sm:hidden flex items-center justify-center text-slate-600" aria-hidden>
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 1v14m0 0L2 10m5 5l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div className="flex-1 min-w-0 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 sm:p-4">
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-emerald-400">③ NAV (Post Deal)</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-300 mt-1">{fmt(sommereli_nav)}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 leading-tight">{(sommereli_pct * 100).toFixed(2)}% × fund NAV {fmt(newFundNav)}</p>
+              </div>
+            </div>
+
+            {/* ── Fund Overview-style card (post-deal) with LP View toggle ── */}
+            {(() => {
+              const isMy = dealMemoLpView === "my-share";
+              const mult = isMy ? sommereli_pct : 1;
+              const totalPositions = allCompanies.reduce((s, c) => {
+                const commonCount = (c.shareTransactions ?? []).some(t => t.type === "Common") ? 1 : 0;
+                const debtCount   = (c.debtPositions ?? []).filter(d => d.status !== "Repaid").length;
+                const optCount    = (c.optionPositions ?? []).length;
+                return s + commonCount + debtCount + optCount;
+              }, 0);
+              const fundCols = [
+                { label: "Assets",   val: grossAssets,     color: "#10B981" },
+                { label: "Leverage", val: newFundLeverage, color: "#F87171" },
+                { label: "NAV",      val: newFundNav,      color: "#38BDF8" },
+                { label: "LP Basis", val: newLpUnitsTotal, color: "#8B5CF6" },
+              ];
+              const maxVal = Math.max(...fundCols.map(c => c.val), 1);
+              const W3 = 280, H3 = 120, PAD3 = { t: 16, r: 6, b: 24, l: 6 };
+              const cW3 = W3 - PAD3.l - PAD3.r, cH3 = H3 - PAD3.t - PAD3.b;
+              const n3 = fundCols.length, gap3 = 10;
+              const bW3 = (cW3 - gap3 * (n3 - 1)) / n3;
+              const fmtS = (v: number) => v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${Math.round(v)}`;
+              const myRows = isMy ? [
+                { label: "My Basis", val: sommereli_lp_basis, color: "#34D399" },
+                { label: "My NAV",   val: sommereli_nav,       color: "#34D399" },
+              ] : [];
+              return (
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  <div className={`grid grid-cols-2 sm:grid-cols-4 border-b border-[#1E2D3D] ${isMy ? "bg-[#080E1A]" : ""}`}>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio NAV Est.</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: "#10B981" }}>{fmt(isMy ? sommereli_nav : newFundNav)}</p>
+                      <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">assets {fmt(grossAssets * mult)}</p>
+                      <p className="text-[9px] text-slate-600 tabular-nums">lev. -{fmt(newFundLeverage * mult)}</p>
+                      {isMy && <p className="text-[9px] text-slate-500 tabular-nums">fund {fmt(newFundNav)}</p>}
+                    </div>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">{isMy ? "My LP Basis" : "LP Basis"}</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{fmt(isMy ? sommereli_lp_basis : newLpUnitsTotal)}</p>
+                      {isMy && (
+                        <>
+                          <p className="text-base font-bold tabular-nums mt-0.5" style={{ color: "#34D399" }}>{(sommereli_pct * 100).toFixed(2)}%</p>
+                          <p className="text-[9px] tabular-nums mt-0.5" style={{ color: "#6EE7B7" }}>{sommereli_lp_basis.toLocaleString()} / {newLpUnitsTotal.toLocaleString()}</p>
+                        </>
+                      )}
+                      {!isMy && <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{newLpUnitsTotal.toLocaleString()} units · $1/unit</p>}
+                    </div>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5 border-r border-[#1E2D3D]">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">MOIC</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums" style={{ color: newFundNav >= newLpUnitsTotal ? "#10B981" : "#F87171" }}>
+                        {newLpUnitsTotal > 0 ? `${(newFundNav / newLpUnitsTotal).toFixed(2)}×` : "—"}
+                      </p>
+                      <p className="text-[9px] text-slate-600 mt-0.5">NAV ÷ LP basis</p>
+                    </div>
+                    <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium leading-tight">Portfolio</p>
+                      <p className="text-sm font-bold mt-1 tabular-nums text-slate-200">{companyRows.length} <span className="text-xs font-normal text-slate-500">co's</span></p>
+                      <p className="text-[9px] text-slate-600 tabular-nums mt-0.5">{totalPositions} positions</p>
+                    </div>
+                  </div>
+
+                  {/* LP View toggle */}
+                  <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-3 bg-[#080E1A]">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium shrink-0">LP View</p>
+                      <div className="flex items-center gap-1">
+                        {([["fund-total","Fund Total"],["my-share","My Share"]] as const).map(([mode, label]) => (
+                          <button key={mode} onClick={() => setDealMemoLpView(mode)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                              dealMemoLpView === mode
+                                ? mode === "fund-total" ? "bg-slate-700 text-slate-200" : "bg-emerald-600/30 text-emerald-400 ring-1 ring-emerald-500/40"
+                                : "bg-[#111D2E] text-slate-500 hover:text-slate-300"
+                            }`}>{label}</button>
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-slate-600 hidden md:inline">post-deal · {newLpUnitsTotal.toLocaleString()} units outstanding · $1.00/unit</span>
+                    </div>
+                  </div>
+
+                  {/* Three-chart grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[#1E2D3D]">
+                    {/* By Company donut */}
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">By Company</p>
+                        <button
+                          onClick={() => setAudilyDeathStar(!audilyDeathStar)}
+                          className={`text-[9px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ${audilyDeathStar ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-[#111D2E] text-slate-500 hover:text-slate-300 border border-[#1E2D3D]"}`}
+                          title="Death Star: Audily → $0; Pigeon Service / Sentius / Falconer −35%"
+                        >
+                          <span aria-hidden>☠</span>
+                          <span>{audilyDeathStar ? "Stressed" : "Stress test"}</span>
+                        </button>
+                      </div>
+                      <div className="flex justify-center mb-3">
+                        <svg width="140" height="140" viewBox="0 0 160 160" className="shrink-0">
+                          {arcs.map((a, i) => <path key={i} d={a.path} fill={a.accent} fillOpacity={0.85} />)}
+                          <text x="80" y="76" textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: "#e2e8f0" }}>{fmt(donutTotal * mult)}</text>
+                          <text x="80" y="91" textAnchor="middle" style={{ fontSize: 9, fill: "#64748b" }}>{isMy ? "my share" : "total value"}</text>
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {donutItems.map(d => (
+                          <div key={d.id} className="grid items-center gap-x-2" style={{ gridTemplateColumns: "8px 1fr 32px 44px" }}>
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.accent }} />
+                            <span className="text-[11px] text-slate-400 truncate">{d.name.replace(" Inc.", "").replace(" Recruiting", "")}{d.isNew && <span className="ml-1 text-[8px] text-emerald-400">NEW</span>}</span>
+                            <span className="text-[10px] text-slate-600 tabular-nums text-right">{donutTotal > 0 ? `${((d.value / donutTotal) * 100).toFixed(1)}%` : "—"}</span>
+                            <span className="text-[11px] text-slate-500 tabular-nums text-right">{fmt(d.value * mult)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Assets by type */}
+                    <div className="p-5">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-4">Assets</p>
+                      <div className="space-y-3">
+                        {allocByType.map(t => {
+                          const pct = allocTotalByType > 0 ? t.amount / allocTotalByType : 0;
+                          return (
+                            <div key={t.label}>
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color }} />
+                                  <span className="text-xs text-slate-300 font-medium">{t.label}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs tabular-nums text-slate-400">{fmt(t.amount * mult)}</span>
+                                  <span className="text-[10px] tabular-nums text-slate-600 w-8 text-right">{(pct * 100).toFixed(0)}%</span>
+                                </div>
+                              </div>
+                              <div className="h-1.5 bg-[#111D2E] rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all" style={{ width: `${(pct * 100).toFixed(1)}%`, background: t.color, opacity: 0.8 }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="pt-2 border-t border-[#1E2D3D] flex items-center justify-between">
+                          <span className="text-[10px] text-slate-600 uppercase tracking-wider">Total{isMy ? " (My Share)" : ""}</span>
+                          <span className="text-xs font-semibold text-slate-300 tabular-nums">{fmt(allocTotalByType * mult)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fund Structure */}
+                    <div className="p-5">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium mb-3">Fund Structure</p>
+                      <svg width="100%" viewBox={`0 0 ${W3} ${H3}`} preserveAspectRatio="xMidYMid meet">
+                        {fundCols.map((c, i) => {
+                          const x  = PAD3.l + i * (bW3 + gap3);
+                          const bh = (c.val / maxVal) * cH3;
+                          const y  = PAD3.t + cH3 - bh;
+                          return (
+                            <g key={c.label}>
+                              <rect x={x} y={y} width={bW3} height={bh} fill={c.color} opacity="0.75" rx="2" />
+                              <text x={x + bW3 / 2} y={y - 3} textAnchor="middle" style={{ fontSize: 7, fill: c.color, fontWeight: 600 }}>{fmtS(c.val)}</text>
+                              <text x={x + bW3 / 2} y={H3 - 4} textAnchor="middle" style={{ fontSize: 7, fill: "#64748B" }}>{c.label}</text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      {myRows.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-[#1E2D3D] space-y-3">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium mb-2">My Share</p>
+                          {myRows.map(row => {
+                            const pct = Math.min(row.val / maxVal, 1);
+                            return (
+                              <div key={row.label}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[9px] text-slate-500">{row.label}</span>
+                                  <span className="text-[9px] tabular-nums font-semibold" style={{ color: row.color }}>{fmtS(row.val)}</span>
+                                </div>
+                                <div className="relative">
+                                  <svg width="100%" viewBox="0 0 280 14" preserveAspectRatio="none">
+                                    <rect x="0" y="5" width="280" height="2" fill="#1E2D3D" rx="1" />
+                                    <rect x="0" y="5" width={280 * pct} height="2" fill={row.color} opacity="0.7" rx="1" />
+                                    <line x1="0" y1="3" x2="0" y2="9" stroke="#1E2D3D" strokeWidth="1.5" />
+                                    <line x1="280" y1="3" x2="280" y2="9" stroke="#1E2D3D" strokeWidth="1.5" />
+                                    <circle cx={280 * pct} cy="6" r="4" fill={row.color} />
+                                    <circle cx={280 * pct} cy="6" r="2" fill="#0D1421" />
+                                    <text x="280" y="14" textAnchor="end" style={{ fontSize: 6, fill: "#475569" }}>{fmtS(maxVal)}</text>
+                                  </svg>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* LP cap table */}
+                  <div className="border-t border-[#1E2D3D] overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                        <tr>
+                          <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">LP</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Units</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">%</th>
+                          <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider hidden sm:table-cell">Contribution type</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#0D1421]">
+                        {lpRows.map(row => {
+                          const total = newLpUnitsTotal + BASE_LP_TOTAL_UNITS;
+                          const pct = (BASE_LP_TOTAL_UNITS + newLpBasis) > 0 ? row.units / (BASE_LP_TOTAL_UNITS + newLpBasis) : 0;
+                          return (
+                            <tr key={row.id} className={row.id === "sommereli" ? "bg-emerald-500/5" : "hover:bg-[#111D2E]/40 transition-colors"}>
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: row.accent }} />
+                                  <span className={`font-medium ${row.id === "sommereli" ? "text-emerald-300" : "text-slate-300"}`}>{row.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.units.toLocaleString()}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.accent }}>{(pct * 100).toFixed(2)}%</td>
+                              <td className="py-2.5 px-3 text-slate-500 hidden sm:table-cell text-[10px]">{row.type}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                          <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-slate-300">{(BASE_LP_TOTAL_UNITS + newLpBasis).toLocaleString()}</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-slate-400">100%</td>
+                          <td className="hidden sm:table-cell" />
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ══ Portfolio at a Glance (post-deal) ═══════════════════════════════ */}
+            {(() => {
+              const isMy = dealMemoLpView === "my-share";
+              const mult = isMy ? sommereli_pct : 1;
+              const equityRows = companyRows.filter(r => r.equityVal > 0);
+              const allDebtPositions = allCompanies.flatMap(c =>
+                (c.debtPositions ?? [])
+                  .filter(d => d.status !== "Repaid")
+                  .map(d => ({ ...d, companyId: c.id, companyName: c.name, companyAccent: c.accentColor || "#64748B" }))
+              );
+              const convertibleRows = allDebtPositions.filter(d => !ALLOC_CREDIT_INSTR.includes(d.instrument));
+              const creditRows      = allDebtPositions.filter(d =>  ALLOC_CREDIT_INSTR.includes(d.instrument));
+              const allOptionPositions = allCompanies.flatMap(c =>
+                (c.optionPositions ?? []).map(o => ({ ...o, companyId: c.id, companyName: c.name, companyAccent: c.accentColor || "#64748B", pps: companyRows.find(r => r.id === c.id)?.pps ?? 0 }))
+              );
+              const ALLOC_CREDIT_INSTR2 = ["Term Loan", "Line of Credit", "Revenue Based Financing"];
+              return (
+              <div className="space-y-3">
+                {/* Equity */}
+                <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                  <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                    <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#10B981" }} />
+                      <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Equity</span>
+                    </div>
+                    <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                      <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Companies</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{equityRows.length}</p>
+                      </div>
+                      <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                        <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Est. Value</p>
+                        <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#10B981" }}>{fmt(equityTypeBasis * mult)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                        <tr>
+                          <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Shares</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Share Price</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Est. Value</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">% FD</th>
+                          <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Voting %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#0D1421]">
+                        {equityRows.map(row => {
+                          const baseCo = portfolio.find(p => p.id === row.id);
+                          const c      = allCompanies.find(c => c.id === row.id);
+                          const hasCustom = baseCo ? userValuations[baseCo.id] !== undefined : false;
+                          const pctFD = c?.totalShares && row.postShares > 0 ? (row.postShares / c.totalShares) * 100 : null;
+                          const pctVoting = baseCo?.commonSharesOutstanding && row.postShares > 0
+                            ? (row.postShares / baseCo.commonSharesOutstanding) * 100
+                            : (typeof baseCo?.votingOwnership === "number" ? baseCo.votingOwnership : null);
+                          return (
+                            <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: row.accent }} />
+                                  <span className="font-medium text-slate-200">{row.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                  {row.isNew && <span className="text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#064E3B", color: "#34D399" }}>NEW</span>}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums">
+                                {baseCo && row.pps > 0 ? (
+                                  <button onClick={() => setValuationModal({ company: baseCo, pendingVal: effectiveImplied(baseCo) })}
+                                    className="inline-flex items-center gap-1 hover:text-emerald-400 transition-colors group" title="Edit share price">
+                                    <span style={{ color: hasCustom ? "#34D399" : "#94A3B8" }}>${row.pps.toFixed(4)}</span>
+                                    <Pencil size={9} className={hasCustom ? "text-emerald-400" : "text-slate-600 group-hover:text-emerald-400 transition-colors"} />
+                                  </button>
+                                ) : (
+                                  <span className="text-slate-500">{row.pps > 0 ? `$${row.pps.toFixed(4)}` : "—"}</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.equityVal > 0 ? "#10B981" : "#475569" }}>{row.equityVal > 0 ? fmt(row.equityVal * mult) : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{pctFD !== null ? `${pctFD.toFixed(1)}%` : "—"}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{pctVoting !== null ? `${pctVoting.toFixed(1)}%` : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Convertibles & Preferred */}
+                {convertibleRows.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Convertibles &amp; Preferred</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{convertibleRows.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Current Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#F59E0B" }}>{fmt(convertTypeBasis * mult)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {convertibleRows.map(d => (
+                            <tr key={d.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.companyAccent }} />
+                                  <span className="font-medium text-slate-200">{d.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F59E0B" }}>{fmt(d.currentValue * mult)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Credit */}
+                {creditRows.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#6366F1" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Credit</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{creditRows.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Current Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#6366F1" }}>{fmt(creditTypeBasis * mult)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Instrument</th>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Date</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Principal</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Current Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {creditRows.map(d => (
+                            <tr key={d.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: d.companyAccent }} />
+                                  <span className="font-medium text-slate-200">{d.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300">{d.instrument}</td>
+                              <td className="py-2.5 px-3 text-slate-500">{d.date}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{fmt(d.principal)}</td>
+                              <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#6366F1" }}>{fmt(d.currentValue * mult)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Options */}
+                {allOptionPositions.length > 0 && (
+                  <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+                    <div className="border-b border-[#1E2D3D] flex items-stretch flex-wrap">
+                      <div className="flex items-center gap-3 px-4 py-3.5 shrink-0 min-w-[140px] border-r border-[#1E2D3D]">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#F43F5E" }} />
+                        <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">Options</span>
+                      </div>
+                      <div className="flex flex-1 items-stretch divide-x divide-[#1E2D3D] overflow-hidden">
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Positions</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums text-slate-200">{allOptionPositions.length}</p>
+                        </div>
+                        <div className="flex flex-col justify-center px-4 py-2.5 flex-1 min-w-0">
+                          <p className="text-[9px] text-slate-600 uppercase tracking-widest font-medium">Total Value</p>
+                          <p className="text-sm font-bold mt-0.5 tabular-nums" style={{ color: "#F43F5E" }}>{fmt(optionsTypeBasis * mult)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                          <tr>
+                            <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider min-w-[160px]">Company</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Shares</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Strike</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Intrinsic</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Time Value</th>
+                            <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#0D1421]">
+                          {allOptionPositions.map(o => {
+                            const intrinsic = o.shares * Math.max(o.pps - o.strikePrice, 0);
+                            const timeVal   = o.shares * o.pps * ((optionVariances[o.id] ?? 0) / 100);
+                            return (
+                              <tr key={o.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: o.companyAccent }} />
+                                    <span className="font-medium text-slate-200">{o.companyName.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-300">{o.shares.toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">${o.strikePrice.toFixed(4)}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: intrinsic > 0 ? "#F43F5E" : "#475569" }}>{intrinsic > 0 ? fmt(intrinsic * mult) : "—"}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{timeVal > 0 ? fmt(timeVal * mult) : "—"}</td>
+                                <td className="py-2.5 px-3 text-right tabular-nums font-semibold" style={{ color: "#F43F5E" }}>{fmt((intrinsic + timeVal) * mult)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+              );
+            })()}
+
+            {/* ── Portfolio Combination Summary ── */}
+            <div className="bg-[#0D1421] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              <div className="border-b border-[#1E2D3D] px-4 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#34D399" }} />
+                <p className="text-xs sm:text-sm font-semibold text-slate-200">Portfolio Combination Summary</p>
+                <p className="text-[10px] text-slate-600 ml-2 hidden sm:inline">pre-deal fund shares + LP roll-ins = post-deal total</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-[#1E2D3D] bg-[#080E1A]">
+                    <tr>
+                      <th className="py-2 px-3 text-left text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Company</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Pre</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Founder LP</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ Co-Founder LP</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">+ LP D</th>
+                      <th className="py-2 px-3 text-right text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Common Post</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0D1421]">
+                    {companyRows.map(row => (
+                      <tr key={row.id} className="hover:bg-[#111D2E]/40 transition-colors">
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: row.accent }} />
+                            <span className="font-medium text-slate-200">{row.name.replace(" Inc.", "").replace(" Recruiting", "")}</span>
+                            {row.isNew && <span className="text-[8px] font-semibold px-1 py-0.5 rounded" style={{ background: "#064E3B", color: "#34D399" }}>NEW</span>}
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-400">{row.fundCommonPre > 0 ? row.fundCommonPre.toLocaleString() : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.palashRollIn  > 0 ? "#F59E0B" : "#475569" }}>{row.palashRollIn  > 0 ? `+${row.palashRollIn.toLocaleString()}`  : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.wolfsonRollIn > 0 ? "#A78BFA" : "#475569" }}>{row.wolfsonRollIn > 0 ? `+${row.wolfsonRollIn.toLocaleString()}` : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: row.lpDRollIn     > 0 ? "#FB923C" : "#475569" }}>{row.lpDRollIn     > 0 ? `+${row.lpDRollIn.toLocaleString()}`     : "—"}</td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-200 font-semibold">{row.postShares > 0 ? row.postShares.toLocaleString() : "—"}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-[#1E2D3D] bg-[#080E1A]">
+                      <td className="py-2 px-3 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Total</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-slate-300">{companyRows.reduce((s, r) => s + r.fundCommonPre, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#F59E0B" }}>+{companyRows.reduce((s, r) => s + r.palashRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#A78BFA" }}>+{companyRows.reduce((s, r) => s + r.wolfsonRollIn, 0).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#FB923C" }}>+{companyRows.reduce((s, r) => s + r.lpDRollIn, 0).toLocaleString()}</td>
                       <td className="py-2 px-3 text-right tabular-nums text-slate-200 font-semibold">{companyRows.reduce((s, r) => s + r.postShares, 0).toLocaleString()}</td>
                     </tr>
                   </tbody>
