@@ -324,14 +324,14 @@ type TeamMember = { name: string; role: string; initials: string; color: string;
 // The card shows the photo with a pencil-sketch filter; falls back to initials if absent.
 const CO_FOUNDERS: TeamMember[] = [
   { name: "Sam Sawhook",  role: "Co-Founder & CEO",                  initials: "SS", color: "#c45a2d", photo: "/team/sam sawhook.jpg",   bio: "Army veteran (Operation Atlantic Resolve convoy commander) and startup operator. Co-founded nth Venture in 2021 and launched six employee-owned portfolio companies. Former U.S. GAO financial auditor — the supreme audit authority in the United States — with engagements at the SEC, DoD, and Treasury. Currently pursuing a Master of Accountancy." },
-  { name: "Sam Johnston", role: "Co-Founder & CMO",                  initials: "SJ", color: "#8a4a1a", photo: "/team/sam-johnston.jpg",  bio: "Forbes Business Council member with a background spanning International Economics, Applied Psychology, and Marketing (Texas McCombs, Stanford, University of Wales Trinity Saint David). Leads brand strategy, investor communications, and new business launches across the nth Venture portfolio." },
-  { name: "Michael Shamoun", role: "Co-Founder & CTO",               initials: "MS", color: "#2a5a8a", photo: "/team/michael-shamoun.jpg", bio: "Electrical engineering and computer architecture background (UT Dallas B.S., UT Austin M.S.). Former software engineer at General Motors and IBM before co-founding nth Venture. Leads all technology infrastructure across the platform and portfolio companies." },
+  { name: "Sam Johnston", role: "Co-Founder & CMO",                  initials: "SJ", color: "#8a4a1a", photo: "/team/sam johnston.jpg",  bio: "Forbes Business Council member with a background spanning International Economics, Applied Psychology, and Marketing (Texas McCombs, Stanford, University of Wales Trinity Saint David). Leads brand strategy, investor communications, and new business launches across the nth Venture portfolio." },
+  { name: "Michael Shamoun", role: "Co-Founder & CTO",               initials: "MS", color: "#2a5a8a", photo: "/team/michael shamoun.jpg", bio: "Electrical engineering and computer architecture background (UT Dallas B.S., UT Austin M.S.). Former software engineer at General Motors and IBM before co-founding nth Venture. Leads all technology infrastructure across the platform and portfolio companies." },
   { name: "Nathan Deily", role: "Co-Founder & Chief People Officer", initials: "ND", color: "#1a5a3a", photo: "/team/nathan deily.jpg",  bio: "Senior talent and organizational leadership roles at Microsoft, Honeywell, Raytheon, and LivePerson before co-founding nth Venture. M.S. in Labor Relations from Michigan State, Executive MBA from ASU W.P. Carey. Host of the Breakthrough Hiring Show podcast." },
-  { name: "Jillian Palash", role: "Co-Founder & Chief of Staff",     initials: "JP", color: "#5a3a6a", photo: "/team/jillian-palash.jpg", bio: "Nearly 15 years in Fortune 50 corporate communications and public relations at top-ranked agencies and in-house roles. Joined nth Venture as a founding team member and serves on the leadership team at Falconer." },
+  { name: "Jillian Palash", role: "Co-Founder & Chief of Staff",     initials: "JP", color: "#5a3a6a", photo: "/team/jillian palash.jpg", bio: "Nearly 15 years in Fortune 50 corporate communications and public relations at top-ranked agencies and in-house roles. Joined nth Venture as a founding team member and serves on the leadership team at Falconer." },
 ];
 
 const PORTCO_CEOS: TeamMember[] = [
-  { name: "David Markowitz", role: "CEO, Audily",                       initials: "DM", color: "#7a3a1a", photo: "/team/david-markowitz.jpg", bio: "Award-winning audio producer and podcast executive. Former Podcast Manager at Netflix. Leads Audily's roster of branded audio content, original productions, and acquisitions — including the Rococo Punch and Pop Ups Studio networks, covered by Bloomberg and The Hollywood Reporter." },
+  { name: "David Markowitz", role: "CEO, Audily",                       initials: "DM", color: "#7a3a1a", photo: "/team/david markowitz.jpg", bio: "Award-winning audio producer and podcast executive. Former Podcast Manager at Netflix. Leads Audily's roster of branded audio content, original productions, and acquisitions — including the Rococo Punch and Pop Ups Studio networks, covered by Bloomberg and The Hollywood Reporter." },
   { name: "Doug Epperly",    role: "President, Merchant Boxes",          initials: "DE", color: "#2a5a2a", photo: "/team/doug epperly.jpg",    bio: "Over two decades in global supply chain and fulfillment. Founder of E3 Enterprises. Expanded Merchant Boxes into a custom packaging platform serving hundreds of e-commerce and retail brands." },
   { name: "John Light",      role: "President, SBR2TH",                  initials: "JL", color: "#1a3a5a", photo: "/team/john light.jpg",      bio: "20+ years in specialized technical recruiting across contingent, retained, and RPO models. Built SBR2TH's proprietary Retingent and Pipelining hiring vehicles and its AI-driven talent platform (sbr2th.ai). Focused on Data Science, ML, and senior engineering placement." },
   { name: "Grant Typrin",    role: "President, Certd & Pigeon Service",  initials: "GT", color: "#4a4a1a", photo: "/team/grant typrin.jpg",    bio: "UT Austin McCombs graduate. Led operations at Certd, nth Venture's training certification marketplace, before expanding to oversee corporate finance and operations across multiple portfolio companies." },
@@ -360,12 +360,13 @@ function SketchFilterDef() {
             <feFuncG type="linear" slope="-1" intercept="1" />
             <feFuncB type="linear" slope="-1" intercept="1" />
           </feComponentTransfer>
-          <feGaussianBlur stdDeviation="4.5" in="inverted" result="blurred" />
+          <feGaussianBlur stdDeviation="2.5" in="inverted" result="blurred" />
           <feBlend in="gray" in2="blurred" mode="color-dodge" result="sketch" />
-          <feComponentTransfer in="sketch">
-            <feFuncR type="linear" slope="1.4" intercept="-0.15" />
-            <feFuncG type="linear" slope="1.4" intercept="-0.15" />
-            <feFuncB type="linear" slope="1.4" intercept="-0.15" />
+          <feBlend in="sketch" in2="gray" mode="multiply" result="dampened" />
+          <feComponentTransfer in="dampened">
+            <feFuncR type="linear" slope="1.6" intercept="-0.1" />
+            <feFuncG type="linear" slope="1.6" intercept="-0.1" />
+            <feFuncB type="linear" slope="1.6" intercept="-0.1" />
           </feComponentTransfer>
         </filter>
       </defs>
@@ -389,7 +390,7 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: expanded ? 14 : 0, transition: "margin 0.2s" }}>
           {/* Avatar: photo with sketch filter, or initials fallback */}
-          <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, overflow: "hidden", position: "relative", background: member.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, overflow: "hidden", position: "relative", background: showPhoto ? "#fafaf8" : member.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
             {member.photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -397,7 +398,7 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
                 alt={member.name}
                 onLoad={() => setPhotoLoaded(true)}
                 onError={() => setPhotoError(true)}
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "url(#team-sketch)", opacity: showPhoto ? 1 : 0, transition: "opacity 0.3s" }}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", filter: "url(#team-sketch)", mixBlendMode: "multiply", opacity: showPhoto ? 1 : 0, transition: "opacity 0.3s" }}
               />
             )}
             {!showPhoto && (
